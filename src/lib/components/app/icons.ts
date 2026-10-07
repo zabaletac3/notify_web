@@ -1,0 +1,86 @@
+import {
+	ArrowLeft,
+	Bold,
+	Check,
+	ChevronDown,
+	Copy,
+	Download,
+	Ellipsis,
+	FileText,
+	Folder,
+	FolderPlus,
+	Hash,
+	Image,
+	Info,
+	Italic,
+	List,
+	ListChecks,
+	Lock,
+	Mail,
+	Menu,
+	Minus,
+	Moon,
+	PanelLeft,
+	Pin,
+	Plus,
+	RotateCcw,
+	Search,
+	Settings,
+	Share,
+	Square,
+	SquarePen,
+	Sun,
+	Trash2,
+	TriangleAlert,
+	Undo2,
+	WifiOff,
+	X
+} from '@lucide/svelte';
+
+/**
+ * Iconos de Apunte. Las claves coinciden con los componentes `icon/*` de Figma;
+ * el valor es el icono de Lucide equivalente. Se dibujan siempre con trazo 1.75.
+ */
+export const icons = {
+	// Los de Figma (icon/*)
+	notes: FileText,
+	folder: Folder,
+	trash: Trash2,
+	search: Search,
+	compose: SquarePen,
+	pin: Pin,
+	checklist: ListChecks,
+	bold: Bold,
+	italic: Italic,
+	list: List,
+	image: Image,
+	share: Share,
+	more: Ellipsis,
+	sidebar: PanelLeft,
+	hash: Hash,
+	'chevron-down': ChevronDown,
+	minimize: Minus,
+	maximize: Square,
+	close: X,
+	'arrow-left': ArrowLeft,
+	menu: Menu,
+	undo: Undo2,
+	// Necesarios para las pantallas (aún sin componente en Figma)
+	plus: Plus,
+	check: Check,
+	lock: Lock,
+	mail: Mail,
+	'wifi-off': WifiOff,
+	settings: Settings,
+	copy: Copy,
+	download: Download,
+	restore: RotateCcw,
+	'folder-plus': FolderPlus,
+	warning: TriangleAlert,
+	info: Info,
+	sun: Sun,
+	moon: Moon
+} as const;
+
+export type IconName = keyof typeof icons;
+export const iconNames = Object.keys(icons) as IconName[];

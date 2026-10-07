@@ -29,9 +29,13 @@ export default defineConfig({
 					name: 'client',
 					browser: {
 						enabled: true,
-						provider: playwright(),
+						provider: playwright({
+							// Opcional: usar un Chromium ya instalado (CHROMIUM_PATH=/ruta/al/chrome).
+							launchOptions: { executablePath: process.env.CHROMIUM_PATH || undefined }
+						}),
 						instances: [{ browser: 'chromium', headless: true }]
 					},
+					setupFiles: ['./src/lib/test/setup-client.ts'],
 					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
 					exclude: ['src/lib/server/**']
 				}

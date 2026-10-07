@@ -11,6 +11,9 @@
 					'bg-destructive/10 [a]:hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 text-destructive dark:bg-destructive/20',
 				outline: 'border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground',
 				ghost: 'hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50',
+				amber: 'bg-tag-amber/15 text-tag-amber',
+				plum: 'bg-tag-plum/15 text-tag-plum',
+				success: 'bg-success/15 text-success',
 				link: 'text-primary underline-offset-4 hover:underline'
 			}
 		},

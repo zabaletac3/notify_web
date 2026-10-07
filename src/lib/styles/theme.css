@@ -11,8 +11,21 @@
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
-	--radius-2xl: calc(var(--radius) + 8px);
+	--radius-xl: calc(var(--radius) + 2px); /* 14: botón grande */
+	--radius-2xl: calc(var(--radius) + 8px); /* 20: diálogos */
+	--radius-3xl: calc(var(--radius) + 12px); /* 24: bottom sheet */
+
+	/* Escala tipográfica de Apunte (Inter). Uso: text-title, text-body… */
+	--text-title: 1.75rem; /* 28 · títulos de pantalla (bold) */
+	--text-title--line-height: 2.125rem;
+	--text-heading: 1.125rem; /* 18 · encabezados de sección (semibold) */
+	--text-heading--line-height: 1.5rem;
+	--text-body: 0.9375rem; /* 15 · texto base y botones */
+	--text-body--line-height: 1.375rem;
+	--text-label: 0.8125rem; /* 13 · etiquetas de campo */
+	--text-label--line-height: 1.125rem;
+	--text-caption: 0.75rem; /* 12 · ayudas y metadatos */
+	--text-caption--line-height: 1rem;
 
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
