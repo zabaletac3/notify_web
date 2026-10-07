@@ -46,7 +46,7 @@
 
 <svelte:head><title>Sincronización · Apunte</title></svelte:head>
 
-<h1 class="text-page font-bold">Sincronización y dispositivos</h1>
+<h1 class="text-page font-bold max-md:sr-only">Sincronización y dispositivos</h1>
 
 <section class="flex items-center gap-3 rounded-[14px] bg-accent p-4" aria-live="polite">
 	<span class="size-3 rounded-full bg-primary"></span>

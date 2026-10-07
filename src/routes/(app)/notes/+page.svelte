@@ -201,6 +201,15 @@
 	}
 
 	let confirmDelete = $state(false);
+	let confirmEmpty = $state(false);
+
+	async function emptyTrash() {
+		const result = await notes.emptyTrash();
+		confirmEmpty = false;
+		toast[result.ok ? 'success' : 'error'](
+			result.ok ? 'Papelera vaciada' : 'No se pudo vaciar la papelera'
+		);
+	}
 
 	async function restore(n: Note) {
 		const result = await notes.restore(n.id);
@@ -254,50 +263,86 @@
 	aria-label="Lista de notas"
 >
 	<!-- Barra superior (pantallas estrechas) -->
-	<div class="-mx-1 flex items-center gap-1 pt-1 md:hidden">
-		<button
-			type="button"
-			aria-label="Abrir menú"
-			onclick={() => (shell.drawerOpen = true)}
-			class="grid size-10 place-content-center rounded-full outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
-		>
-			<AppIcon name="menu" size={22} />
-		</button>
-		<button
-			type="button"
-			onclick={() => (shell.drawerOpen = true)}
-			class="flex min-w-0 items-center gap-1.5 pl-1 outline-none"
-		>
-			<span class="truncate text-xl font-bold"
-				>{searching ? 'Resultados' : titleOf(notes.filter)}</span
-			>
-			<AppIcon name="chevron-down" size={18} class="shrink-0" />
-		</button>
-		<div class="flex-1"></div>
-		<DropdownMenu.Root>
-			<DropdownMenu.Trigger
-				aria-label="Ordenar notas"
+	{#if inTrash}
+		<div class="-mx-1 flex items-center gap-1 pt-1 md:hidden">
+			<button
+				type="button"
+				aria-label="Volver a todas las notas"
+				onclick={() => notes.setFilter({ kind: 'all' })}
 				class="grid size-10 place-content-center rounded-full outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
 			>
-				<AppIcon name="more" size={22} />
-			</DropdownMenu.Trigger>
-			<DropdownMenu.Content align="end">
-				<DropdownMenu.Label>Ordenar por</DropdownMenu.Label>
-				<DropdownMenu.RadioGroup
-					value={settings.values.noteOrder}
-					onValueChange={(v) =>
-						settings.update({ noteOrder: v as (typeof sortOptions)[number]['value'] })}
+				<AppIcon name="arrow-left" size={24} />
+			</button>
+			<h1 class="flex-1 text-heading font-semibold">Papelera</h1>
+			{#if notes.counts.trash}
+				<button
+					type="button"
+					onclick={() => (confirmEmpty = true)}
+					class="px-3 text-sm font-semibold text-primary outline-none focus-visible:underline"
 				>
-					{#each sortOptions as option (option.value)}
-						<DropdownMenu.RadioItem value={option.value}>{option.label}</DropdownMenu.RadioItem>
-					{/each}
-				</DropdownMenu.RadioGroup>
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
-	</div>
-	<p class="pb-3 pl-3 text-label font-medium text-muted-foreground md:hidden">
-		{searching ? resultsLabel : formatCount(notes.visible.length, 'nota', 'notas')}
-	</p>
+					Vaciar
+				</button>
+			{/if}
+		</div>
+	{:else}
+		<div class="-mx-1 flex items-center gap-1 pt-1 md:hidden">
+			<button
+				type="button"
+				aria-label="Abrir menú"
+				onclick={() => (shell.drawerOpen = true)}
+				class="grid size-10 place-content-center rounded-full outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+			>
+				<AppIcon name="menu" size={22} />
+			</button>
+			<button
+				type="button"
+				onclick={() => (shell.drawerOpen = true)}
+				class="flex min-w-0 items-center gap-1.5 pl-1 outline-none"
+			>
+				<span class="truncate text-xl font-bold"
+					>{searching ? 'Resultados' : titleOf(notes.filter)}</span
+				>
+				<AppIcon name="chevron-down" size={18} class="shrink-0" />
+			</button>
+			<div class="flex-1"></div>
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger
+					aria-label="Ordenar notas"
+					class="grid size-10 place-content-center rounded-full outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+				>
+					<AppIcon name="more" size={22} />
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end">
+					<DropdownMenu.Label>Ordenar por</DropdownMenu.Label>
+					<DropdownMenu.RadioGroup
+						value={settings.values.noteOrder}
+						onValueChange={(v) =>
+							settings.update({ noteOrder: v as (typeof sortOptions)[number]['value'] })}
+					>
+						{#each sortOptions as option (option.value)}
+							<DropdownMenu.RadioItem value={option.value}>{option.label}</DropdownMenu.RadioItem>
+						{/each}
+					</DropdownMenu.RadioGroup>
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
+		</div>
+	{/if}
+	{#if sync.isOffline}
+		<div class="-mx-3 mb-2 md:hidden">
+			<Banner
+				message="Sin conexión. Tus cambios se guardan aquí y se sincronizarán al volver."
+				action="Reintentar"
+				onaction={() => sync.syncNow()}
+			/>
+		</div>
+	{/if}
+	{#if !inTrash && !notes.isFirstTime}
+		<p class="pb-3 pl-3 text-label font-medium text-muted-foreground md:hidden">
+			{searching
+				? formatCount(app.search.results.length, 'resultado', 'resultados')
+				: formatCount(notes.visible.length, 'nota', 'notas')}
+		</p>
+	{/if}
 
 	<!-- Cabecera (≥ 768 px) -->
 	<header class="hidden items-center pr-0.5 pb-3 pl-1.5 md:flex">
@@ -330,7 +375,9 @@
 	</header>
 
 	<label
-		class="flex h-12 w-full items-center gap-3 rounded-[28px] bg-input-fill px-4.5 text-base md:h-8 md:gap-2 md:rounded-lg md:px-2.5 md:text-label"
+		class="flex h-12 w-full items-center gap-3 rounded-[28px] bg-input-fill px-4.5 text-base {inTrash
+			? 'max-md:hidden'
+			: ''} md:h-8 md:gap-2 md:rounded-lg md:px-2.5 md:text-label"
 	>
 		<AppIcon name="search" size={shell.split.current ? 16 : 20} class="shrink-0 text-tertiary" />
 		{#if inTrash}
@@ -395,7 +442,8 @@
 
 	{#if inTrash}
 		<p class="mt-2 rounded-xl bg-accent px-3.5 py-3 text-label leading-[19px]" role="note">
-			Las notas se eliminan definitivamente después de {TRASH_RETENTION_DAYS} días.
+			Las notas {shell.split.current ? '' : 'de la papelera '}se eliminan definitivamente después de {TRASH_RETENTION_DAYS}
+			días.
 		</p>
 	{/if}
 
@@ -440,18 +488,36 @@
 			<EmptyState
 				icon="search"
 				title="Sin resultados"
-				description="No encontramos notas con “{app.search.trimmed}”."
+				description="No encontramos notas con “{app.search.trimmed}”.{shell.split.current
+					? ''
+					: ' Revisa la ortografía o prueba con otra palabra.'}"
 			>
 				<Button variant="outline" onclick={() => app.search.clear()}>Borrar búsqueda</Button>
 			</EmptyState>
 		{/each}
 	{:else if notes.groups.length === 0}
 		{#if notes.isFirstTime}
-			<EmptyState
-				icon="notes"
-				title="Aún no tienes notas"
-				description="Tus notas aparecerán aquí."
-			/>
+			<div class="hidden min-h-0 flex-1 md:flex">
+				<EmptyState
+					icon="notes"
+					title="Aún no tienes notas"
+					description="Tus notas aparecerán aquí."
+				/>
+			</div>
+			<div class="flex min-h-0 flex-1 md:hidden">
+				<EmptyState
+					title="Bienvenido a Apunte"
+					description="Aquí vivirán tus apuntes, listas y ideas. Escribe tu primera nota para empezar."
+				>
+					{#snippet mark()}
+						<span
+							class="grid size-22 place-content-center rounded-[22px] bg-primary text-[40px] font-bold text-primary-foreground"
+							aria-hidden="true">A</span
+						>
+					{/snippet}
+					<Button onclick={newNote}>Crear mi primera nota</Button>
+				</EmptyState>
+			</div>
 		{:else if notes.filter.kind === 'folder'}
 			<EmptyState
 				icon="folder"
@@ -475,7 +541,7 @@
 	{/if}
 </section>
 
-{#if !inTrash && !shell.editing}
+{#if !inTrash && !shell.editing && !searching && notes.visible.length > 0}
 	<button
 		type="button"
 		onclick={newNote}
@@ -684,6 +750,21 @@
 			<AlertDialog.Action variant="destructive" onclick={() => note && deleteForever(note)}>
 				Eliminar
 			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
+
+<AlertDialog.Root bind:open={confirmEmpty}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>¿Vaciar la papelera?</AlertDialog.Title>
+			<AlertDialog.Description>
+				Se eliminarán definitivamente {notes.counts.trash} notas. No podrás recuperarlas.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Cancelar</AlertDialog.Cancel>
+			<AlertDialog.Action variant="destructive" onclick={emptyTrash}>Vaciar</AlertDialog.Action>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>

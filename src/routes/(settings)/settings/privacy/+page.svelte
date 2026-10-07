@@ -11,7 +11,7 @@
 
 <svelte:head><title>Privacidad y seguridad · Apunte</title></svelte:head>
 
-<h1 class="text-page font-bold">Privacidad y seguridad</h1>
+<h1 class="text-page font-bold max-md:sr-only">Privacidad y seguridad</h1>
 
 <SettingsGroup title="Bloqueo">
 	<SettingRow label="Bloqueo con huella">

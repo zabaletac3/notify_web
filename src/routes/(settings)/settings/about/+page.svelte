@@ -4,7 +4,7 @@
 
 <svelte:head><title>Acerca de · Apunte</title></svelte:head>
 
-<h1 class="text-page font-bold">Acerca de</h1>
+<h1 class="text-page font-bold max-md:sr-only">Acerca de</h1>
 
 <section class="flex flex-col items-center gap-2 py-2">
 	<span

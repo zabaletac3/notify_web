@@ -23,7 +23,7 @@
 
 <svelte:head><title>Mi cuenta · Apunte</title></svelte:head>
 
-<h1 class="text-page font-bold">Mi cuenta</h1>
+<h1 class="text-page font-bold max-md:sr-only">Mi cuenta</h1>
 
 <section class="flex items-center gap-4 rounded-[14px] border bg-card p-4">
 	<span

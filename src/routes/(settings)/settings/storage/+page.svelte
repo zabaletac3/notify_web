@@ -23,7 +23,7 @@
 
 <svelte:head><title>Almacenamiento · Apunte</title></svelte:head>
 
-<h1 class="text-page font-bold">Almacenamiento y exportación</h1>
+<h1 class="text-page font-bold max-md:sr-only">Almacenamiento y exportación</h1>
 
 <section class="flex flex-col gap-3 rounded-[14px] border bg-card p-4">
 	<p class="text-body font-semibold">{usage.usedMb} MB de 1 GB usados</p>

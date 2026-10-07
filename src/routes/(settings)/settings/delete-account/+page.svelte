@@ -20,7 +20,7 @@
 
 <svelte:head><title>Eliminar cuenta · Apunte</title></svelte:head>
 
-<h1 class="text-page font-bold">Eliminar cuenta</h1>
+<h1 class="text-page font-bold max-md:sr-only">Eliminar cuenta</h1>
 
 <section
 	class="flex flex-col gap-2.5 rounded-[14px] border border-destructive bg-destructive-soft p-4"
