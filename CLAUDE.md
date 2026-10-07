@@ -1,0 +1,24 @@
+# Apunte web — guía para asistentes
+
+App de notas (SvelteKit + Svelte 5 + shadcn-svelte + Tailwind v4). Lee `docs/architecture.md` y `docs/conventions.md` antes de añadir código.
+
+## Reglas clave
+
+- Svelte 5 con **runes**; TypeScript estricto. Alias `#lib/...`.
+- Capas: `routes → features → data → fuente`. `domain` y `core` no dependen de la UI. Una feature se importa solo por su `index.ts`. ESLint lo verifica.
+- **Sin colores ni medidas arbitrarias**: solo tokens (`src/lib/styles/tokens.css`, mapa en `docs/design-tokens.md`).
+- Los componentes de presentación no cargan datos; los datos llegan por repositorios (`src/lib/data`), primero simulados.
+- Markdown de usuario siempre sanitizado (nunca `{@html}` directo).
+- UI en español.
+
+## Comandos
+
+`pnpm dev` · `pnpm check` · `pnpm lint` · `pnpm test:unit --run` · `pnpm build` · `pnpm verify` (todo junto, como la CI).
+
+## shadcn-svelte
+
+`components.json` fija estilo `vega`, base `stone`, Lucide. Añadir con `pnpm dlx shadcn-svelte@latest add <nombre>`; luego revisar que use tokens y no colores sueltos.
+
+## Diseño
+
+Fuente de verdad: archivo de Figma "Apunte – App de notas" (35 vistas, escritorio y móvil, claro y oscuro). No tocar Figma sin que se pida.
