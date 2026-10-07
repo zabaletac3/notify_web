@@ -24,7 +24,7 @@
 
 	async function verify() {
 		const result = await auth.verify(code);
-		if (result.ok) await goto('/notes');
+		if (result.ok) await goto('/onboarding');
 	}
 
 	async function resend() {

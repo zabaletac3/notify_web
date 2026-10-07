@@ -451,9 +451,9 @@
 		<Skeleton class="mt-4 mb-2.5 ml-3.5 h-3 w-[70px]" />
 		{#each [0, 1, 2, 3, 4] as i (i)}
 			<div class="flex h-23 flex-col gap-2 px-3.5 py-3" aria-hidden="true">
-				<Skeleton class="h-3.5 w-39" />
-				<Skeleton class="h-2.5 w-68" />
-				<Skeleton class="h-2.5 w-50" />
+				<Skeleton class="h-3.5 w-[55%]" />
+				<Skeleton class="h-2.5 w-[97%]" />
+				<Skeleton class="h-2.5 w-[70%]" />
 				<Skeleton class="h-2.5 w-[70px]" />
 			</div>
 		{/each}
