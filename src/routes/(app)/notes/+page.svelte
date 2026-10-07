@@ -27,7 +27,9 @@
 		type NotesFilter
 	} from '#lib/domain/index.js';
 
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import { dialogs } from '../dialogs.svelte.js';
+	import { shell } from '../shell.svelte.js';
 
 	const app = getApp();
 	const { notes, folders, settings, sync } = app;
@@ -83,7 +85,8 @@
 
 	// Al terminar de cargar (o cambiar de lista) se abre la primera nota, como en el diseño.
 	$effect(() => {
-		if (notes.status === 'ready' && notes.selectedId === null && !searching) notes.selectFirst();
+		if (shell.split.current && notes.status === 'ready' && notes.selectedId === null && !searching)
+			notes.selectFirst();
 	});
 
 	// Con resultados se abre el primero; sin resultados no hay nota abierta.
@@ -119,7 +122,7 @@
 			case 'rename':
 				notes.select(target.id);
 				await tick();
-				document.querySelector<HTMLInputElement>('[data-title-input]')?.select();
+				document.querySelector<HTMLTextAreaElement>('[data-title-input]')?.select();
 				break;
 		}
 	}
@@ -149,7 +152,7 @@
 		}
 		if (e.key.toLowerCase() === 'n' && !inTrash) {
 			e.preventDefault();
-			void notes.create();
+			void newNote();
 		} else if (e.key.toLowerCase() === 'k') {
 			e.preventDefault();
 			document.querySelector<HTMLInputElement>('[data-search-input]')?.focus();
@@ -157,6 +160,27 @@
 	}
 
 	const note = $derived(notes.selected);
+
+	// Sin nota abierta no hay editor al que volver en pantallas estrechas.
+	$effect(() => {
+		if (!note) shell.editing = false;
+	});
+
+	function open(id: string) {
+		notes.select(id);
+		shell.editing = true;
+	}
+
+	async function newNote() {
+		const result = await notes.create();
+		if (result.ok) shell.editing = true;
+	}
+
+	const sortOptions = [
+		{ value: 'updated', label: 'Fecha de edición' },
+		{ value: 'created', label: 'Fecha de creación' },
+		{ value: 'title', label: 'Título' }
+	] as const;
 	const folderName = $derived(note?.folderId ? folders.name(note.folderId) : '');
 
 	let titleTimer: ReturnType<typeof setTimeout> | undefined;
@@ -196,8 +220,8 @@
 			date={formatNoteDate(n.deletedAt ?? n.updatedAt, now)}
 			folder={inTrash ? purgeLabel(n) : n.folderId ? folders.name(n.folderId) : undefined}
 			pinned={n.pinned}
-			selected={n.id === notes.selectedId}
-			onclick={() => notes.select(n.id)}
+			selected={shell.split.current && n.id === notes.selectedId}
+			onclick={() => open(n.id)}
 		/>
 	{/snippet}
 
@@ -212,12 +236,69 @@
 
 <!-- Lista de notas: 336 px -->
 <section
-	class="flex w-84 shrink-0 flex-col gap-0.5 overflow-y-auto border-r bg-card px-3 py-4 *:shrink-0"
+	class="flex w-full shrink-0 flex-col gap-0.5 overflow-y-auto bg-card px-3 py-1 *:shrink-0 md:w-84 md:border-r md:py-4 {shell.editing
+		? 'max-md:hidden'
+		: ''}"
 	aria-label="Lista de notas"
 >
-	<header class="flex items-center pr-0.5 pb-3 pl-1.5">
-		<div class="flex-1">
-			<h1 class="text-2xl leading-tight font-bold">
+	<!-- Barra superior (pantallas estrechas) -->
+	<div class="-mx-1 flex items-center gap-1 pt-1 md:hidden">
+		<button
+			type="button"
+			aria-label="Abrir menú"
+			onclick={() => (shell.drawerOpen = true)}
+			class="grid size-10 place-content-center rounded-full outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+		>
+			<AppIcon name="menu" size={22} />
+		</button>
+		<button
+			type="button"
+			onclick={() => (shell.drawerOpen = true)}
+			class="flex min-w-0 items-center gap-1.5 pl-1 outline-none"
+		>
+			<span class="truncate text-xl font-bold"
+				>{searching ? 'Resultados' : titleOf(notes.filter)}</span
+			>
+			<AppIcon name="chevron-down" size={18} class="shrink-0" />
+		</button>
+		<div class="flex-1"></div>
+		<DropdownMenu.Root>
+			<DropdownMenu.Trigger
+				aria-label="Ordenar notas"
+				class="grid size-10 place-content-center rounded-full outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+			>
+				<AppIcon name="more" size={22} />
+			</DropdownMenu.Trigger>
+			<DropdownMenu.Content align="end">
+				<DropdownMenu.Label>Ordenar por</DropdownMenu.Label>
+				<DropdownMenu.RadioGroup
+					value={settings.values.noteOrder}
+					onValueChange={(v) =>
+						settings.update({ noteOrder: v as (typeof sortOptions)[number]['value'] })}
+				>
+					{#each sortOptions as option (option.value)}
+						<DropdownMenu.RadioItem value={option.value}>{option.label}</DropdownMenu.RadioItem>
+					{/each}
+				</DropdownMenu.RadioGroup>
+			</DropdownMenu.Content>
+		</DropdownMenu.Root>
+	</div>
+	<p class="pb-3 pl-3 text-label font-medium text-muted-foreground md:hidden">
+		{searching ? resultsLabel : formatCount(notes.visible.length, 'nota', 'notas')}
+	</p>
+
+	<!-- Cabecera (≥ 768 px) -->
+	<header class="hidden items-center pr-0.5 pb-3 pl-1.5 md:flex">
+		<button
+			type="button"
+			aria-label="Abrir menú"
+			onclick={() => (shell.drawerOpen = true)}
+			class="mr-2 grid size-9 place-content-center rounded-lg outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50 lg:hidden"
+		>
+			<AppIcon name="menu" size={20} />
+		</button>
+		<div class="min-w-0 flex-1">
+			<h1 class="truncate text-2xl leading-tight font-bold">
 				{searching ? 'Resultados' : titleOf(notes.filter)}
 			</h1>
 			<p class="text-caption font-medium text-muted-foreground">
@@ -228,7 +309,7 @@
 			<button
 				type="button"
 				aria-label="Nueva nota"
-				onclick={() => notes.create()}
+				onclick={newNote}
 				class="grid size-9 place-content-center rounded-[9px] bg-primary text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 			>
 				<AppIcon name="compose" size={18} />
@@ -236,8 +317,10 @@
 		{/if}
 	</header>
 
-	<label class="flex h-8 w-full items-center gap-2 rounded-lg bg-input-fill px-2.5 text-label">
-		<AppIcon name="search" size={16} class="shrink-0 text-tertiary" />
+	<label
+		class="flex h-12 w-full items-center gap-3 rounded-[28px] bg-input-fill px-4.5 text-base md:h-8 md:gap-2 md:rounded-lg md:px-2.5 md:text-label"
+	>
+		<AppIcon name="search" size={shell.split.current ? 16 : 20} class="shrink-0 text-tertiary" />
 		{#if inTrash}
 			<input
 				type="text"
@@ -264,9 +347,39 @@
 				<AppIcon name="close" size={16} />
 			</button>
 		{:else}
-			<kbd class="shrink-0 text-micro font-medium text-tertiary">Ctrl K</kbd>
+			<kbd class="hidden shrink-0 text-micro font-medium text-tertiary md:inline">Ctrl K</kbd>
 		{/if}
 	</label>
+
+	{#if !inTrash && !searching && folders.list.length}
+		<div
+			class="flex gap-2 overflow-x-auto pt-3.5 pb-1.5 pl-0.5 *:shrink-0 md:hidden"
+			role="tablist"
+			aria-label="Carpetas"
+		>
+			{#each [{ id: null as string | null, name: 'Todas' }, ...folders.list] as chip (chip.id)}
+				{@const current =
+					chip.id === null
+						? notes.filter.kind === 'all'
+						: notes.filter.kind === 'folder' && notes.filter.folderId === chip.id}
+				<button
+					type="button"
+					role="tab"
+					aria-selected={current}
+					onclick={() =>
+						notes.setFilter(
+							chip.id === null ? { kind: 'all' } : { kind: 'folder', folderId: chip.id }
+						)}
+					class="flex items-center gap-1.5 rounded-[10px] px-3.5 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50 {current
+						? 'bg-accent font-semibold text-accent-foreground'
+						: 'border font-medium text-muted-foreground'}"
+				>
+					{#if current && chip.id !== null}<AppIcon name="folder" size={15} />{/if}
+					{chip.name}
+				</button>
+			{/each}
+		</div>
+	{/if}
 
 	{#if inTrash}
 		<p class="mt-2 rounded-xl bg-accent px-3.5 py-3 text-label leading-[19px]" role="note">
@@ -333,7 +446,7 @@
 				title="Esta carpeta está vacía"
 				description="Crea una nota nueva o mueve aquí notas de otras carpetas."
 			>
-				<Button onclick={() => notes.create()}>Nueva nota</Button>
+				<Button onclick={newNote}>Nueva nota</Button>
 			</EmptyState>
 		{:else}
 			<p class="px-2 pt-6 text-label text-muted-foreground">No hay notas en esta lista.</p>
@@ -350,10 +463,20 @@
 	{/if}
 </section>
 
+{#if !inTrash && !shell.editing}
+	<button
+		type="button"
+		onclick={newNote}
+		class="fixed right-4 bottom-4 z-10 flex h-13.5 items-center gap-2.5 rounded-[18px] bg-primary pr-5.5 pl-4.5 text-body font-semibold text-primary-foreground shadow-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:hidden"
+	>
+		<AppIcon name="compose" size={22} /> Nueva nota
+	</button>
+{/if}
+
 <svelte:window onkeydown={onKeydown} />
 
 <!-- Editor -->
-<main class="flex min-w-0 flex-1 flex-col bg-background">
+<main class="flex min-w-0 flex-1 flex-col bg-background {shell.editing ? '' : 'max-md:hidden'}">
 	{#if sync.isOffline}
 		<Banner
 			message="Sin conexión. Tus cambios se guardan en este equipo y se sincronizarán al volver."
@@ -362,7 +485,10 @@
 		/>
 	{/if}
 	{#if notes.status === 'loading' || notes.status === 'idle'}
-		<div class="flex flex-1 flex-col gap-3.5 px-20 pt-10" aria-hidden="true">
+		<div
+			class="flex flex-1 flex-col gap-3.5 overflow-hidden px-6 pt-10 md:px-20"
+			aria-hidden="true"
+		>
 			<Skeleton class="h-3 w-45" />
 			<Skeleton class="h-7.5 w-95 rounded-lg" />
 			<Skeleton class="h-3 w-133.5" />
@@ -377,9 +503,19 @@
 		</div>
 	{:else if note && note.deletedAt}
 		<!-- Nota en la papelera: solo lectura, con avisos y acciones -->
-		<div class="flex flex-1 flex-col gap-5 overflow-y-auto px-12 pt-8">
-			<div class="flex items-center gap-3 rounded-xl bg-accent px-4 py-3.5" role="note">
-				<p class="flex-1 text-sm font-medium">
+		<div class="px-2 py-1 md:hidden">
+			<button
+				type="button"
+				aria-label="Volver a la lista"
+				onclick={() => (shell.editing = false)}
+				class="grid size-10 place-content-center rounded-full outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+			>
+				<AppIcon name="arrow-left" size={22} />
+			</button>
+		</div>
+		<div class="flex flex-1 flex-col gap-5 overflow-y-auto px-6 pt-3 pb-8 md:px-12 md:pt-8">
+			<div class="flex flex-wrap items-center gap-3 rounded-xl bg-accent px-4 py-3.5" role="note">
+				<p class="min-w-48 flex-1 text-sm font-medium">
 					Esta nota está en la papelera. Se eliminará definitivamente en {formatCount(
 						daysUntilPurge(note.deletedAt, now, TRASH_RETENTION_DAYS),
 						'día',
@@ -389,7 +525,9 @@
 				<Button onclick={() => restore(note)}>Restaurar</Button>
 				<Button variant="outline" onclick={() => (confirmDelete = true)}>Eliminar ahora</Button>
 			</div>
-			<h1 class="text-3xl leading-[38px] font-bold text-muted-foreground">{note.title}</h1>
+			<h1 class="text-title font-bold text-muted-foreground md:text-3xl md:leading-[38px]">
+				{note.title}
+			</h1>
 			<MarkdownView source={note.content} class="text-muted-foreground" />
 		</div>
 	{:else if note}
@@ -403,14 +541,49 @@
 					</span>
 				{/if}
 			</p>
-			<input
+			<textarea
 				aria-label="Título"
 				data-title-input
+				rows="1"
 				value={note.title}
 				placeholder="Sin título"
-				oninput={(e) => saveTitle(note.id, e.currentTarget.value)}
-				class="mb-3.5 w-full bg-transparent text-4xl leading-[42px] font-bold outline-none placeholder:text-tertiary"
-			/>
+				oninput={(e) => saveTitle(note.id, e.currentTarget.value.replace(/\n/g, ' '))}
+				onkeydown={(e) => e.key === 'Enter' && e.preventDefault()}
+				class="mb-3.5 field-sizing-content w-full resize-none bg-transparent text-title font-bold outline-none placeholder:text-tertiary md:text-4xl md:leading-[42px]"
+			></textarea>
+		{/snippet}
+
+		{#snippet mobileBar({ undo }: { undo: () => void })}
+			<div class="flex items-center gap-0.5 px-2 py-1">
+				<button
+					type="button"
+					aria-label="Volver a la lista"
+					onclick={() => (shell.editing = false)}
+					class="grid size-10 place-content-center rounded-full outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+				>
+					<AppIcon name="arrow-left" size={22} />
+				</button>
+				{#if folderName}
+					<span class="flex min-w-0 items-center gap-1.5 pl-1 text-sm font-semibold text-primary">
+						<AppIcon name="folder" size={16} class="shrink-0" />
+						<span class="truncate">{folderName}</span>
+					</span>
+				{/if}
+				<div class="flex-1"></div>
+				<ToolbarButton size="lg" icon="undo" label="Deshacer" onclick={undo} />
+				<ToolbarButton
+					size="lg"
+					icon="share"
+					label="Compartir"
+					onclick={() => runAction('share')}
+				/>
+				<NoteMenu
+					variant="dropdown"
+					size="lg"
+					pinned={note.pinned}
+					onaction={(id) => runAction(id)}
+				/>
+			</div>
 		{/snippet}
 
 		{#snippet actions()}
@@ -421,15 +594,16 @@
 		{#key note.id}
 			<NoteEditor
 				content={note.content}
-				class="px-20 pt-10 pb-8"
+				class="px-6 pt-3 pb-24 md:px-20 md:pt-10 md:pb-8"
 				{header}
 				{actions}
+				{mobileBar}
 				onchange={(md) => notes.update(note.id, { content: md })}
 			/>
 		{/key}
 
 		{#if note.tags.length}
-			<ul class="flex gap-2 px-20 pb-2">
+			<ul class="flex gap-2 px-6 pb-2 md:px-20">
 				{#each note.tags as tag, i (tag)}
 					<li
 						class="rounded-full bg-input-fill px-2.5 py-1 text-caption font-semibold {i % 2
@@ -442,7 +616,7 @@
 			</ul>
 		{/if}
 		<footer
-			class="flex items-center justify-end gap-2 px-6 pt-2 pb-2.5 text-caption font-medium text-tertiary"
+			class="hidden items-center justify-end gap-2 px-6 pt-2 pb-2.5 text-caption font-medium text-tertiary md:flex"
 		>
 			<span class="size-1.5 rounded-full bg-primary"></span>
 			{#if sync.isOffline}
@@ -468,7 +642,7 @@
 						aria-hidden="true">A</span
 					>
 				{/snippet}
-				<Button size="default" onclick={() => notes.create()}>Crear mi primera nota</Button>
+				<Button size="default" onclick={newNote}>Crear mi primera nota</Button>
 			</EmptyState>
 		{:else}
 			<EmptyState

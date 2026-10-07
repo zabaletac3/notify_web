@@ -9,11 +9,13 @@
 		/** `context`: clic derecho sobre `children`. `dropdown`: botón "más" de la barra. */
 		variant: 'context' | 'dropdown';
 		pinned?: boolean;
+		/** Tamaño del botón del menú desplegable. */
+		size?: 'sm' | 'lg';
 		onaction: (id: NoteActionId) => void;
 		children?: Snippet;
 	};
 
-	let { variant, pinned = false, onaction, children }: Props = $props();
+	let { variant, pinned = false, size = 'sm', onaction, children }: Props = $props();
 
 	const actions = $derived(noteActions(pinned));
 	const contentClass = 'w-62 rounded-xl px-0 py-1.5';
@@ -47,7 +49,9 @@
 		<DropdownMenu.Trigger
 			aria-label="Más acciones"
 			title="Más acciones"
-			class="grid size-8 place-content-center rounded-lg text-muted-foreground outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+			class="grid {size === 'lg'
+				? 'size-10'
+				: 'size-8'} place-content-center rounded-lg text-muted-foreground outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
 		>
 			<AppIcon name="more" size={18} />
 		</DropdownMenu.Trigger>

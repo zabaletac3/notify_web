@@ -20,10 +20,12 @@
 		header?: Snippet;
 		/** Botones del extremo derecho de la barra (compartir, más…). */
 		actions?: Snippet;
+		/** Barra superior para pantallas estrechas (volver, compartir…). Recibe `undo`. */
+		mobileBar?: Snippet<[{ undo: () => void }]>;
 		class?: string;
 	};
 
-	let { content, onchange, header, actions, class: className }: Props = $props();
+	let { content, onchange, header, actions, mobileBar, class: className }: Props = $props();
 
 	let element: HTMLDivElement;
 	let editor = $state.raw<Editor | null>(null);
@@ -85,11 +87,15 @@
 	});
 
 	const run = (fn: (e: Editor) => void) => editor && fn(editor);
+	const undo = () => run((e) => e.chain().focus().undo().run());
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col">
+<div class="relative flex min-h-0 flex-1 flex-col">
+	{#if mobileBar}
+		<div class="md:hidden">{@render mobileBar({ undo })}</div>
+	{/if}
 	<div
-		class="flex h-[53px] shrink-0 items-center gap-0.5 border-b py-2.5 pr-3 pl-4"
+		class="hidden h-[53px] shrink-0 items-center gap-0.5 border-b py-2.5 pr-3 pl-4 md:flex"
 		role="toolbar"
 		aria-label="Formato"
 	>
@@ -142,5 +148,57 @@
 	<div class={cn('flex-1 overflow-y-auto', className)}>
 		{@render header?.()}
 		<div bind:this={element} class="prose-apunte"></div>
+	</div>
+
+	<!-- Barra de formato flotante (pantallas estrechas) -->
+	<div class="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center md:hidden">
+		<div
+			class="pointer-events-auto flex items-center gap-1 rounded-3xl bg-sidebar p-1.5 shadow-lg ring-1 ring-foreground/5"
+			role="toolbar"
+			aria-label="Formato"
+		>
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger
+					class="flex h-8.5 items-center gap-1 rounded-full bg-input-fill pr-2 pl-3 text-sm font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+					aria-label="Estilo de texto"
+				>
+					Aa
+					<AppIcon name="chevron-down" size={14} />
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="start" side="top">
+					{#each styles as style (style.label)}
+						<DropdownMenu.Item onclick={() => run(style.apply)}>{style.label}</DropdownMenu.Item>
+					{/each}
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
+			<ToolbarButton
+				size="lg"
+				icon="bold"
+				label="Negrita"
+				active={active('bold')}
+				onclick={() => run((e) => e.chain().focus().toggleBold().run())}
+			/>
+			<ToolbarButton
+				size="lg"
+				icon="italic"
+				label="Cursiva"
+				active={active('italic')}
+				onclick={() => run((e) => e.chain().focus().toggleItalic().run())}
+			/>
+			<ToolbarButton
+				size="lg"
+				icon="list"
+				label="Lista"
+				active={active('bulletList')}
+				onclick={() => run((e) => e.chain().focus().toggleBulletList().run())}
+			/>
+			<ToolbarButton
+				size="lg"
+				icon="checklist"
+				label="Lista de tareas"
+				active={active('taskList')}
+				onclick={() => run((e) => e.chain().focus().toggleTaskList().run())}
+			/>
+		</div>
 	</div>
 </div>

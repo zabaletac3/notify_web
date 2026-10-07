@@ -3,8 +3,15 @@
 	import type { IconName } from './icons.js';
 	import { cn } from '#lib/utils.js';
 
-	type Props = { icon: IconName; label: string; active?: boolean; onclick?: () => void };
-	let { icon, label, active = false, onclick }: Props = $props();
+	type Props = {
+		icon: IconName;
+		label: string;
+		active?: boolean;
+		/** `lg`: 40 px (barra flotante móvil). */
+		size?: 'sm' | 'lg';
+		onclick?: () => void;
+	};
+	let { icon, label, active = false, size = 'sm', onclick }: Props = $props();
 </script>
 
 <button
@@ -14,7 +21,8 @@
 	aria-pressed={active}
 	title={label}
 	class={cn(
-		'grid size-8 place-content-center rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+		size === 'lg' ? 'size-10' : 'size-8',
+		'grid place-content-center rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
 		active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-hover'
 	)}
 >
