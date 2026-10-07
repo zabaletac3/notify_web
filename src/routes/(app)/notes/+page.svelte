@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getApp } from '#lib/app/index.js';
-	import { AppIcon, MarkdownView, NoteCard, ToolbarButton } from '#lib/components/app/index.js';
+	import { AppIcon, MarkdownView, NoteCard, NoteEditor } from '#lib/components/app/index.js';
 	import { Skeleton } from '#lib/components/ui/skeleton/index.js';
 	import { formatCount, formatNoteDate, formatNoteDateLong } from '#lib/core/index.js';
 	import { countWords, derivePreview, type NotesFilter } from '#lib/domain/index.js';
@@ -31,6 +31,12 @@
 	});
 
 	const note = $derived(notes.selected);
+
+	let titleTimer: ReturnType<typeof setTimeout> | undefined;
+	function saveTitle(id: string, title: string) {
+		clearTimeout(titleTimer);
+		titleTimer = setTimeout(() => notes.update(id, { title }), 400);
+	}
 	const folderName = $derived(note?.folderId ? folders.name(note.folderId) : '');
 </script>
 
@@ -109,32 +115,11 @@
 	{/if}
 </section>
 
-<!-- Editor (solo lectura por ahora; TipTap llega después) -->
+<!-- Editor -->
 <main class="flex min-w-0 flex-1 flex-col bg-background">
-	<div
-		class="flex h-[53px] items-center gap-0.5 border-b py-2.5 pr-3 pl-4"
-		role="toolbar"
-		aria-label="Formato"
-	>
-		<span
-			class="mr-1.5 flex h-7 items-center gap-1 rounded-lg bg-input-fill px-2.5 text-label font-medium"
-		>
-			Párrafo <AppIcon name="chevron-down" size={14} />
-		</span>
-		<ToolbarButton icon="bold" label="Negrita" active />
-		<ToolbarButton icon="italic" label="Cursiva" />
-		<ToolbarButton icon="list" label="Lista" />
-		<ToolbarButton icon="checklist" label="Lista de tareas" />
-		<span class="mx-1 h-[18px] w-px bg-border"></span>
-		<ToolbarButton icon="image" label="Imagen" />
-		<div class="flex-1"></div>
-		<ToolbarButton icon="share" label="Compartir" />
-		<ToolbarButton icon="more" label="Más acciones" />
-	</div>
-
 	{#if note}
-		<article class="flex flex-1 flex-col gap-3.5 overflow-y-auto px-20 pt-10 pb-8">
-			<p class="flex items-center gap-2 text-caption font-medium text-tertiary">
+		{#snippet header()}
+			<p class="mb-3.5 flex items-center gap-2 text-caption font-medium text-tertiary">
 				{formatNoteDateLong(note.updatedAt)}
 				{#if folderName}
 					<span>·</span>
@@ -143,22 +128,48 @@
 					</span>
 				{/if}
 			</p>
-			<h1 class="text-4xl leading-[42px] font-bold">{note.title}</h1>
-			<MarkdownView source={note.content} />
-			{#if note.tags.length}
-				<ul class="flex gap-2 pt-1.5">
-					{#each note.tags as tag, i (tag)}
-						<li
-							class="rounded-full bg-input-fill px-2.5 py-1 text-caption font-semibold {i % 2
-								? 'text-tag-plum'
-								: 'text-tag-amber'}"
-						>
-							#{tag}
-						</li>
-					{/each}
-				</ul>
+			{#if note.deletedAt}
+				<h1 class="mb-3.5 text-4xl leading-[42px] font-bold">{note.title}</h1>
+			{:else}
+				<input
+					aria-label="Título"
+					value={note.title}
+					placeholder="Sin título"
+					oninput={(e) => saveTitle(note.id, e.currentTarget.value)}
+					class="mb-3.5 w-full bg-transparent text-4xl leading-[42px] font-bold outline-none placeholder:text-tertiary"
+				/>
 			{/if}
-		</article>
+		{/snippet}
+
+		{#if note.deletedAt}
+			<div class="flex-1 overflow-y-auto px-20 pt-10 pb-8">
+				{@render header()}
+				<MarkdownView source={note.content} />
+			</div>
+		{:else}
+			{#key note.id}
+				<NoteEditor
+					content={note.content}
+					class="px-20 pt-10 pb-8"
+					{header}
+					onchange={(md) => notes.update(note.id, { content: md })}
+				/>
+			{/key}
+		{/if}
+
+		{#if note.tags.length}
+			<ul class="flex gap-2 px-20 pb-2">
+				{#each note.tags as tag, i (tag)}
+					<li
+						class="rounded-full bg-input-fill px-2.5 py-1 text-caption font-semibold {i % 2
+							? 'text-tag-plum'
+							: 'text-tag-amber'}"
+					>
+						#{tag}
+					</li>
+				{/each}
+			</ul>
+		{/if}
 		<footer
 			class="flex items-center justify-end gap-2 px-6 pt-2 pb-2.5 text-caption font-medium text-tertiary"
 		>

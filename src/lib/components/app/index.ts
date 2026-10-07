@@ -6,3 +6,4 @@ export { default as MarkdownView } from './markdown-view.svelte';
 export { default as NoteCard } from './note-card.svelte';
 export { default as SidebarItem } from './sidebar-item.svelte';
 export { default as ToolbarButton } from './toolbar-button.svelte';
+export { default as NoteEditor } from './note-editor.svelte';
