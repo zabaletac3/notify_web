@@ -3,7 +3,7 @@
 App de notas **original** (cálida, tipo "papel", acento azul) para web, escritorio (Tauri 2) y, por separado, móvil (Flutter).
 Este repositorio contiene la **web** y es la base de la app de escritorio.
 
-> Estado: **fase 1 hecha y fase 2 (parte sin Figma) hecha**. Las pantallas se construyen en las fases siguientes — ver [`docs/roadmap.md`](docs/roadmap.md).
+> Estado: andamiaje, sistema de diseño base, **tipos, datos simulados y estado** listos. Falta construir las pantallas (con Figma). Las pantallas se construyen en las fases siguientes — ver [`docs/roadmap.md`](docs/roadmap.md).
 
 ## Stack
 
@@ -28,7 +28,7 @@ cp .env.example .env
 pnpm dev            # http://localhost:5173
 ```
 
-Catálogo de tokens y componentes (solo en desarrollo): <http://localhost:5173/dev/design-system>
+Solo en desarrollo: catálogo de tokens y componentes <http://localhost:5173/dev/design-system> · simulador de escenarios (sin conexión, errores, conflictos…) <http://localhost:5173/dev/simulator>
 
 Si las pruebas de navegador no encuentran Chromium, apunta a uno instalado: `CHROMIUM_PATH=/ruta/al/chrome pnpm test:unit`.
 
@@ -56,10 +56,12 @@ src/
    ├─ components/
    │  ├─ ui/         shadcn-svelte (código propio, generado)
    │  └─ app/        componentes compuestos de Apunte (NoteCard, SidebarItem…)
-   ├─ features/      notes · folders · search · trash · settings · auth · sync · share
-   ├─ data/          contratos (repositorios) + implementaciones: mock · local · remote
-   ├─ domain/        tipos de dominio, sin dependencias
-   ├─ core/          infraestructura transversal (HTTP, errores, config)
+   ├─ app/           raíz de composición (createApp) y contexto (getApp)
+   ├─ features/      notes · folders · search · trash · settings · auth · sync · share (estado con runes)
+   ├─ data/          contratos (repositorios) + implementaciones: mock (hecho) · local · remote
+   ├─ domain/        tipos de dominio y reglas puras, sin dependencias
+   ├─ core/          formato, mensajes, attempt() (luego HTTP, config)
+   ├─ dev/           panel del simulador de escenarios (solo desarrollo)
    ├─ hooks/         hooks de UI
    └─ styles/        tokens.css (claro/oscuro) + theme.css (utilidades Tailwind)
 ```
@@ -81,6 +83,7 @@ Después de añadir uno, revisa que use los tokens (`bg-background`, `text-prima
 - [`docs/architecture.md`](docs/architecture.md) — capas, carpetas, patrón de repositorios y estado.
 - [`docs/conventions.md`](docs/conventions.md) — nombres, commits, Tailwind, pruebas, accesibilidad, seguridad.
 - [`docs/design-tokens.md`](docs/design-tokens.md) — mapa Figma → variables CSS.
+- [`docs/data-and-state.md`](docs/data-and-state.md) — tipos, contratos de datos, datos simulados, simulador y estado.
 - [`docs/components.md`](docs/components.md) — componentes base, escala tipográfica, contraste y pendientes de validar con Figma.
 - [`docs/roadmap.md`](docs/roadmap.md) — fases del trabajo.
 - [`docs/adr/`](docs/adr) — decisiones de arquitectura.

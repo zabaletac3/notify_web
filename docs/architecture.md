@@ -54,6 +54,14 @@ export class NotesState {
 
 Se crea una vez en el layout `(app)` y se comparte con `setContext`/`getContext`. En pruebas se inyecta un repositorio mock.
 
+## Composición y contexto
+
+`src/lib/app/create-app.svelte.ts` es la **raíz de composición**: crea los repositorios (hoy los simulados), los estados (`NotesState`, `AuthState`, …) y los conecta (p. ej. sincronizar recarga las notas; una sesión vencida avisa a `AuthState`). El layout raíz llama `setApp(createApp())` y cualquier componente usa `getApp()`. Es el único lugar que cambia al pasar a datos reales.
+
+## Errores
+
+Los repositorios lanzan `AppFailure` con un `AppError` tipado (`network`, `server`, `session-expired`, `validation`, `conflict`…). El estado los atrapa con `attempt()` y devuelve `ActionResult`, así las pantallas no usan `try/catch`. Los textos están en `core/messages.ts`.
+
 ## Rutas
 
 - `(marketing)`: prerenderizada (`prerender = true`).

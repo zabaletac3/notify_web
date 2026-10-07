@@ -1,2 +1,8 @@
 // API pública de la feature "search". Importar siempre desde aquí, nunca desde sus carpetas internas.
-export {};
+export {
+	SearchState,
+	type SearchableNotes,
+	type SearchResult,
+	type SearchScope,
+	type SearchStatus
+} from './state/search.svelte.js';

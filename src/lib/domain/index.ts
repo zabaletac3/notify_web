@@ -1,2 +1,14 @@
-// Tipos de dominio (Note, Folder, Tag, Device…). Sin dependencias de UI, datos ni framework.
-export {};
+// Tipos y reglas puras del dominio. Sin dependencias de UI, datos ni framework.
+export * from './ids.js';
+export * from './errors.js';
+export * from './note.js';
+export * from './note-text.js';
+export * from './note-groups.js';
+export * from './folder.js';
+export * from './user.js';
+export * from './auth.js';
+export * from './device.js';
+export * from './share.js';
+export * from './sync.js';
+export * from './settings.js';
+export * from './validation.js';

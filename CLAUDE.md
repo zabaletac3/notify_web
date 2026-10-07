@@ -27,3 +27,7 @@ Fuente de verdad: archivo de Figma "Apunte – App de notas" (35 vistas, escrito
 
 Ver `docs/components.md`: escala tipográfica (`text-title/heading/body/label/caption`), radios, ajustes a shadcn y pendientes con Figma. Iconos solo vía `AppIcon` (`src/lib/components/app`).
 Pruebas de navegador: si no hay Chromium de Playwright, usar `CHROMIUM_PATH=/ruta/al/chrome`.
+
+## Datos y estado
+
+Ver `docs/data-and-state.md`. La UI obtiene todo con `getApp()` (`#lib/app/index.js`); nunca llama a repositorios directamente. Las acciones de estado devuelven `ActionResult` (no lanzan) y los errores de validación son códigos (`validationMessage`). Para ver estados (sin conexión, error, conflicto, vacío) usar el simulador en `/dev/simulator`. Las pruebas de estado usan `testApp()` de `#lib/test/test-app.js`.

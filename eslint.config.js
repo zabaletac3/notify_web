@@ -13,7 +13,7 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 
 /** Prohíbe importar archivos internos de una feature (solo su index). */
 const deepFeatureImport = {
-	group: ['\\#lib/features/*/*', '\\#lib/features/*/*/**'],
+	group: ['\\#lib/features/*/*', '\\#lib/features/*/*/**', '!\\#lib/features/*/index.js'],
 	message: 'Importa la feature desde su index: #lib/features/<nombre>/index.js'
 };
 
