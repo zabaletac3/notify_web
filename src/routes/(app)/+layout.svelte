@@ -4,6 +4,8 @@
 	import { getApp } from '#lib/app/index.js';
 	import { AppIcon, SidebarItem, ThemeToggle } from '#lib/components/app/index.js';
 	import type { NotesFilter } from '#lib/domain/index.js';
+	import NoteDialogs from './note-dialogs.svelte';
+	import { dialogs } from './dialogs.svelte.js';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
@@ -104,6 +106,7 @@
 		/>
 		<button
 			type="button"
+			onclick={() => dialogs.open('folder')}
 			class="flex items-center gap-2 px-2.5 pt-2.5 pb-1 text-label font-semibold text-primary"
 		>
 			<AppIcon name="folder-plus" size={16} /> Nueva carpeta
@@ -112,3 +115,5 @@
 
 	{@render children()}
 </div>
+
+<NoteDialogs />

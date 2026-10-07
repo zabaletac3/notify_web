@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { getApp } from '#lib/app/index.js';
 	import {
@@ -6,7 +7,10 @@
 		EmptyState,
 		MarkdownView,
 		NoteCard,
-		NoteEditor
+		NoteEditor,
+		NoteMenu,
+		ToolbarButton,
+		type NoteActionId
 	} from '#lib/components/app/index.js';
 	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
@@ -21,6 +25,8 @@
 		type Note,
 		type NotesFilter
 	} from '#lib/domain/index.js';
+
+	import { dialogs } from '../dialogs.svelte.js';
 
 	const app = getApp();
 	const { notes, folders, settings } = app;
@@ -87,8 +93,59 @@
 		else if (!results.some((r) => r.note.id === notes.selectedId)) notes.select(results[0].note.id);
 	});
 
+	async function runAction(id: NoteActionId, target: Note | null = note) {
+		if (!target) return;
+		switch (id) {
+			case 'pin':
+				await notes.togglePin(target.id);
+				break;
+			case 'move':
+				dialogs.open('move', target.id);
+				break;
+			case 'share':
+				dialogs.open('share', target.id);
+				break;
+			case 'trash':
+				dialogs.open('trash', target.id);
+				break;
+			case 'duplicate': {
+				const result = await notes.duplicate(target.id);
+				toast[result.ok ? 'success' : 'error'](
+					result.ok ? 'Nota duplicada' : 'No se pudo duplicar la nota'
+				);
+				break;
+			}
+			case 'rename':
+				notes.select(target.id);
+				await tick();
+				document.querySelector<HTMLInputElement>('[data-title-input]')?.select();
+				break;
+		}
+	}
+
 	function onKeydown(e: KeyboardEvent) {
+		if (e.key === 'F2' && !inTrash) {
+			e.preventDefault();
+			void runAction('rename');
+			return;
+		}
+		const typing = (e.target as HTMLElement | null)?.closest('input, textarea, [contenteditable]');
+		if (e.key === 'Delete' && !typing && !inTrash) {
+			void runAction('trash');
+			return;
+		}
 		if (!(e.ctrlKey || e.metaKey)) return;
+		const key = e.key.toLowerCase();
+		const shortcuts: Record<string, NoteActionId> = { p: 'pin', m: 'move', d: 'duplicate' };
+		if (inTrash) {
+			// En la papelera solo se busca.
+		} else if (key === 's' && e.shiftKey) {
+			e.preventDefault();
+			void runAction('share');
+		} else if (shortcuts[key] && !e.shiftKey) {
+			e.preventDefault();
+			void runAction(shortcuts[key]);
+		}
 		if (e.key.toLowerCase() === 'n' && !inTrash) {
 			e.preventDefault();
 			void notes.create();
@@ -131,15 +188,25 @@
 </script>
 
 {#snippet card(n: Note)}
-	<NoteCard
-		title={n.title}
-		preview={inTrash || !settings.values.showPreview ? '' : derivePreview(n.content)}
-		date={formatNoteDate(n.deletedAt ?? n.updatedAt, now)}
-		folder={inTrash ? purgeLabel(n) : n.folderId ? folders.name(n.folderId) : undefined}
-		pinned={n.pinned}
-		selected={n.id === notes.selectedId}
-		onclick={() => notes.select(n.id)}
-	/>
+	{#snippet item()}
+		<NoteCard
+			title={n.title}
+			preview={inTrash || !settings.values.showPreview ? '' : derivePreview(n.content)}
+			date={formatNoteDate(n.deletedAt ?? n.updatedAt, now)}
+			folder={inTrash ? purgeLabel(n) : n.folderId ? folders.name(n.folderId) : undefined}
+			pinned={n.pinned}
+			selected={n.id === notes.selectedId}
+			onclick={() => notes.select(n.id)}
+		/>
+	{/snippet}
+
+	{#if inTrash}
+		{@render item()}
+	{:else}
+		<NoteMenu variant="context" pinned={n.pinned} onaction={(id) => runAction(id, n)}>
+			{@render item()}
+		</NoteMenu>
+	{/if}
 {/snippet}
 
 <!-- Lista de notas: 336 px -->
@@ -294,6 +361,7 @@
 			</p>
 			<input
 				aria-label="Título"
+				data-title-input
 				value={note.title}
 				placeholder="Sin título"
 				oninput={(e) => saveTitle(note.id, e.currentTarget.value)}
@@ -301,11 +369,17 @@
 			/>
 		{/snippet}
 
+		{#snippet actions()}
+			<ToolbarButton icon="share" label="Compartir" onclick={() => runAction('share')} />
+			<NoteMenu variant="dropdown" pinned={note.pinned} onaction={(id) => runAction(id)} />
+		{/snippet}
+
 		{#key note.id}
 			<NoteEditor
 				content={note.content}
 				class="px-20 pt-10 pb-8"
 				{header}
+				{actions}
 				onchange={(md) => notes.update(note.id, { content: md })}
 			/>
 		{/key}

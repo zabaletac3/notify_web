@@ -11,3 +11,5 @@ export { default as ChoiceRow } from './choice-row.svelte';
 export { default as SettingRow } from './setting-row.svelte';
 export { default as SettingsGroup } from './settings-group.svelte';
 export { default as EmptyState } from './empty-state.svelte';
+export { default as NoteMenu } from './note-menu.svelte';
+export { noteActions, type NoteAction, type NoteActionId } from './note-actions.js';

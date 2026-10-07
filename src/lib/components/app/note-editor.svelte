@@ -18,10 +18,12 @@
 		onchange?: (markdown: string) => void;
 		/** Se dibuja dentro del área con scroll, encima del texto (fecha, título…). */
 		header?: Snippet;
+		/** Botones del extremo derecho de la barra (compartir, más…). */
+		actions?: Snippet;
 		class?: string;
 	};
 
-	let { content, onchange, header, class: className }: Props = $props();
+	let { content, onchange, header, actions, class: className }: Props = $props();
 
 	let element: HTMLDivElement;
 	let editor = $state.raw<Editor | null>(null);
@@ -135,6 +137,7 @@
 			onclick={() => run((e) => e.chain().focus().undo().run())}
 		/>
 		<div class="flex-1"></div>
+		{@render actions?.()}
 	</div>
 	<div class={cn('flex-1 overflow-y-auto', className)}>
 		{@render header?.()}
