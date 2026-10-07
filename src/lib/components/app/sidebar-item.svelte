@@ -20,7 +20,7 @@
 	{onclick}
 	aria-current={selected ? 'page' : undefined}
 	class={cn(
-		'flex h-[34px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+		'flex h-8.5 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
 		selected
 			? 'bg-accent font-semibold text-accent-foreground'
 			: 'font-medium text-foreground hover:bg-hover'

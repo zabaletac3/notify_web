@@ -2,7 +2,6 @@
 .prose-apunte {
 	font-size: var(--text-prose);
 	line-height: var(--text-prose--line-height);
-	color: var(--foreground);
 }
 .prose-apunte p {
 	margin: 0 0 0.875rem;

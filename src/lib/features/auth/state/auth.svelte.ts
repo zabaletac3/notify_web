@@ -134,6 +134,14 @@ export class AuthState {
 		});
 	}
 
+	async deleteAccount(): Promise<ActionResult> {
+		return this.act({ valid: true }, async () => {
+			await this.repo.deleteAccount();
+			this.user = null;
+			this.status = 'anonymous';
+		});
+	}
+
 	/** Pide el enlace de recuperación. Siempre "funciona" para no revelar qué correos existen. */
 	async forgotPassword(email: string): Promise<ActionResult> {
 		return this.act(validateEmail(email), async () => {

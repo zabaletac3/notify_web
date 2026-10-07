@@ -53,6 +53,8 @@ export interface AuthRepository {
 	resendVerificationCode(email: string): Promise<void>;
 	login(input: LoginInput): Promise<Session>;
 	logout(): Promise<void>;
+	/** Elimina la cuenta y todos sus datos (se conservan 30 días antes del borrado definitivo). */
+	deleteAccount(): Promise<void>;
 	/** Sesión vigente, o `null` si no hay sesión. Lanza `session-expired` si venció. */
 	currentSession(): Promise<Session | null>;
 	/** Siempre resuelve, exista o no la cuenta (no revela qué correos están registrados). */

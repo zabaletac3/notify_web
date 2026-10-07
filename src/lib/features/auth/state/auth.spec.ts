@@ -97,6 +97,15 @@ describe('AuthState · inicio de sesión', () => {
 		expect(auth.user).toBeNull();
 	});
 
+	it('elimina la cuenta y deja la sesión cerrada', async () => {
+		const { auth } = await testApp();
+		expect(auth.isAuthenticated).toBe(true);
+		const r = await auth.deleteAccount();
+		expect(r.ok).toBe(true);
+		expect(auth.status).toBe('anonymous');
+		expect(auth.user).toBeNull();
+	});
+
 	it('credenciales incorrectas: error general, sin errores por campo', async () => {
 		const { auth } = await testApp({ startAuthenticated: false });
 		const r = await auth.login({ email: DEMO_USER_EMAIL, password: 'mal' });

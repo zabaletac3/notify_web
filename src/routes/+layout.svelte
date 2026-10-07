@@ -1,8 +1,8 @@
 <script lang="ts">
 	import './layout.css';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import favicon from '#lib/assets/favicon.svg';
-	import { ModeWatcher } from 'mode-watcher';
+	import { ModeWatcher, setMode } from 'mode-watcher';
 	import { createApp, setApp } from '#lib/app/index.js';
 	import { Toaster } from '#lib/components/ui/sonner/index.js';
 	import type { LayoutProps } from './$types';
@@ -11,6 +11,16 @@
 
 	// Estado global de la app. En desarrollo se simula una pequeña latencia para ver los estados de carga.
 	const app = setApp(createApp({ latencyMs: import.meta.env.DEV ? 250 : 0 }));
+
+	// Los ajustes guardados mandan sobre el tema y el orden de las notas.
+	$effect(() => {
+		if (app.settings.status !== 'ready') return;
+		const { theme, noteOrder } = app.settings.values;
+		untrack(() => {
+			setMode(theme);
+			app.notes.sort = noteOrder;
+		});
+	});
 
 	onMount(() => {
 		void app.bootstrap();

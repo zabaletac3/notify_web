@@ -92,3 +92,8 @@
 	--text-prose: 1.0625rem; /* 17 · cuerpo del editor */
 	--text-prose--line-height: 1.75rem;
 }
+
+@theme inline {
+	--text-page: 1.625rem; /* 26 · título de las pantallas de ajustes */
+	--text-page--line-height: 2rem;
+}

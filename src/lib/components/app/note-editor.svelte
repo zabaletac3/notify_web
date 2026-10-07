@@ -6,7 +6,9 @@
 	import TaskItem from '@tiptap/extension-task-item';
 	import TaskList from '@tiptap/extension-task-list';
 	import StarterKit from '@tiptap/starter-kit';
+	import AppIcon from './app-icon.svelte';
 	import ToolbarButton from './toolbar-button.svelte';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
 	import { cn } from '#lib/utils.js';
 
 	type Props = {
@@ -68,6 +70,18 @@
 		editor?.destroy();
 	});
 
+	const styles = [
+		{ label: 'Párrafo', apply: (e: Editor) => e.chain().focus().setParagraph().run() },
+		{ label: 'Título 1', apply: (e: Editor) => e.chain().focus().setHeading({ level: 1 }).run() },
+		{ label: 'Título 2', apply: (e: Editor) => e.chain().focus().setHeading({ level: 2 }).run() },
+		{ label: 'Título 3', apply: (e: Editor) => e.chain().focus().setHeading({ level: 3 }).run() }
+	];
+	const currentStyle = $derived.by(() => {
+		void tick;
+		const level = [1, 2, 3].find((l) => editor?.isActive('heading', { level: l }));
+		return level ? `Título ${level}` : 'Párrafo';
+	});
+
 	const run = (fn: (e: Editor) => void) => editor && fn(editor);
 </script>
 
@@ -77,6 +91,19 @@
 		role="toolbar"
 		aria-label="Formato"
 	>
+		<DropdownMenu.Root>
+			<DropdownMenu.Trigger
+				class="mr-1.5 flex h-7 items-center gap-1 rounded-lg bg-input-fill pr-2 pl-2.5 text-label font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+			>
+				{currentStyle}
+				<AppIcon name="chevron-down" size={14} />
+			</DropdownMenu.Trigger>
+			<DropdownMenu.Content align="start">
+				{#each styles as style (style.label)}
+					<DropdownMenu.Item onclick={() => run(style.apply)}>{style.label}</DropdownMenu.Item>
+				{/each}
+			</DropdownMenu.Content>
+		</DropdownMenu.Root>
 		<ToolbarButton
 			icon="bold"
 			label="Negrita"

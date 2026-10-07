@@ -81,6 +81,11 @@ export class MockAuthRepository implements AuthRepository {
 		this.db.session = null;
 	}
 
+	async deleteAccount(): Promise<void> {
+		await this.db.local('write');
+		this.db.session = null;
+	}
+
 	async currentSession(): Promise<Session | null> {
 		await this.db.local('write');
 		if (this.db.scenario.sessionExpired && this.db.session) {

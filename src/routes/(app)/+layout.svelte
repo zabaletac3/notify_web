@@ -23,7 +23,7 @@
 <div class="flex h-screen bg-card text-foreground">
 	<!-- Barra lateral: 248 px -->
 	<aside
-		class="flex w-62 shrink-0 flex-col gap-0.5 overflow-y-auto border-r bg-sidebar px-3 pt-3.5 pb-3.5"
+		class="flex w-62 shrink-0 flex-col gap-0.5 overflow-y-auto border-r bg-sidebar px-3 pt-3.5 pb-3.5 *:shrink-0"
 		aria-label="Navegación"
 	>
 		<div class="flex items-center gap-2.5 pt-0.5 pr-1 pb-3.5 pl-1.5">
@@ -32,6 +32,13 @@
 				>a</span
 			>
 			<span class="flex-1 text-xl font-bold">Apunte</span>
+			<a
+				href="/settings"
+				aria-label="Ajustes"
+				class="grid size-8 place-content-center rounded-lg text-muted-foreground outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+			>
+				<AppIcon name="settings" size={18} />
+			</a>
 			<ThemeToggle />
 		</div>
 
