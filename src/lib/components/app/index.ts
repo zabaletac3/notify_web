@@ -18,3 +18,5 @@ export { default as AuthCard } from './auth-card.svelte';
 export { default as AuthField } from './auth-field.svelte';
 export { default as GoogleButton } from './google-button.svelte';
 export { default as StrengthMeter } from './strength-meter.svelte';
+export { default as ResponsiveDialog } from './responsive-dialog.svelte';
+export { viewport } from './viewport.svelte.js';

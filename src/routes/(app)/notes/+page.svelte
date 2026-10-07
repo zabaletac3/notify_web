@@ -166,6 +166,12 @@
 		if (!note) shell.editing = false;
 	});
 
+	function sheetSubtitle(n: Note) {
+		const when = formatNoteDate(n.updatedAt, now);
+		const folder = n.folderId ? `${folders.name(n.folderId)} · ` : '';
+		return `${folder}${when.includes(':') ? `hoy ${when}` : when.toLowerCase()}`;
+	}
+
 	function open(id: string) {
 		notes.select(id);
 		shell.editing = true;
@@ -228,7 +234,13 @@
 	{#if inTrash}
 		{@render item()}
 	{:else}
-		<NoteMenu variant="context" pinned={n.pinned} onaction={(id) => runAction(id, n)}>
+		<NoteMenu
+			variant="context"
+			pinned={n.pinned}
+			title={n.title}
+			subtitle={sheetSubtitle(n)}
+			onaction={(id) => runAction(id, n)}
+		>
 			{@render item()}
 		</NoteMenu>
 	{/if}
@@ -581,6 +593,8 @@
 					variant="dropdown"
 					size="lg"
 					pinned={note.pinned}
+					title={note.title}
+					subtitle={sheetSubtitle(note)}
 					onaction={(id) => runAction(id)}
 				/>
 			</div>

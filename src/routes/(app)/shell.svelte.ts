@@ -1,5 +1,4 @@
-import { MediaQuery } from 'svelte/reactivity';
-
+import { viewport } from '#lib/components/app/index.js';
 /**
  * Estado del marco de la app que depende del tamaño de pantalla.
  *  - ≥ 1024 px: barra lateral fija + lista + editor.
@@ -12,9 +11,9 @@ class Shell {
 	/** En pantallas estrechas: `true` muestra el editor, `false` la lista. */
 	editing = $state(false);
 	/** Barra lateral fija. */
-	wide = new MediaQuery('min-width: 1024px');
+	wide = viewport.wide;
 	/** Lista y editor lado a lado. */
-	split = new MediaQuery('min-width: 768px');
+	split = viewport.split;
 }
 
 export const shell = new Shell();
