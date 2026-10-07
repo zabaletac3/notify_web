@@ -1,6 +1,7 @@
 import {
 	fail,
 	normalizeTag,
+	queryNotes,
 	TRASH_RETENTION_DAYS,
 	type Id,
 	type Note,
@@ -39,29 +40,7 @@ export class MockNoteRepository implements NoteRepository {
 	async list(query: NoteQuery = {}): Promise<Note[]> {
 		await this.db.local('read');
 		this.purgeExpired();
-		const filter = query.filter ?? { kind: 'all' };
-		let items = this.db.notes.filter((n) => {
-			if (filter.kind === 'trash') return n.deletedAt !== null;
-			if (n.deletedAt) return false;
-			switch (filter.kind) {
-				case 'pinned':
-					return n.pinned;
-				case 'folder':
-					return n.folderId === filter.folderId;
-				case 'tag':
-					return n.tags.includes(filter.tag);
-				default:
-					return true;
-			}
-		});
-		const sort = query.sort ?? 'updated';
-		items = [...items].sort((a, b) =>
-			sort === 'title'
-				? a.title.localeCompare(b.title, 'es', { sensitivity: 'base' })
-				: sort === 'created'
-					? b.createdAt.localeCompare(a.createdAt)
-					: b.updatedAt.localeCompare(a.updatedAt)
-		);
+		const items = queryNotes(this.db.notes, query);
 		return clone(items);
 	}
 

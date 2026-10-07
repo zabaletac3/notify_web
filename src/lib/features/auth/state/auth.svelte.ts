@@ -47,11 +47,18 @@ export class AuthState {
 
 	private readonly repo: AuthRepository;
 	private readonly clock: () => Date;
+	private readonly onSignedOut: () => void | Promise<void>;
 
-	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fábrica del reloj, no es estado
-	constructor(repo: AuthRepository, clock: () => Date = () => new Date()) {
+	/** @param hooks.onSignedOut se llama al cerrar sesión o borrar la cuenta (para limpiar la copia local) */
+	constructor(
+		repo: AuthRepository,
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fábrica del reloj, no es estado
+		clock: () => Date = () => new Date(),
+		hooks: { onSignedOut?: () => void | Promise<void> } = {}
+	) {
 		this.repo = repo;
 		this.clock = clock;
+		this.onSignedOut = hooks.onSignedOut ?? (() => {});
 	}
 
 	isAuthenticated = $derived(this.status === 'authenticated');
@@ -136,6 +143,7 @@ export class AuthState {
 			await this.repo.logout();
 			this.user = null;
 			this.status = 'anonymous';
+			await this.onSignedOut();
 		});
 	}
 
@@ -144,6 +152,7 @@ export class AuthState {
 			await this.repo.deleteAccount();
 			this.user = null;
 			this.status = 'anonymous';
+			await this.onSignedOut();
 		});
 	}
 

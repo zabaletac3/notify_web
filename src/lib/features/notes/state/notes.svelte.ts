@@ -40,10 +40,18 @@ export class NotesState {
 	private readonly repo: NoteRepository;
 	private readonly clock: () => Date;
 
-	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fábrica del reloj, no es estado
-	constructor(repo: NoteRepository, clock: () => Date = () => new Date()) {
+	private readonly onWrite: () => void;
+
+	/** @param onWrite se llama tras cada escritura correcta (para actualizar el contador de cambios pendientes). */
+	constructor(
+		repo: NoteRepository,
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fábrica del reloj, no es estado
+		clock: () => Date = () => new Date(),
+		onWrite: () => void = () => {}
+	) {
 		this.repo = repo;
 		this.clock = clock;
+		this.onWrite = onWrite;
 	}
 
 	active = $derived(this.all.filter((n) => !n.deletedAt));
@@ -143,6 +151,15 @@ export class NotesState {
 			])
 		);
 		if (result.ok) this.all = [...result.value[0], ...result.value[1]];
+	}
+
+	/** Vacía el estado (al cerrar sesión). */
+	reset() {
+		this.all = [];
+		this.status = 'idle';
+		this.error = null;
+		this.selectedId = null;
+		this.filter = { kind: 'all' };
 	}
 
 	// ─── Navegación ───────────────────────────────────────────────────────────
@@ -262,6 +279,7 @@ export class NotesState {
 		this.lastError = null;
 		const result = await attempt(action);
 		if (!result.ok) this.lastError = result.error;
+		else this.onWrite();
 		return result;
 	}
 }

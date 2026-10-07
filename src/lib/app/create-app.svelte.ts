@@ -1,5 +1,11 @@
 import { untrack } from 'svelte';
-import { createMockBackend, type Dataset, type MockBackend } from '#lib/data/index.js';
+import {
+	createLocalBackend,
+	createMockBackend,
+	type Dataset,
+	type LocalBackend,
+	type MockBackend
+} from '#lib/data/index.js';
 import { AuthState } from '#lib/features/auth/index.js';
 import { FoldersState } from '#lib/features/folders/index.js';
 import { NotesState } from '#lib/features/notes/index.js';
@@ -9,7 +15,19 @@ import { ShareState } from '#lib/features/share/index.js';
 import { StorageState } from '#lib/features/storage/index.js';
 import { SyncState } from '#lib/features/sync/index.js';
 
+/** Cada cuántos ms se sincroniza sola tras un cambio (agrupa ediciones seguidas). */
+export const AUTO_SYNC_DELAY_MS = 2500;
+/** Cada cuántos ms se consultan cambios de otros dispositivos con la app abierta. */
+export const AUTO_SYNC_POLL_MS = 60_000;
+
 export interface AppOptions {
+	/**
+	 * Dónde viven las notas: `memory` (todo en el simulador, sin guardar) o `indexeddb`
+	 * (copia local en el navegador que se sincroniza con el servidor).
+	 */
+	persistence?: 'memory' | 'indexeddb';
+	/** Nombre de la base IndexedDB (solo con `persistence: 'indexeddb'`). */
+	dbName?: string;
 	/** Backend simulado a usar (por defecto uno nuevo). */
 	backend?: MockBackend;
 	/** Reloj inyectable (pruebas). */
@@ -33,7 +51,7 @@ export interface App {
 	sync: SyncState;
 	/** Simulador de escenarios (ver `data/mock/scenario.svelte.ts`). */
 	scenario: MockBackend['scenario'];
-	backend: MockBackend;
+	backend: MockBackend | LocalBackend;
 	/** Carga sesión, ajustes, carpetas, notas y estado de sincronización. */
 	bootstrap(): Promise<void>;
 	/** Restablece los datos de ejemplo (opcionalmente con otro dataset) y recarga todo. */
@@ -50,37 +68,60 @@ export interface App {
 export function createApp(options: AppOptions = {}): App {
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fábrica del reloj, no es estado
 	const now = options.now ?? (() => new Date());
-	const backend =
+	const persistence = options.persistence ?? 'memory';
+	const startAuthenticated = options.startAuthenticated ?? true;
+	const backend: MockBackend | LocalBackend =
 		options.backend ??
-		createMockBackend({ now, startAuthenticated: options.startAuthenticated ?? true });
+		(persistence === 'indexeddb'
+			? createLocalBackend({ now, startAuthenticated, dbName: options.dbName })
+			: createMockBackend({ now, startAuthenticated }));
+	const local = (backend as Partial<LocalBackend>).local ?? null;
 	if (options.latencyMs !== undefined) backend.scenario.latencyMs = options.latencyMs;
 	const { repos, scenario } = backend;
 
-	const auth = new AuthState(repos.auth, now);
-	const notes = new NotesState(repos.notes, now);
-	const folders = new FoldersState(repos.folders, () => notes.refresh());
+	// Estados que se actualizan al cerrar sesión: se declaran antes para poder referirlos en los ganchos.
+	// eslint-disable-next-line prefer-const -- se asigna más abajo, tras crear los estados
+	let sync: SyncState;
+	const refreshPending = () => void sync.refresh();
+
+	const auth = new AuthState(repos.auth, now, {
+		// Al salir, la copia local se borra (los datos siguen en el servidor).
+		onSignedOut: async () => {
+			await local?.clear();
+			notes.reset();
+			folders.reset();
+			void sync.refresh();
+		}
+	});
+	const notes = new NotesState(repos.notes, now, refreshPending);
+	const folders = new FoldersState(repos.folders, () => notes.refresh(), refreshPending);
 	const search = new SearchState(notes);
 	const settings = new SettingsState(repos.settings);
 	const devices = new DevicesState(repos.devices, () => auth.markExpired());
 	const share = new ShareState(repos.share, () => auth.markExpired());
 	const storage = new StorageState(repos.storage);
-	const sync = new SyncState(repos.sync, {
-		onSynced: () => notes.refresh(),
+	sync = new SyncState(repos.sync, {
+		onSynced: async () => {
+			await Promise.all([notes.refresh(), folders.refresh()]);
+		},
 		onSessionExpired: () => auth.markExpired()
 	});
 
+	/** Carga los datos. En el primer arranque de un dispositivo, antes descarga todo del servidor. */
+	async function loadData() {
+		await sync.refresh();
+		if (local && auth.isAuthenticated && !sync.snapshot.lastSyncedAt) await sync.syncNow();
+		await Promise.all([settings.load(), folders.load(), notes.load()]);
+	}
+
 	async function bootstrap() {
-		await Promise.all([
-			auth.bootstrap(),
-			settings.load(),
-			folders.load(),
-			notes.load(),
-			sync.refresh()
-		]);
+		await auth.bootstrap();
+		await loadData();
 	}
 
 	async function resetData(dataset?: Dataset) {
 		if (dataset) scenario.dataset = dataset;
+		await local?.clear();
 		backend.db.reset();
 		notes.setFilter({ kind: 'all' });
 		notes.select(null);
@@ -88,7 +129,39 @@ export function createApp(options: AppOptions = {}): App {
 	}
 
 	// Cuando cambian la conectividad o la sesión en el simulador, el estado lo refleja al instante.
+	let autoSyncTimer: ReturnType<typeof setTimeout> | undefined;
+	let pollTimer: ReturnType<typeof setInterval> | undefined;
+	const onOnline = () => void sync.syncNow();
+	if (local && typeof window !== 'undefined') {
+		window.addEventListener('online', onOnline);
+		pollTimer = setInterval(() => {
+			if (settings.values.autoSync && auth.isAuthenticated && sync.phase === 'idle')
+				void sync.syncNow();
+		}, AUTO_SYNC_POLL_MS);
+	}
+
 	const stop = $effect.root(() => {
+		// Tras un cambio local, se sincroniza sola a los pocos segundos (si está activado y hay red).
+		$effect(() => {
+			const pending = sync.snapshot.pendingCount;
+			const ready = settings.values.autoSync && auth.isAuthenticated && sync.phase === 'idle';
+			untrack(() => {
+				clearTimeout(autoSyncTimer);
+				if (local && ready && pending > 0)
+					autoSyncTimer = setTimeout(() => void sync.syncNow(), AUTO_SYNC_DELAY_MS);
+			});
+		});
+
+		// Al iniciar sesión de nuevo (la copia local se borró al salir) se vuelven a cargar los datos.
+		let wasAuthenticated = auth.isAuthenticated;
+		$effect(() => {
+			const authenticated = auth.isAuthenticated;
+			untrack(() => {
+				if (authenticated && !wasAuthenticated) void loadData();
+				wasAuthenticated = authenticated;
+			});
+		});
+
 		$effect(() => {
 			void scenario.offline;
 			void scenario.serverError;
@@ -114,6 +187,11 @@ export function createApp(options: AppOptions = {}): App {
 		backend,
 		bootstrap,
 		resetData,
-		destroy: stop
+		destroy: () => {
+			clearTimeout(autoSyncTimer);
+			clearInterval(pollTimer);
+			if (local && typeof window !== 'undefined') window.removeEventListener('online', onOnline);
+			stop();
+		}
 	};
 }

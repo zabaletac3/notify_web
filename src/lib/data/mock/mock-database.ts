@@ -60,6 +60,17 @@ export class MockDatabase {
 	/** Cambio de correo pendiente de confirmar con el código. */
 	pendingEmailChange: { userId: string; email: string } | null = null;
 
+	// ── Estado del "servidor de sincronización" (lo usa MockSyncServer) ──
+	/** Último número de cambio asignado. El cursor del cliente es el último que vio. */
+	serverSeq = 0;
+	/** Número del último cambio de cada entidad (`note:ID`, `folder:ID`). */
+	entitySeq = new Map<string, number>();
+	folderRevisions = new Map<string, number>();
+	/** Nombres de los dispositivos que han sincronizado (id → nombre). */
+	deviceNames = new Map<string, string>();
+	/** Borrados definitivos, para avisar a los demás dispositivos. */
+	tombstones: { entity: 'note' | 'folder'; id: string; seq: number; revision: number }[] = [];
+
 	constructor(options: MockDatabaseOptions = {}) {
 		this.scenario = options.scenario ?? new Scenario();
 		this.now = options.now ?? (() => new Date());
@@ -113,9 +124,29 @@ export class MockDatabase {
 		this.failedLogins.clear();
 		this.pendingEmailChange = null;
 		this.lastSyncedAt = iso(2);
+		this.seedSequences();
 		this.session = this.startAuthenticated
 			? { user: demo, expiresAt: new Date(now.getTime() + 60 * 60000).toISOString() }
 			: null;
+	}
+
+	/** Numera los datos de ejemplo como si el servidor ya los tuviera (primer arranque = descarga completa). */
+	private seedSequences() {
+		this.entitySeq.clear();
+		this.folderRevisions.clear();
+		this.deviceNames.clear();
+		this.tombstones = [];
+		let seq = 0;
+		for (const f of this.folders) {
+			this.entitySeq.set(`folder:${f.id}`, ++seq);
+			this.folderRevisions.set(f.id, 1);
+		}
+		for (const n of this.notes) {
+			n.revision = Math.max(1, n.revision);
+			n.syncStatus = 'synced';
+			this.entitySeq.set(`note:${n.id}`, ++seq);
+		}
+		this.serverSeq = seq;
 	}
 
 	nextId(prefix: string): string {

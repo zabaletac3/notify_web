@@ -9,6 +9,6 @@
 | 4    | Dominio y datos simulados: tipos, repositorios, estado con runes, simulador de escenarios                                        | ✅ hecho                                                                                                                   |
 | 5    | Pantallas: notas + editor (TipTap/Markdown), carpetas, búsqueda, papelera, menús y modales, ajustes, acceso, onboarding, estados | ✅ hecho, con responsive móvil/tableta. Pendiente: landing (por rediseñar), comparación del modo oscuro, imágenes en notas |
 | 6    | Calidad: accesibilidad, rendimiento (lista virtualizada), pruebas unitarias/componentes/E2E                                      | parcial (185 pruebas de dominio y estado; sin pruebas de pantallas ni accesibilidad auditada)                              |
-| 7    | Datos reales: IndexedDB (Dexie), cliente de la API (OpenAPI), sincronización, empaquetado con Tauri 2                            | pendiente                                                                                                                  |
+| 7    | Datos reales: IndexedDB (Dexie), cliente de la API (OpenAPI), sincronización, empaquetado con Tauri 2                            | en curso: IndexedDB y sincronización listas con servidor simulado; faltan cliente HTTP y Tauri                             |
 
 Flujo por pantalla (con el MCP de Figma): leer el diseño → adaptarlo a Svelte con los componentes y tokens existentes → conectarlo a datos simulados → comparar con captura (claro y oscuro) → añadir prueba.

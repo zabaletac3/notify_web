@@ -96,3 +96,7 @@ Convenciones:
 ## Pruebas
 
 `pnpm test:unit`: dominio, formato y mensajes, backend simulado (contadores del diseño, papelera, cuentas, sincronización, escenarios), estado de notas/búsqueda/cuenta y la composición completa (sincronización, carpetas, ajustes, dispositivos, compartir) más una prueba en navegador de la reacción a los escenarios.
+
+## Persistencia local y sincronización
+
+`createApp({ persistence: 'indexeddb' })` (el layout raíz) guarda notas, carpetas y ajustes en IndexedDB (`data/local`) y los sincroniza con `MockSyncServer`. `persistence: 'memory'` (por defecto, usado en las pruebas) mantiene todo en el simulador. Protocolo y decisiones en `docs/adr/0004-sincronizacion.md`; pruebas en `src/lib/data/local/local-sync.spec.ts`.

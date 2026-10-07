@@ -18,10 +18,20 @@ export class FoldersState {
 	private readonly repo: FolderRepository;
 	private readonly onNotesAffected: () => Promise<void>;
 
-	/** `onNotesAffected`: se llama al borrar una carpeta, porque sus notas cambian de carpeta. */
-	constructor(repo: FolderRepository, onNotesAffected: () => Promise<void> = async () => {}) {
+	private readonly onWrite: () => void;
+
+	/**
+	 * @param onNotesAffected se llama al borrar una carpeta, porque sus notas cambian de carpeta
+	 * @param onWrite se llama tras cada escritura correcta
+	 */
+	constructor(
+		repo: FolderRepository,
+		onNotesAffected: () => Promise<void> = async () => {},
+		onWrite: () => void = () => {}
+	) {
 		this.repo = repo;
 		this.onNotesAffected = onNotesAffected;
+		this.onWrite = onWrite;
 	}
 
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- índice temporal dentro de un derivado, no se muta
@@ -43,6 +53,19 @@ export class FoldersState {
 		this.list = result.value;
 		this.status = 'ready';
 		return succeed();
+	}
+
+	/** Recarga sin mostrar el estado de carga (tras sincronizar). */
+	async refresh(): Promise<void> {
+		const result = await attempt(() => this.repo.list());
+		if (result.ok) this.list = result.value;
+	}
+
+	/** Vacía el estado (al cerrar sesión). */
+	reset() {
+		this.list = [];
+		this.status = 'idle';
+		this.error = null;
 	}
 
 	/** Valida el nombre en el cliente (mismo criterio que el servidor) y crea la carpeta. */
@@ -85,6 +108,7 @@ export class FoldersState {
 		this.lastError = null;
 		const result = await attempt(action);
 		if (!result.ok) this.lastError = result.error;
+		else this.onWrite();
 		return result;
 	}
 }

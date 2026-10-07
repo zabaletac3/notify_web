@@ -5,11 +5,11 @@ Estas decisiones condicionan el servidor; cada una trae mi recomendación. Marca
 
 ## Las que bloquean el diseño de la API
 
-- [ ] **D1 · Identificadores generados por el cliente.** Para crear notas y carpetas sin conexión el cliente necesita su propio `id`.
+- [x] **D1 · Identificadores generados por el cliente. (Decidido: UUID v7, `newId()`)** Para crear notas y carpetas sin conexión el cliente necesita su propio `id`.
       _Recomendación:_ UUID v7 (ordenable por fecha). El servidor los acepta en `PUT /notes/{id}` y `PUT /folders/{id}` (idempotentes) y rechaza duplicados de otra cuenta. Hoy el simulador los genera en el "servidor"; hay que cambiarlo.
 - [ ] **D2 · Sesión y tokens.** Token de acceso corto + token de renovación con rotación, o sesión por cookie.
       _Recomendación:_ acceso JWT de 15 min + renovación opaca con rotación y lista de dispositivos (`/devices` ya la espera). Cookie `HttpOnly` para la web, cabecera `Authorization` para escritorio y móvil.
-- [ ] **D3 · Protocolo de sincronización.** El contrato `POST /sync` es un borrador. Se fija tras la capa local (paso 2): cola de cambios, cursor, resolución de conflictos y borrados (lápidas).
+- [x] **D3 · Protocolo de sincronización. (Decidido: ver ADR 0004; implementado en `data/local` y `MockSyncServer`)** El contrato `POST /sync` es un borrador. Se fija tras la capa local (paso 2): cola de cambios, cursor, resolución de conflictos y borrados (lápidas).
       _Recomendación:_ revisión por nota (`revision`, ya existe), cursor por cuenta, el servidor nunca pisa: ante `baseRevision` distinto devuelve `409` con la versión remota y el cliente decide (`local`, `remote`, `both`).
 - [ ] **D4 · Modelo en MongoDB y multiempresa.** Tu plantilla (`multitenant-template`) es multiempresa; Apunte es de un solo usuario por cuenta.
       _Recomendación:_ quitar el tenant: colecciones `users`, `notes`, `folders`, `devices`, `share_links`, `refresh_tokens`, `verification_codes`. Índices: `notes(userId, updatedAt)`, `notes(userId, deletedAt)`, `folders(userId, nameFolded)` único, `share_links(slug)` único.

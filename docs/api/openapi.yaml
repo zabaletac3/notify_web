@@ -529,10 +529,10 @@ paths:
       tags: [sync]
       summary: Sube cambios locales y baja los remotos
       description: |
-        **Borrador.** Se fijará después de implementar la capa local con cola de cambios.
-        Contrato mínimo: el cliente envía lo pendiente y el último `cursor`; el servidor responde
-        con los cambios remotos desde ese cursor y los conflictos detectados por `baseRevision`.
-      x-status: draft
+        El cliente envía su cola de cambios y el último `cursor`; el servidor responde con lo aplicado,
+        los cambios remotos desde ese cursor y los conflictos. Ver `docs/adr/0004-sincronizacion.md`.
+        Un `baseRevision` distinto en una nota es conflicto (no se aplica, no es un error HTTP);
+        las carpetas son «gana el último».
       x-contract: SyncRepository.syncNow
       requestBody:
         required: true
@@ -1000,31 +1000,73 @@ components:
     SyncChange:
       type: object
       description: |
-        Borrador. Un cambio de nota o carpeta hecho sin conexión.
-      required: [entity, id, op]
+        Un cambio de nota o carpeta hecho en el cliente (cola de cambios, una entrada por entidad).
+        Mover a la papelera y restaurar son `upsert` (llevan `deletedAt`); `delete` es borrado definitivo.
+      required: [entity, id, op, baseRevision]
       properties:
         entity: { type: string, enum: [note, folder] }
-        id: { type: string }
-        op: { type: string, enum: [upsert, trash, restore, delete] }
-        baseRevision: { type: integer, minimum: 0 }
-        data: { type: object, additionalProperties: true }
+        id: { type: string, description: UUID v7 generado por el cliente }
+        op: { type: string, enum: [upsert, delete] }
+        baseRevision:
+          {
+            type: integer,
+            minimum: 0,
+            description: 'Revisión que el cliente conocía (0 si la creó sin conexión)'
+          }
+        data:
+          {
+            type: object,
+            additionalProperties: true,
+            description: Campos de la nota o carpeta (en upsert)
+          }
     SyncRequest:
       type: object
-      required: [deviceId, changes]
+      required: [deviceId, deviceName, cursor, changes]
       properties:
         deviceId: { type: string }
-        cursor: { type: [string, 'null'], description: Último cursor recibido }
+        deviceName: { type: string }
+        cursor:
+          { type: [string, 'null'], description: 'Último cursor recibido; null descarga todo' }
         changes:
           type: array
           items: { $ref: '#/components/schemas/SyncChange' }
+    SyncApplied:
+      type: object
+      required: [entity, id, revision]
+      properties:
+        entity: { type: string, enum: [note, folder] }
+        id: { type: string }
+        revision: { type: integer }
+    SyncRemoteChange:
+      type: object
+      description: Algo que cambió en el servidor desde el cursor. `deleted` es una lápida (borrado definitivo).
+      required: [entity, id, deleted, revision]
+      properties:
+        entity: { type: string, enum: [note, folder] }
+        id: { type: string }
+        deleted: { type: boolean }
+        revision: { type: integer }
+        note: { $ref: '#/components/schemas/Note' }
+        folder: { $ref: '#/components/schemas/Folder' }
+    SyncConflictReport:
+      type: object
+      description: Una nota cuyo `baseRevision` no coincide. El servidor no la modifica.
+      required: [noteId, remote, remoteDeviceName]
+      properties:
+        noteId: { type: string }
+        remote: { $ref: '#/components/schemas/Note' }
+        remoteDeviceName: { type: string }
     SyncResponse:
       type: object
-      required: [cursor, remoteChanges, conflicts]
+      required: [cursor, applied, remoteChanges, conflicts]
       properties:
         cursor: { type: string }
+        applied:
+          type: array
+          items: { $ref: '#/components/schemas/SyncApplied' }
         remoteChanges:
           type: array
-          items: { $ref: '#/components/schemas/SyncChange' }
+          items: { $ref: '#/components/schemas/SyncRemoteChange' }
         conflicts:
           type: array
-          items: { $ref: '#/components/schemas/Conflict' }
+          items: { $ref: '#/components/schemas/SyncConflictReport' }

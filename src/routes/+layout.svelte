@@ -10,7 +10,9 @@
 	let { children }: LayoutProps = $props();
 
 	// Estado global de la app. En desarrollo se simula una pequeña latencia para ver los estados de carga.
-	const app = setApp(createApp({ latencyMs: import.meta.env.DEV ? 250 : 0 }));
+	const app = setApp(
+		createApp({ persistence: 'indexeddb', latencyMs: import.meta.env.DEV ? 250 : 0 })
+	);
 
 	// Los ajustes guardados mandan sobre el tema y el orden de las notas.
 	$effect(() => {

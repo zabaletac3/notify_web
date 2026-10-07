@@ -13,6 +13,8 @@ import type {
 	Session,
 	ShareLink,
 	StorageUsage,
+	SyncRequest,
+	SyncResponse,
 	SyncSnapshot,
 	User
 } from '#lib/domain/index.js';
@@ -87,6 +89,12 @@ export interface SyncRepository {
 	/** Sube lo pendiente y baja los cambios remotos. Puede dejar conflictos en el snapshot. */
 	syncNow(): Promise<SyncSnapshot>;
 	resolveConflict(noteId: Id, resolution: ConflictResolution): Promise<SyncSnapshot>;
+}
+
+/** Canal con el servidor para sincronizar. Lo implementa `mock/MockSyncServer` y, después, el cliente HTTP. */
+export interface SyncTransport {
+	/** Envía los cambios locales y recibe los remotos. Lanza `AppFailure` (`network`, `server`, `session-expired`…). */
+	sync(request: SyncRequest): Promise<SyncResponse>;
 }
 
 export interface ShareRepository {

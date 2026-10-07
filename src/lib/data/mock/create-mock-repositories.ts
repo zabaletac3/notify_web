@@ -19,8 +19,10 @@ export interface MockBackend {
 }
 
 /** Crea todos los repositorios mock sobre una misma base en memoria. */
-export function createMockBackend(options: MockDatabaseOptions = {}): MockBackend {
-	const db = new MockDatabase(options);
+export function createMockBackend(
+	options: MockDatabaseOptions & { database?: MockDatabase } = {}
+): MockBackend {
+	const db = options.database ?? new MockDatabase(options);
 	return {
 		db,
 		scenario: db.scenario,
