@@ -97,3 +97,9 @@
 	--text-page: 1.625rem; /* 26 · título de las pantallas de ajustes */
 	--text-page--line-height: 2rem;
 }
+
+/* Tarjeta de las pantallas de acceso (login, registro…) */
+@theme inline {
+	--radius-4xl: calc(var(--radius) + 20px); /* 32 */
+	--shadow-auth: 0 24px 64px -8px rgb(31 29 26 / 0.1);
+}

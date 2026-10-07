@@ -14,3 +14,7 @@ export { default as EmptyState } from './empty-state.svelte';
 export { default as NoteMenu } from './note-menu.svelte';
 export { noteActions, type NoteAction, type NoteActionId } from './note-actions.js';
 export { default as Banner } from './banner.svelte';
+export { default as AuthCard } from './auth-card.svelte';
+export { default as AuthField } from './auth-field.svelte';
+export { default as GoogleButton } from './google-button.svelte';
+export { default as StrengthMeter } from './strength-meter.svelte';
