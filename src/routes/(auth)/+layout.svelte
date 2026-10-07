@@ -2,6 +2,7 @@
 	import { untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { getApp } from '#lib/app/index.js';
+	import { ThemeToggle } from '#lib/components/app/index.js';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
@@ -26,6 +27,9 @@
 		<div
 			class="absolute -bottom-[18%] left-[35%] size-[40vw] rounded-full bg-tag-amber/12 blur-[70px]"
 		></div>
+	</div>
+	<div class="absolute top-4 right-4 z-20">
+		<ThemeToggle />
 	</div>
 	<main class="relative z-10 flex w-full justify-center">
 		{@render children()}

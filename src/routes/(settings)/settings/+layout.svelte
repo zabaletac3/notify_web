@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { getApp } from '#lib/app/index.js';
-	import { AppIcon } from '#lib/components/app/index.js';
+	import { AppIcon, ThemeToggle } from '#lib/components/app/index.js';
 	import { cn } from '#lib/utils.js';
 	import type { LayoutProps } from './$types';
 
@@ -28,7 +28,10 @@
 		class="flex w-62 shrink-0 flex-col gap-1 overflow-y-auto border-r bg-sidebar px-4 py-5"
 		aria-label="Secciones de ajustes"
 	>
-		<h1 class="text-heading font-bold">Ajustes</h1>
+		<div class="flex items-center justify-between">
+			<h1 class="text-heading font-bold">Ajustes</h1>
+			<ThemeToggle />
+		</div>
 		<div class="h-2"></div>
 		{#each sections as section (section.href)}
 			{@const current = page.url.pathname === section.href}
