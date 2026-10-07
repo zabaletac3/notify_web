@@ -63,7 +63,7 @@
 		{:else}
 			<div class="flex items-center gap-4.5">
 				<div
-					class="flex h-22 w-53 gap-2 rounded-[10px] border-3 border-primary bg-background p-2.5"
+					class="flex h-29 w-38 gap-2 rounded-[10px] border-3 border-primary bg-background p-2.5 md:h-22 md:w-53"
 				>
 					<span class="w-4.5 rounded-full bg-hover"></span>
 					<span class="flex flex-1 flex-col gap-1.5">
@@ -73,7 +73,7 @@
 					</span>
 				</div>
 				<div
-					class="flex h-30 w-25 flex-col gap-1.5 rounded-xl border-3 border-primary bg-background px-2 py-2.5"
+					class="flex h-39 w-18 flex-col gap-1.5 rounded-xl border-3 border-primary bg-background px-2 py-2.5 md:h-30 md:w-25"
 				>
 					<span class="h-1.75 w-6 rounded-full bg-tertiary"></span>
 					<span class="h-1.5 w-7.5 rounded-full bg-hover"></span>

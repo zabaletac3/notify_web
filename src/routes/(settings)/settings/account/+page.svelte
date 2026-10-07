@@ -17,7 +17,7 @@
 
 	async function logout() {
 		const result = await auth.logout();
-		if (result.ok) await goto('/login');
+		if (result.ok) await goto('/welcome');
 	}
 </script>
 
