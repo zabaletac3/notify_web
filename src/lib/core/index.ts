@@ -2,4 +2,5 @@
 export * from './attempt.js';
 export * from './format.js';
 export * from './load-status.js';
+export * from './markdown.js';
 export * from './messages.js';

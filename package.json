@@ -65,6 +65,8 @@
 		"@lucide/svelte": "^1.52.0",
 		"bits-ui": "^2.19.5",
 		"cn": "^0.3.3",
+		"dompurify": "^3.4.16",
+		"marked": "^18.1.0",
 		"minisearch": "^7.2.0",
 		"mode-watcher": "^1.1.0",
 		"paneforge": "^1.0.2",
