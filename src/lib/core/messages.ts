@@ -15,7 +15,9 @@ export const validationMessages: Record<ValidationCode, string> = {
 	'name-taken': 'Ya existe una carpeta con ese nombre.',
 	'invalid-code': 'El código debe tener 6 dígitos.',
 	'invalid-token': 'El enlace no es válido o ya venció.',
-	'email-taken': 'Ya existe una cuenta con ese correo.'
+	'email-taken': 'Ya existe una cuenta con ese correo.',
+	'wrong-password': 'La contraseña actual no es correcta.',
+	'same-password': 'La nueva contraseña debe ser distinta de la actual.'
 };
 
 export function validationMessage(code: string | undefined): string | undefined {

@@ -6,6 +6,7 @@ import { NotesState } from '#lib/features/notes/index.js';
 import { SearchState } from '#lib/features/search/index.js';
 import { DevicesState, SettingsState } from '#lib/features/settings/index.js';
 import { ShareState } from '#lib/features/share/index.js';
+import { StorageState } from '#lib/features/storage/index.js';
 import { SyncState } from '#lib/features/sync/index.js';
 
 export interface AppOptions {
@@ -28,6 +29,7 @@ export interface App {
 	settings: SettingsState;
 	devices: DevicesState;
 	share: ShareState;
+	storage: StorageState;
 	sync: SyncState;
 	/** Simulador de escenarios (ver `data/mock/scenario.svelte.ts`). */
 	scenario: MockBackend['scenario'];
@@ -61,6 +63,7 @@ export function createApp(options: AppOptions = {}): App {
 	const settings = new SettingsState(repos.settings);
 	const devices = new DevicesState(repos.devices, () => auth.markExpired());
 	const share = new ShareState(repos.share, () => auth.markExpired());
+	const storage = new StorageState(repos.storage);
 	const sync = new SyncState(repos.sync, {
 		onSynced: () => notes.refresh(),
 		onSessionExpired: () => auth.markExpired()
@@ -105,6 +108,7 @@ export function createApp(options: AppOptions = {}): App {
 		settings,
 		devices,
 		share,
+		storage,
 		sync,
 		scenario,
 		backend,

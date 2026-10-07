@@ -7,12 +7,15 @@ import {
 	type Id,
 	type Note,
 	type ShareLink,
-	type SyncSnapshot
+	type StorageUsage,
+	type SyncSnapshot,
+	STORAGE_QUOTA_BYTES
 } from '#lib/domain/index.js';
 import type {
 	DeviceRepository,
 	SettingsRepository,
 	ShareRepository,
+	StorageRepository,
 	SyncRepository
 } from '../contracts.js';
 import { DEMO_DEVICE_ID } from './fixtures/index.js';
@@ -175,5 +178,26 @@ export class MockSyncRepository implements SyncRepository {
 		note.revision += 1;
 		this.db.conflicts = this.db.conflicts.filter((c) => c.noteId !== noteId);
 		return this.build();
+	}
+}
+
+export class MockStorageRepository implements StorageRepository {
+	constructor(private db: MockDatabase) {}
+
+	async usage(): Promise<StorageUsage> {
+		await this.db.remote();
+		const encoder = new TextEncoder();
+		const size = (n: Note) => encoder.encode(n.title + n.content).length;
+		const notesBytes = this.db.notes.filter((n) => !n.deletedAt).reduce((t, n) => t + size(n), 0);
+		const trashBytes = this.db.notes.filter((n) => n.deletedAt).reduce((t, n) => t + size(n), 0);
+		// Aún no se pueden adjuntar imágenes: 0 bytes.
+		const imagesBytes = 0;
+		return {
+			usedBytes: notesBytes + trashBytes + imagesBytes,
+			quotaBytes: STORAGE_QUOTA_BYTES,
+			notesBytes,
+			imagesBytes,
+			trashBytes
+		};
 	}
 }

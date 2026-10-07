@@ -1,6 +1,7 @@
 import {
 	fail,
 	isValidEmail,
+	PASSWORD_MIN_LENGTH,
 	type LoginInput,
 	type RegisterInput,
 	type Session,
@@ -58,6 +59,62 @@ export class MockAuthRepository implements AuthRepository {
 	async resendVerificationCode(email: string): Promise<void> {
 		await this.db.remote();
 		if (!this.findByEmail(email)) throw fail.notFound('user');
+	}
+
+	private requireUser() {
+		const current = this.db.session;
+		const stored = current && this.db.users.find((u) => u.user.id === current.user.id);
+		if (!stored) throw fail.sessionExpired();
+		return stored;
+	}
+
+	private refreshSession(user: User) {
+		if (this.db.session) this.db.session = { ...this.db.session, user: structuredClone(user) };
+	}
+
+	async updateProfile(patch: { fullName: string }): Promise<User> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		const fullName = patch.fullName.trim();
+		if (fullName.length < 2) throw fail.validation({ fullName: 'name-too-short' });
+		stored.user.fullName = fullName;
+		this.refreshSession(stored.user);
+		return structuredClone(stored.user);
+	}
+
+	async requestEmailChange(newEmail: string, password: string): Promise<{ email: string }> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		if (stored.password !== password) throw fail.validation({ password: 'wrong-password' });
+		const email = norm(newEmail);
+		if (!isValidEmail(email)) throw fail.validation({ email: 'invalid-email' });
+		if (this.findByEmail(email)) throw fail.validation({ email: 'email-taken' });
+		this.db.pendingEmailChange = { userId: stored.user.id, email };
+		return { email };
+	}
+
+	async confirmEmailChange(email: string, code: string): Promise<User> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		const pending = this.db.pendingEmailChange;
+		if (!pending || pending.userId !== stored.user.id || pending.email !== norm(email))
+			throw fail.notFound('email-change');
+		if (code !== this.db.verificationCode) throw fail.validation({ code: 'invalid-code' });
+		stored.user.email = pending.email;
+		this.db.pendingEmailChange = null;
+		this.refreshSession(stored.user);
+		return structuredClone(stored.user);
+	}
+
+	async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		if (stored.password !== currentPassword)
+			throw fail.validation({ currentPassword: 'wrong-password' });
+		if (newPassword.length < PASSWORD_MIN_LENGTH)
+			throw fail.validation({ password: 'password-too-short' });
+		if (newPassword === currentPassword) throw fail.validation({ password: 'same-password' });
+		stored.password = newPassword;
 	}
 
 	async login(input: LoginInput): Promise<Session> {

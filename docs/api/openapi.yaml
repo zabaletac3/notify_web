@@ -1,0 +1,1030 @@
+openapi: 3.1.0
+info:
+  title: Apunte API
+  version: 0.1.0-draft
+  summary: Borrador del contrato HTTP entre los clientes (web, escritorio, móvil) y el backend.
+  description: |
+    Derivado de los contratos de repositorio de la web (`src/lib/data/contracts.ts`) y de los tipos de
+    `src/lib/domain`. Cada operación indica a qué método del contrato corresponde (`x-contract`).
+
+    **Estado:** borrador. Lo marcado `x-status: draft` depende de decisiones abiertas
+    (ver `docs/api/decisions.md`): sesiones y renovación de token, identificadores generados por el
+    cliente, protocolo de sincronización.
+
+    Convenciones:
+    - JSON en UTF-8. Fechas en ISO 8601 UTC.
+    - Los errores usan el esquema `Error` (mismo `kind` que `AppError` del cliente).
+    - Escrituras sobre notas: concurrencia optimista con `baseRevision`.
+servers:
+  - url: https://api.apunte.app/v1
+    description: Producción (provisional)
+  - url: http://localhost:8080/v1
+    description: Desarrollo local
+security:
+  - bearerAuth: []
+tags:
+  - { name: auth, description: 'Cuenta, sesión y recuperación de contraseña' }
+  - { name: account, description: Perfil y credenciales de la cuenta actual }
+  - { name: notes, description: Notas y papelera }
+  - { name: folders, description: Carpetas }
+  - { name: sync, description: Sincronización y conflictos }
+  - { name: share, description: Enlaces públicos de solo lectura }
+  - { name: devices, description: Dispositivos y sesiones activas }
+  - { name: settings, description: Preferencias }
+  - { name: storage, description: Cuota y uso }
+paths:
+  /auth/register:
+    post:
+      operationId: postAuthRegister
+      tags: [auth]
+      summary: Crea la cuenta (sin verificar) y envía el código al correo
+      x-contract: AuthRepository.register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterInput' }
+      responses:
+        '201':
+          description: Cuenta creada; falta verificar el correo
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [email]
+                properties:
+                  email: { type: string, format: email }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /auth/verify-email:
+    post:
+      operationId: postAuthVerifyEmail
+      tags: [auth]
+      summary: Verifica el correo con el código de 6 dígitos e inicia sesión
+      x-contract: AuthRepository.verifyEmail
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email: { type: string, format: email }
+                code: { type: string, pattern: '^\d{6}$' }
+      responses:
+        '200':
+          description: Correo verificado; sesión iniciada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /auth/resend-code:
+    post:
+      operationId: postAuthResendCode
+      tags: [auth]
+      summary: Reenvía el código de verificación (máx. 1 cada 60 s)
+      x-contract: AuthRepository.resendVerificationCode
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '204': { description: Código reenviado }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /auth/login:
+    post:
+      operationId: postAuthLogin
+      tags: [auth]
+      summary: Inicia sesión
+      description: |
+        Mismo error (`unauthorized`) para correo inexistente y contraseña incorrecta.
+        `403 forbidden/email-not-verified` si falta verificar el correo.
+        Bloqueo temporal tras 5 intentos fallidos (`429`).
+      x-contract: AuthRepository.login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginInput' }
+      responses:
+        '200':
+          description: Sesión iniciada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /auth/refresh:
+    post:
+      operationId: postAuthRefresh
+      tags: [auth]
+      summary: Renueva el token de acceso con el de renovación
+      x-status: draft
+      x-contract: Session (renovación gestionada por la capa de datos)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: Nuevo par de tokens (rotación del de renovación)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/SessionExpired' }
+  /auth/logout:
+    post:
+      operationId: postAuthLogout
+      tags: [auth]
+      summary: Cierra la sesión de este dispositivo
+      x-contract: AuthRepository.logout
+      responses:
+        '204': { description: Sesión cerrada }
+  /auth/session:
+    get:
+      operationId: getAuthSession
+      tags: [auth]
+      summary: Sesión vigente
+      x-contract: AuthRepository.currentSession
+      responses:
+        '200':
+          description: Sesión vigente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/SessionExpired' }
+  /auth/password/forgot:
+    post:
+      operationId: postAuthPasswordForgot
+      tags: [auth]
+      summary: Pide el enlace de recuperación
+      description: Siempre responde igual, exista o no la cuenta (no revela qué correos están registrados).
+      x-contract: AuthRepository.requestPasswordReset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '202': { description: 'Si la cuenta existe, se envió el enlace' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /auth/password/reset:
+    post:
+      operationId: postAuthPasswordReset
+      tags: [auth]
+      summary: Crea una contraseña nueva con el token del enlace
+      x-contract: AuthRepository.resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: { type: string }
+                newPassword: { type: string, minLength: 8, maxLength: 128 }
+      responses:
+        '204': { description: Contraseña actualizada }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /me:
+    get:
+      operationId: getMe
+      tags: [account]
+      summary: Perfil de la cuenta actual
+      responses:
+        '200':
+          description: Perfil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+    patch:
+      operationId: patchMe
+      tags: [account]
+      summary: Cambia el nombre visible
+      x-contract: AuthRepository.updateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fullName]
+              properties:
+                fullName: { type: string, minLength: 2, maxLength: 80 }
+      responses:
+        '200':
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      operationId: deleteMe
+      tags: [account]
+      summary: Elimina la cuenta
+      description: Los datos se conservan 30 días antes del borrado definitivo y se cierran todas las sesiones.
+      x-contract: AuthRepository.deleteAccount
+      responses:
+        '202': { description: Eliminación programada }
+  /me/email-change:
+    post:
+      operationId: postMeEmailChange
+      tags: [account]
+      summary: Pide cambiar el correo (exige la contraseña actual)
+      description: Envía un código al correo nuevo. El cambio no se aplica hasta confirmarlo.
+      x-contract: AuthRepository.requestEmailChange
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newEmail, password]
+              properties:
+                newEmail: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '202':
+          description: Código enviado al correo nuevo
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [email]
+                properties:
+                  email: { type: string, format: email }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /me/email-change/confirm:
+    post:
+      operationId: postMeEmailChangeConfirm
+      tags: [account]
+      summary: Confirma el correo nuevo con el código
+      x-contract: AuthRepository.confirmEmailChange
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email: { type: string, format: email }
+                code: { type: string, pattern: '^\d{6}$' }
+      responses:
+        '200':
+          description: Correo actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /me/password:
+    post:
+      operationId: postMePassword
+      tags: [account]
+      summary: Cambia la contraseña (exige la actual)
+      x-contract: AuthRepository.changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string, minLength: 8, maxLength: 128 }
+      responses:
+        '204': { description: Contraseña actualizada }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /notes:
+    get:
+      operationId: getNotes
+      tags: [notes]
+      summary: Lista notas
+      description: |
+        Sin `filter`, devuelve las activas. La papelera solo sale con `filter=trash`.
+        Paginación por cursor; `updatedSince` permite bajar solo lo cambiado.
+      x-contract: NoteRepository.list
+      parameters:
+        - name: filter
+          in: query
+          schema: { type: string, enum: [all, pinned, trash] }
+        - name: folderId
+          in: query
+          description: Notas de una carpeta (`none` = sin carpeta)
+          schema: { type: string }
+        - name: tag
+          in: query
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [updated, created, title], default: updated }
+        - name: updatedSince
+          in: query
+          schema: { type: string, format: date-time }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Página de notas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Note' }
+                  nextCursor: { type: [string, 'null'] }
+  /notes/{noteId}:
+    parameters:
+      - { $ref: '#/components/parameters/NoteId' }
+    get:
+      operationId: getNotesNoteId
+      tags: [notes]
+      summary: Obtiene una nota
+      x-contract: NoteRepository.get
+      responses:
+        '200':
+          description: Nota
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Note' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: putNotesNoteId
+      tags: [notes]
+      summary: Crea o edita una nota (idempotente)
+      description: |
+        El cliente genera el `noteId` (permite crear sin conexión). Si la nota existe, `baseRevision`
+        debe coincidir con la revisión del servidor; si no, `409 conflict` con la versión remota.
+      x-status: draft
+      x-contract: NoteRepository.create / NoteRepository.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NoteWrite' }
+      responses:
+        '200':
+          description: Nota guardada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Note' }
+        '201':
+          description: Nota creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Note' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      operationId: deleteNotesNoteId
+      tags: [notes]
+      summary: Elimina definitivamente una nota de la papelera
+      x-contract: NoteRepository.deleteForever
+      responses:
+        '204': { description: Eliminada }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /notes/{noteId}/duplicate:
+    post:
+      operationId: postNotesNoteIdDuplicate
+      tags: [notes]
+      summary: Duplica una nota
+      x-contract: NoteRepository.duplicate
+      parameters:
+        - { $ref: '#/components/parameters/NoteId' }
+      responses:
+        '201':
+          description: Copia creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Note' }
+  /notes/{noteId}/trash:
+    post:
+      operationId: postNotesNoteIdTrash
+      tags: [notes]
+      summary: Mueve una nota a la papelera
+      x-contract: NoteRepository.moveToTrash
+      parameters:
+        - { $ref: '#/components/parameters/NoteId' }
+      responses:
+        '200':
+          description: Nota en la papelera
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Note' }
+  /notes/{noteId}/restore:
+    post:
+      operationId: postNotesNoteIdRestore
+      tags: [notes]
+      summary: Restaura una nota de la papelera
+      x-contract: NoteRepository.restore
+      parameters:
+        - { $ref: '#/components/parameters/NoteId' }
+      responses:
+        '200':
+          description: Nota restaurada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Note' }
+  /trash:
+    delete:
+      operationId: deleteTrash
+      tags: [notes]
+      summary: Vacía la papelera
+      x-contract: NoteRepository.emptyTrash
+      responses:
+        '200':
+          description: Cuántas notas se eliminaron
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [removed]
+                properties:
+                  removed: { type: integer, minimum: 0 }
+  /folders:
+    get:
+      operationId: getFolders
+      tags: [folders]
+      summary: Lista carpetas
+      x-contract: FolderRepository.list
+      responses:
+        '200':
+          description: Carpetas
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Folder' }
+  /folders/{folderId}:
+    parameters:
+      - name: folderId
+        in: path
+        required: true
+        schema: { type: string }
+    put:
+      operationId: putFoldersFolderId
+      tags: [folders]
+      summary: Crea o renombra una carpeta (idempotente, id del cliente)
+      description: Nombre de 1 a 30 caracteres, único sin distinguir mayúsculas ni tildes.
+      x-status: draft
+      x-contract: FolderRepository.create / FolderRepository.rename
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 30 }
+      responses:
+        '200':
+          description: Carpeta guardada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Folder' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      operationId: deleteFoldersFolderId
+      tags: [folders]
+      summary: Elimina la carpeta (sus notas pasan a "sin carpeta")
+      x-contract: FolderRepository.delete
+      responses:
+        '204': { description: Eliminada }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /sync:
+    post:
+      operationId: postSync
+      tags: [sync]
+      summary: Sube cambios locales y baja los remotos
+      description: |
+        **Borrador.** Se fijará después de implementar la capa local con cola de cambios.
+        Contrato mínimo: el cliente envía lo pendiente y el último `cursor`; el servidor responde
+        con los cambios remotos desde ese cursor y los conflictos detectados por `baseRevision`.
+      x-status: draft
+      x-contract: SyncRepository.syncNow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SyncRequest' }
+      responses:
+        '200':
+          description: Resultado de la sincronización
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SyncResponse' }
+  /sync/conflicts/{noteId}/resolve:
+    post:
+      operationId: postSyncConflictsNoteIdResolve
+      tags: [sync]
+      summary: Resuelve un conflicto de edición
+      x-contract: SyncRepository.resolveConflict
+      parameters:
+        - { $ref: '#/components/parameters/NoteId' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolution]
+              properties:
+                resolution: { $ref: '#/components/schemas/ConflictResolution' }
+      responses:
+        '200':
+          description: Estado de sincronización tras resolver
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SyncSnapshot' }
+  /notes/{noteId}/share:
+    parameters:
+      - { $ref: '#/components/parameters/NoteId' }
+    get:
+      operationId: getNotesNoteIdShare
+      tags: [share]
+      summary: Enlace público actual (si existe)
+      x-contract: ShareRepository.getLink
+      responses:
+        '200':
+          description: Enlace, o `null` si no hay
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: '#/components/schemas/ShareLink' }
+                  - { type: 'null' }
+    put:
+      operationId: putNotesNoteIdShare
+      tags: [share]
+      summary: Crea el enlace público de solo lectura (o devuelve el existente)
+      x-contract: ShareRepository.createLink
+      responses:
+        '200':
+          description: Enlace
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShareLink' }
+    delete:
+      operationId: deleteNotesNoteIdShare
+      tags: [share]
+      summary: Revoca el enlace
+      x-contract: ShareRepository.revokeLink
+      responses:
+        '204': { description: Revocado }
+  /public/notes/{slug}:
+    get:
+      operationId: getPublicNotesSlug
+      tags: [share]
+      summary: Vista pública de una nota compartida
+      description: Sin sesión. Solo lectura. Devuelve `404` si el enlace fue revocado.
+      x-status: draft
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Contenido de la nota
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [title, content, updatedAt]
+                properties:
+                  title: { type: string }
+                  content: { type: string, description: Markdown }
+                  updatedAt: { type: string, format: date-time }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /devices:
+    get:
+      operationId: getDevices
+      tags: [devices]
+      summary: Dispositivos con sesión activa
+      x-contract: DeviceRepository.list
+      responses:
+        '200':
+          description: Dispositivos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Device' }
+  /devices/{deviceId}:
+    delete:
+      operationId: deleteDevicesDeviceId
+      tags: [devices]
+      summary: Cierra la sesión de otro dispositivo
+      description: No se puede quitar el dispositivo actual (`422`, campo `device`).
+      x-contract: DeviceRepository.remove
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Dispositivo quitado }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Preferencias
+      x-contract: SettingsRepository.get
+      responses:
+        '200':
+          description: Preferencias
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppSettings' }
+    patch:
+      operationId: patchSettings
+      tags: [settings]
+      summary: Cambia preferencias
+      x-contract: SettingsRepository.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AppSettingsPatch' }
+      responses:
+        '200':
+          description: Preferencias resultantes
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppSettings' }
+  /storage/usage:
+    get:
+      operationId: getStorageUsage
+      tags: [storage]
+      summary: Espacio usado frente a la cuota
+      x-contract: StorageRepository.usage
+      responses:
+        '200':
+          description: Uso
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StorageUsage' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token de acceso de corta duración (ver decisión D2).
+  parameters:
+    NoteId:
+      name: noteId
+      in: path
+      required: true
+      schema: { type: string }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+  responses:
+    ValidationError:
+      description: Datos inválidos. `fields` mapea campo → código de validación.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Credenciales incorrectas
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Acción no permitida (ej. correo sin verificar)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    SessionExpired:
+      description: 'La sesión venció (`kind: session-expired`)'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: No existe
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: La nota cambió en otro dispositivo; incluye la versión remota.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Demasiados intentos
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      description: Equivale a `AppError` de `domain/errors.ts`.
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum:
+            - server
+            - unauthorized
+            - forbidden
+            - session-expired
+            - not-found
+            - validation
+            - conflict
+            - rate-limited
+            - unknown
+        code: { type: string, description: 'Ej.: invalid-credentials, email-not-verified' }
+        fields:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/ValidationCode' }
+        entity: { type: string }
+        noteId: { type: string }
+        retryAfterSec: { type: integer }
+        remote:
+          description: En un `conflict`, la versión actual del servidor
+          allOf:
+            - { $ref: '#/components/schemas/Note' }
+    ValidationCode:
+      type: string
+      enum:
+        - required
+        - invalid-email
+        - password-too-short
+        - passwords-dont-match
+        - terms-required
+        - name-too-short
+        - name-too-long
+        - name-taken
+        - invalid-code
+        - invalid-token
+        - email-taken
+        - wrong-password
+        - same-password
+    User:
+      type: object
+      required: [id, email, fullName, emailVerified, createdAt]
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        fullName: { type: string }
+        emailVerified: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    Session:
+      type: object
+      required: [user, expiresAt]
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+        expiresAt: { type: string, format: date-time }
+        accessToken: { type: string }
+        refreshToken: { type: string }
+    RegisterInput:
+      type: object
+      required: [fullName, email, password, acceptedTerms]
+      properties:
+        fullName: { type: string, minLength: 2 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8, maxLength: 128 }
+        acceptedTerms: { type: boolean, const: true }
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+        device:
+          type: object
+          description: Datos del dispositivo que inicia sesión (para la lista de dispositivos)
+          properties:
+            name: { type: string }
+            platform: { $ref: '#/components/schemas/DevicePlatform' }
+    Note:
+      type: object
+      required:
+        [
+          id,
+          folderId,
+          title,
+          content,
+          tags,
+          pinned,
+          createdAt,
+          updatedAt,
+          deletedAt,
+          revision,
+          syncStatus
+        ]
+      properties:
+        id: { type: string }
+        folderId: { type: [string, 'null'] }
+        title: { type: string }
+        content: { type: string, description: Markdown (CommonMark + GFM) }
+        tags: { type: array, items: { type: string }, description: "Sin '#', en minúsculas" }
+        pinned: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: [string, 'null'], format: date-time }
+        revision: { type: integer, minimum: 0 }
+        syncStatus: { type: string, enum: [synced, pending, conflict] }
+        lastEditedDeviceId: { type: string }
+    NoteWrite:
+      type: object
+      description: Campos editables. `baseRevision` es la revisión que el cliente conocía.
+      required: [baseRevision]
+      properties:
+        baseRevision: { type: integer, minimum: 0 }
+        folderId: { type: [string, 'null'] }
+        title: { type: string }
+        content: { type: string }
+        tags: { type: array, items: { type: string } }
+        pinned: { type: boolean }
+    Folder:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        name: { type: string, minLength: 1, maxLength: 30 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DevicePlatform:
+      type: string
+      enum: [linux, windows, android, web]
+    Device:
+      type: object
+      required: [id, name, platform, lastActiveAt, current]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        platform: { $ref: '#/components/schemas/DevicePlatform' }
+        lastActiveAt: { type: string, format: date-time }
+        current: { type: boolean }
+    ShareLink:
+      type: object
+      required: [id, noteId, url, readOnly, createdAt]
+      properties:
+        id: { type: string }
+        noteId: { type: string }
+        url: { type: string, format: uri }
+        readOnly: { type: boolean, const: true }
+        createdAt: { type: string, format: date-time }
+    AppSettings:
+      type: object
+      required:
+        - theme
+        - textSize
+        - noteOrder
+        - openWithNewNote
+        - showPreview
+        - language
+        - autoSync
+        - wifiOnly
+        - biometricLock
+        - lockOnExit
+        - lockTimeout
+        - encryptLocal
+        - twoFactor
+      properties:
+        theme: { type: string, enum: [system, light, dark] }
+        textSize: { type: string, enum: [small, medium, large] }
+        noteOrder: { type: string, enum: [updated, created, title] }
+        openWithNewNote: { type: boolean }
+        showPreview: { type: boolean }
+        language: { type: string, enum: [es] }
+        autoSync: { type: boolean }
+        wifiOnly: { type: boolean }
+        biometricLock: { type: boolean }
+        lockOnExit: { type: boolean }
+        lockTimeout: { type: string, enum: [immediately, 1m, 5m, 15m] }
+        encryptLocal: { type: boolean }
+        twoFactor: { type: boolean }
+    AppSettingsPatch:
+      type: object
+      description: Cualquier subconjunto de `AppSettings`.
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        theme: { type: string, enum: [system, light, dark] }
+        textSize: { type: string, enum: [small, medium, large] }
+        noteOrder: { type: string, enum: [updated, created, title] }
+        openWithNewNote: { type: boolean }
+        showPreview: { type: boolean }
+        language: { type: string, enum: [es] }
+        autoSync: { type: boolean }
+        wifiOnly: { type: boolean }
+        biometricLock: { type: boolean }
+        lockOnExit: { type: boolean }
+        lockTimeout: { type: string, enum: [immediately, 1m, 5m, 15m] }
+        encryptLocal: { type: boolean }
+        twoFactor: { type: boolean }
+    StorageUsage:
+      type: object
+      required: [usedBytes, quotaBytes, notesBytes, imagesBytes, trashBytes]
+      properties:
+        usedBytes: { type: integer, minimum: 0 }
+        quotaBytes: { type: integer, minimum: 0 }
+        notesBytes: { type: integer, minimum: 0 }
+        imagesBytes: { type: integer, minimum: 0 }
+        trashBytes: { type: integer, minimum: 0 }
+    ConflictResolution:
+      type: string
+      enum: [local, remote, both]
+      description: '`local` conserva la versión de este dispositivo, `remote` la de la nube, `both` crea una copia.'
+    NoteVersion:
+      type: object
+      required: [title, content, editedAt, deviceName]
+      properties:
+        title: { type: string }
+        content: { type: string }
+        editedAt: { type: string, format: date-time }
+        deviceName: { type: string }
+    Conflict:
+      type: object
+      required: [noteId, local, remote]
+      properties:
+        noteId: { type: string }
+        local: { $ref: '#/components/schemas/NoteVersion' }
+        remote: { $ref: '#/components/schemas/NoteVersion' }
+    SyncSnapshot:
+      type: object
+      required: [phase, lastSyncedAt, pendingCount, conflicts]
+      properties:
+        phase: { type: string, enum: [idle, syncing, offline, error] }
+        lastSyncedAt: { type: [string, 'null'], format: date-time }
+        pendingCount: { type: integer, minimum: 0 }
+        conflicts:
+          type: array
+          items: { $ref: '#/components/schemas/Conflict' }
+    SyncChange:
+      type: object
+      description: |
+        Borrador. Un cambio de nota o carpeta hecho sin conexión.
+      required: [entity, id, op]
+      properties:
+        entity: { type: string, enum: [note, folder] }
+        id: { type: string }
+        op: { type: string, enum: [upsert, trash, restore, delete] }
+        baseRevision: { type: integer, minimum: 0 }
+        data: { type: object, additionalProperties: true }
+    SyncRequest:
+      type: object
+      required: [deviceId, changes]
+      properties:
+        deviceId: { type: string }
+        cursor: { type: [string, 'null'], description: Último cursor recibido }
+        changes:
+          type: array
+          items: { $ref: '#/components/schemas/SyncChange' }
+    SyncResponse:
+      type: object
+      required: [cursor, remoteChanges, conflicts]
+      properties:
+        cursor: { type: string }
+        remoteChanges:
+          type: array
+          items: { $ref: '#/components/schemas/SyncChange' }
+        conflicts:
+          type: array
+          items: { $ref: '#/components/schemas/Conflict' }

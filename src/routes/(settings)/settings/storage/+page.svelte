@@ -1,14 +1,22 @@
 <script lang="ts">
+	import { onMount, untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { getApp } from '#lib/app/index.js';
 	import { SettingRow, SettingsGroup } from '#lib/components/app/index.js';
 	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+	import { Skeleton } from '#lib/components/ui/skeleton/index.js';
+	import { formatBytes } from '#lib/core/index.js';
 
-	const { notes } = getApp();
+	const { notes, storage } = getApp();
 
-	// Cifras de ejemplo: aún no existe un repositorio de almacenamiento (llega con IndexedDB).
-	const usage = { usedMb: 180, totalMb: 1024, notesMb: 120, imagesMb: 55, trashMb: 5 };
-	const percent = (usage.usedMb / usage.totalMb) * 100;
+	onMount(() => void storage.load());
+	// El espacio se recalcula cuando cambian las notas (vaciar la papelera, etc.).
+	$effect(() => {
+		void notes.all.length;
+		untrack(() => void storage.load());
+	});
+
+	const usage = $derived(storage.usage);
 
 	let confirmEmpty = $state(false);
 
@@ -26,25 +34,39 @@
 <h1 class="text-page font-bold max-md:sr-only">Almacenamiento y exportación</h1>
 
 <section class="flex flex-col gap-3 rounded-[14px] border bg-card p-4">
-	<p class="text-body font-semibold">{usage.usedMb} MB de 1 GB usados</p>
-	<div
-		class="h-2 overflow-hidden rounded-full bg-border"
-		role="progressbar"
-		aria-valuenow={usage.usedMb}
-		aria-valuemax={usage.totalMb}
-		aria-label="Almacenamiento usado"
-	>
-		<div class="h-full rounded-full bg-primary" style:width="{percent}%"></div>
-	</div>
-	<p class="text-label text-muted-foreground">
-		Tienes {usage.totalMb - usage.usedMb} MB disponibles.
-	</p>
+	{#if usage}
+		<p class="text-body font-semibold">
+			{formatBytes(usage.usedBytes)} de {formatBytes(usage.quotaBytes)} usados
+		</p>
+		<div
+			class="h-2 overflow-hidden rounded-full bg-border"
+			role="progressbar"
+			aria-valuenow={Math.round(storage.percentUsed)}
+			aria-valuemin={0}
+			aria-valuemax={100}
+			aria-label="Almacenamiento usado"
+		>
+			<div
+				class="h-full min-w-1 rounded-full bg-primary"
+				style:width="{storage.percentUsed}%"
+			></div>
+		</div>
+		<p class="text-label text-muted-foreground">
+			Tienes {formatBytes(storage.availableBytes)} disponibles.
+		</p>
+	{:else if storage.status === 'error'}
+		<p class="text-label text-muted-foreground">No pudimos calcular el espacio usado.</p>
+	{:else}
+		<Skeleton class="h-4 w-48" />
+		<Skeleton class="h-2 w-full rounded-full" />
+		<Skeleton class="h-3.5 w-40" />
+	{/if}
 </section>
 
 <SettingsGroup title="Uso">
-	<SettingRow label="Notas" value="{usage.notesMb} MB" chevron />
-	<SettingRow label="Imágenes" value="{usage.imagesMb} MB" chevron />
-	<SettingRow label="Papelera" value="{usage.trashMb} MB" chevron />
+	<SettingRow label="Notas" value={usage ? formatBytes(usage.notesBytes) : '—'} chevron />
+	<SettingRow label="Imágenes" value={usage ? formatBytes(usage.imagesBytes) : '—'} chevron />
+	<SettingRow label="Papelera" value={usage ? formatBytes(usage.trashBytes) : '—'} chevron />
 </SettingsGroup>
 
 <SettingsGroup title="Exportar">

@@ -157,3 +157,79 @@ describe('AuthState · recuperar contraseña', () => {
 		expect((await auth.login({ email: DEMO_USER_EMAIL, password: 'Nueva123!' })).ok).toBe(true);
 	});
 });
+
+describe('AuthState · mi cuenta', () => {
+	it('cambia el nombre y lo refleja al instante', async () => {
+		const { auth } = await testApp();
+		const r = await auth.updateProfile('  Ana María  ');
+		expect(r.ok).toBe(true);
+		expect(auth.user?.fullName).toBe('Ana María');
+	});
+
+	it('rechaza un nombre vacío sin llamar al servidor', async () => {
+		const { auth, backend } = await testApp();
+		const before = backend.db.users[0].user.fullName;
+		const r = await auth.updateProfile(' ');
+		expect(r.ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ fullName: 'name-too-short' });
+		expect(backend.db.users[0].user.fullName).toBe(before);
+	});
+
+	it('cambia el correo en dos pasos: contraseña y código', async () => {
+		const { auth } = await testApp();
+		const bad = await auth.requestEmailChange('nuevo@correo.com', 'mala');
+		expect(bad.ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ password: 'wrong-password' });
+
+		expect((await auth.requestEmailChange('nuevo@correo.com', DEMO_USER_PASSWORD)).ok).toBe(true);
+		expect(auth.pendingEmailChange).toBe('nuevo@correo.com');
+		expect(auth.user?.email).toBe(DEMO_USER_EMAIL); // aún no cambia
+
+		expect((await auth.confirmEmailChange('000000')).ok).toBe(false);
+		expect((await auth.confirmEmailChange('123456')).ok).toBe(true);
+		expect(auth.user?.email).toBe('nuevo@correo.com');
+		expect(auth.pendingEmailChange).toBeNull();
+	});
+
+	it('no permite cambiar a un correo que ya existe', async () => {
+		const { auth, backend } = await testApp();
+		backend.db.users.push({
+			password: 'x',
+			user: {
+				id: 'u_9',
+				email: 'otra@correo.com',
+				fullName: 'Otra',
+				emailVerified: true,
+				createdAt: ''
+			}
+		});
+		const r = await auth.requestEmailChange('otra@correo.com', DEMO_USER_PASSWORD);
+		expect(r.ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ email: 'email-taken' });
+	});
+
+	it('cambia la contraseña: valida y exige la actual', async () => {
+		const { auth } = await testApp();
+		const weak = await auth.changePassword(DEMO_USER_PASSWORD, 'corta', 'corta');
+		expect(weak.ok).toBe(false);
+		expect(auth.fieldErrors.password).toBe('password-too-short');
+
+		const same = await auth.changePassword(
+			DEMO_USER_PASSWORD,
+			DEMO_USER_PASSWORD,
+			DEMO_USER_PASSWORD
+		);
+		expect(same.ok).toBe(false);
+		expect(auth.fieldErrors.password).toBe('same-password');
+
+		const wrong = await auth.changePassword('mala', 'Nueva123!x', 'Nueva123!x');
+		expect(wrong.ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ currentPassword: 'wrong-password' });
+
+		expect((await auth.changePassword(DEMO_USER_PASSWORD, 'Nueva123!x', 'Nueva123!x')).ok).toBe(
+			true
+		);
+		await auth.logout();
+		expect((await auth.login({ email: DEMO_USER_EMAIL, password: 'Nueva123!x' })).ok).toBe(true);
+	});
+});

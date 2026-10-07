@@ -1,0 +1,8 @@
+extends:
+  - recommended
+rules:
+  # Borrador: la URL de producción es provisional y todavía no hay licencia.
+  no-server-example.com: off
+  info-license: off
+  # No todas las operaciones declaran un 4XX concreto (los comunes viven en `components/responses`).
+  operation-4xx-response: off

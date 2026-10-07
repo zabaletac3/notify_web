@@ -13,7 +13,9 @@ export type ValidationCode =
 	| 'name-taken'
 	| 'invalid-code'
 	| 'invalid-token'
-	| 'email-taken';
+	| 'email-taken'
+	| 'wrong-password'
+	| 'same-password';
 
 export type FieldErrors = Record<string, ValidationCode>;
 
@@ -100,4 +102,30 @@ export function validateFolderName(name: string, existing: string[]): Validation
 			.toLowerCase();
 	if (existing.some((e) => fold(e) === fold(trimmed))) return done({ name: 'name-taken' });
 	return done({});
+}
+
+export function validateProfileName(fullName: string): Validation {
+	return done(fullName.trim().length < 2 ? { fullName: 'name-too-short' } : {});
+}
+
+/** Cambio de correo: correo nuevo válido y contraseña actual (para confirmar que eres tú). */
+export function validateEmailChange(email: string, password: string): Validation {
+	const errors: FieldErrors = {};
+	if (!email.trim()) errors.email = 'required';
+	else if (!isValidEmail(email)) errors.email = 'invalid-email';
+	if (!password) errors.password = 'required';
+	return done(errors);
+}
+
+export function validateChangePassword(
+	currentPassword: string,
+	newPassword: string,
+	confirmation: string
+): Validation {
+	const errors: FieldErrors = {};
+	if (!currentPassword) errors.currentPassword = 'required';
+	if (newPassword.length < PASSWORD_MIN_LENGTH) errors.password = 'password-too-short';
+	else if (newPassword === currentPassword) errors.password = 'same-password';
+	if (confirmation !== newPassword) errors.confirmation = 'passwords-dont-match';
+	return done(errors);
 }

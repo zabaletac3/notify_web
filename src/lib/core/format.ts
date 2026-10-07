@@ -52,3 +52,19 @@ export function formatRelativeTime(iso: string, now: Date): string {
 export function formatCount(n: number, one: string, many: string): string {
 	return `${n} ${n === 1 ? one : many}`;
 }
+
+/** Tamaño legible en español con unidades binarias: `180 MB`, `1 GB`, `12,5 KB`. */
+export function formatBytes(bytes: number): string {
+	const units = ['B', 'KB', 'MB', 'GB'];
+	let value = Math.max(0, bytes);
+	let unit = 0;
+	// 1023,5 ya se redondea a 1024: pasa a la unidad siguiente para no mostrar "1024 MB".
+	while (value >= 1023.5 && unit < units.length - 1) {
+		value /= 1024;
+		unit++;
+	}
+	const text = new Intl.NumberFormat('es', {
+		maximumFractionDigits: value < 10 && unit > 0 ? 1 : 0
+	}).format(value);
+	return `${text} ${units[unit]}`;
+}

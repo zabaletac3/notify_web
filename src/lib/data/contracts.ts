@@ -12,6 +12,7 @@ import type {
 	RegisterInput,
 	Session,
 	ShareLink,
+	StorageUsage,
 	SyncSnapshot,
 	User
 } from '#lib/domain/index.js';
@@ -53,6 +54,15 @@ export interface AuthRepository {
 	resendVerificationCode(email: string): Promise<void>;
 	login(input: LoginInput): Promise<Session>;
 	logout(): Promise<void>;
+	/** Cambia el nombre visible. */
+	updateProfile(patch: { fullName: string }): Promise<User>;
+	/**
+	 * Pide cambiar el correo: exige la contraseña actual y envía un código al correo nuevo.
+	 * El cambio no se aplica hasta `confirmEmailChange`.
+	 */
+	requestEmailChange(newEmail: string, password: string): Promise<{ email: string }>;
+	confirmEmailChange(email: string, code: string): Promise<User>;
+	changePassword(currentPassword: string, newPassword: string): Promise<void>;
 	/** Elimina la cuenta y todos sus datos (se conservan 30 días antes del borrado definitivo). */
 	deleteAccount(): Promise<void>;
 	/** Sesión vigente, o `null` si no hay sesión. Lanza `session-expired` si venció. */
@@ -85,6 +95,11 @@ export interface ShareRepository {
 	getLink(noteId: Id): Promise<ShareLink | null>;
 }
 
+export interface StorageRepository {
+	/** Espacio usado en el servidor, desglosado, frente a la cuota de la cuenta. */
+	usage(): Promise<StorageUsage>;
+}
+
 export interface Repositories {
 	notes: NoteRepository;
 	folders: FolderRepository;
@@ -93,6 +108,7 @@ export interface Repositories {
 	settings: SettingsRepository;
 	sync: SyncRepository;
 	share: ShareRepository;
+	storage: StorageRepository;
 }
 
 export type { Conflict };

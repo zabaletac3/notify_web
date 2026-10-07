@@ -6,6 +6,7 @@ import {
 	MockDeviceRepository,
 	MockSettingsRepository,
 	MockShareRepository,
+	MockStorageRepository,
 	MockSyncRepository
 } from './mock-misc-repositories.js';
 import { MockNoteRepository } from './mock-note-repository.js';
@@ -30,7 +31,8 @@ export function createMockBackend(options: MockDatabaseOptions = {}): MockBacken
 			devices: new MockDeviceRepository(db),
 			settings: new MockSettingsRepository(db),
 			sync: new MockSyncRepository(db),
-			share: new MockShareRepository(db)
+			share: new MockShareRepository(db),
+			storage: new MockStorageRepository(db)
 		}
 	};
 }

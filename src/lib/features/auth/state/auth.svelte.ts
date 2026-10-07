@@ -2,9 +2,12 @@ import { attempt } from '#lib/core/index.js';
 import type { AuthRepository } from '#lib/data/index.js';
 import {
 	succeed,
+	validateChangePassword,
 	validateEmail,
+	validateEmailChange,
 	validateLogin,
 	validateNewPassword,
+	validateProfileName,
 	validateRegister,
 	validateVerificationCode,
 	type ActionResult,
@@ -35,6 +38,8 @@ export class AuthState {
 
 	/** Correo pendiente de verificar (entre "registro" y "verificación"). */
 	pendingEmail = $state<string | null>(null);
+	/** Correo nuevo que espera el código de confirmación (cambio de correo en Mi cuenta). */
+	pendingEmailChange = $state<string | null>(null);
 	/** Instante (ms) desde el que se puede reenviar el código. */
 	resendAvailableAt = $state(0);
 	/** `true` cuando ya se pidió el enlace de recuperación. */
@@ -140,6 +145,40 @@ export class AuthState {
 			this.user = null;
 			this.status = 'anonymous';
 		});
+	}
+
+	async updateProfile(fullName: string): Promise<ActionResult> {
+		return this.act(validateProfileName(fullName), async () => {
+			this.user = await this.repo.updateProfile({ fullName });
+		});
+	}
+
+	/** Paso 1 del cambio de correo: valida, pide la contraseña actual y manda el código al correo nuevo. */
+	async requestEmailChange(newEmail: string, password: string): Promise<ActionResult> {
+		return this.act(validateEmailChange(newEmail, password), async () => {
+			const { email } = await this.repo.requestEmailChange(newEmail, password);
+			this.pendingEmailChange = email;
+		});
+	}
+
+	/** Paso 2: confirma el correo nuevo con el código recibido. */
+	async confirmEmailChange(code: string): Promise<ActionResult> {
+		const email = this.pendingEmailChange;
+		if (!email) return this.reject({ kind: 'not-found', entity: 'email-change' });
+		return this.act(validateVerificationCode(code), async () => {
+			this.user = await this.repo.confirmEmailChange(email, code);
+			this.pendingEmailChange = null;
+		});
+	}
+
+	async changePassword(
+		currentPassword: string,
+		newPassword: string,
+		confirmation: string
+	): Promise<ActionResult> {
+		return this.act(validateChangePassword(currentPassword, newPassword, confirmation), () =>
+			this.repo.changePassword(currentPassword, newPassword)
+		);
 	}
 
 	/** Pide el enlace de recuperación. Siempre "funciona" para no revelar qué correos existen. */

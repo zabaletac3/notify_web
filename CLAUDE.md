@@ -31,3 +31,7 @@ Pruebas de navegador: si no hay Chromium de Playwright, usar `CHROMIUM_PATH=/rut
 ## Datos y estado
 
 Ver `docs/data-and-state.md`. La UI obtiene todo con `getApp()` (`#lib/app/index.js`); nunca llama a repositorios directamente. Las acciones de estado devuelven `ActionResult` (no lanzan) y los errores de validación son códigos (`validationMessage`). Para ver estados (sin conexión, error, conflicto, vacío) usar el simulador en `/dev/simulator`. Las pruebas de estado usan `testApp()` de `#lib/test/test-app.js`.
+
+## API del backend
+
+Borrador del contrato HTTP en `docs/api/openapi.yaml` (`pnpm api:lint` lo valida) y decisiones abiertas en `docs/api/decisions.md`. Si cambias un contrato de `src/lib/data/contracts.ts`, actualiza la especificación.

@@ -11,4 +11,5 @@ export * from './device.js';
 export * from './share.js';
 export * from './sync.js';
 export * from './settings.js';
+export * from './storage.js';
 export * from './validation.js';

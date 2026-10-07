@@ -22,7 +22,7 @@
 	--popover: #fffdf8;
 	--popover-foreground: #1f1d1a;
 	--muted: #f6f2ea; /* bg/app */
-	--muted-foreground: #6f685e; /* text/secondary */
+	--muted-foreground: #57514a; /* text/secondary */
 	--secondary: #e6dfd3; /* bg/hover */
 	--secondary-foreground: #1f1d1a;
 	--accent: #dce7f5; /* bg/selected */
@@ -54,13 +54,13 @@
 	/* --- Tokens propios (no existen en shadcn) --- */
 	--hover: #e6dfd3; /* bg/hover */
 	--input-fill: #eae4d9; /* bg/input */
-	--tertiary: #9c958a; /* text/tertiary */
-	--tag-amber: #b7791f; /* tag/amber */
+	--tertiary: #675f55; /* text/tertiary */
+	--tag-amber: #8a590c; /* tag/amber */
 	--tag-plum: #7b4b8a; /* tag/plum */
 	--destructive-soft: #f8e3e0; /* status/danger-bg */
 
 	--chart-1: #2a5db0;
-	--chart-2: #b7791f;
+	--chart-2: #8a590c;
 	--chart-3: #7b4b8a;
 	--chart-4: #2f7d5c;
 	--chart-5: #b3382c;
@@ -74,7 +74,7 @@
 	--popover: #262522;
 	--popover-foreground: #f1ede6;
 	--muted: #1b1a18; /* bg/app */
-	--muted-foreground: #a39c91; /* text/secondary */
+	--muted-foreground: #bab3a8; /* text/secondary */
 	--secondary: #2e2c29; /* bg/hover */
 	--secondary-foreground: #f1ede6;
 	--accent: #26364d; /* bg/selected */
@@ -101,7 +101,7 @@
 
 	--hover: #2e2c29;
 	--input-fill: #2a2826;
-	--tertiary: #7c766d;
+	--tertiary: #a09990;
 	--tag-amber: #e3b062;
 	--tag-plum: #c49ad3;
 	--destructive-soft: #3b2421;

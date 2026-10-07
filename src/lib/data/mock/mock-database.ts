@@ -57,6 +57,8 @@ export class MockDatabase {
 	lastSyncedAt: string | null = null;
 	resetTokens = new Map<string, string>();
 	failedLogins = new Map<string, number>();
+	/** Cambio de correo pendiente de confirmar con el código. */
+	pendingEmailChange: { userId: string; email: string } | null = null;
 
 	constructor(options: MockDatabaseOptions = {}) {
 		this.scenario = options.scenario ?? new Scenario();
@@ -109,6 +111,7 @@ export class MockDatabase {
 		this.shareLinks = [];
 		this.resetTokens.clear();
 		this.failedLogins.clear();
+		this.pendingEmailChange = null;
 		this.lastSyncedAt = iso(2);
 		this.session = this.startAuthenticated
 			? { user: demo, expiresAt: new Date(now.getTime() + 60 * 60000).toISOString() }
