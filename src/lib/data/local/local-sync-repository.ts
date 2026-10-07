@@ -20,6 +20,8 @@ export interface LocalSyncDeps {
 	now: () => Date;
 	device: { id: Id; name: string };
 	gate?: DataGate;
+	/** Hay una base abierta (si no, no hay nada pendiente ni en conflicto). */
+	isOpen?: () => boolean;
 	/** Estado de la conectividad según el entorno (en producción, `navigator.onLine`). */
 	connectivity?: () => 'online' | 'offline' | 'error';
 	/** Se ejecuta justo antes de cada sincronización (lo usa el simulador para inyectar conflictos). */
@@ -49,6 +51,15 @@ export class LocalSyncRepository implements SyncRepository {
 
 	async snapshot(): Promise<SyncSnapshot> {
 		await this.gate.write();
+		if (this.d.isOpen && !this.d.isOpen()) {
+			const link = this.d.connectivity?.() ?? 'online';
+			return {
+				phase: link === 'online' ? 'idle' : link,
+				lastSyncedAt: null,
+				pendingCount: 0,
+				conflicts: []
+			};
+		}
 		const { db } = this.d;
 		const [pendingCount, rows, lastSyncedAt] = await Promise.all([
 			db.outbox.count(),

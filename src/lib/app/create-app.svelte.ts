@@ -1,6 +1,7 @@
 import { untrack } from 'svelte';
 import {
 	createLocalBackend,
+	createSessionChannel,
 	createMockBackend,
 	type Dataset,
 	type LocalBackend,
@@ -84,13 +85,27 @@ export function createApp(options: AppOptions = {}): App {
 	let sync: SyncState;
 	const refreshPending = () => void sync.refresh();
 
+	// Al cerrar sesión en una pestaña se avisa a las demás (sin rebote: lo recibido no se vuelve a emitir).
+	let applyingRemote = false;
+	const channel = local
+		? createSessionChannel((message) => {
+				if (message.type !== 'signed-out' || message.userId !== (local.userId ?? message.userId))
+					return;
+				applyingRemote = true;
+				void auth.endSession('signed-out-elsewhere').finally(() => (applyingRemote = false));
+			})
+		: null;
+
 	const auth = new AuthState(repos.auth, now, {
 		// Al salir, la copia local se borra (los datos siguen en el servidor).
 		onSignedOut: async () => {
-			await local?.clear();
+			const userId = local?.userId ?? null;
+			// Primero se vacía lo que la pantalla tiene en memoria; después se borra la base.
 			notes.reset();
 			folders.reset();
+			await local?.destroy();
 			void sync.refresh();
+			if (!applyingRemote) channel?.post({ type: 'signed-out', userId });
 		}
 	});
 	const notes = new NotesState(repos.notes, now, refreshPending);
@@ -104,12 +119,17 @@ export function createApp(options: AppOptions = {}): App {
 		onSynced: async () => {
 			await Promise.all([notes.refresh(), folders.refresh()]);
 		},
-		onSessionExpired: () => auth.markExpired()
+		onSessionExpired: () => auth.markExpired(),
+		// Este dispositivo se eliminó desde otro: se borra la copia local y se cierra la sesión.
+		onDeviceRevoked: () => void auth.endSession('device-revoked')
 	});
 
 	/** Carga los datos. En el primer arranque de un dispositivo, antes descarga todo del servidor. */
 	async function loadData() {
+		// Cada cuenta tiene su propia base local; sin sesión no se abre ninguna.
+		if (local && auth.user) await local.open(auth.user.id);
 		await sync.refresh();
+		if (local && !local.userId) return;
 		if (local && auth.isAuthenticated && !sync.snapshot.lastSyncedAt) await sync.syncNow();
 		await Promise.all([settings.load(), folders.load(), notes.load()]);
 	}
@@ -166,6 +186,7 @@ export function createApp(options: AppOptions = {}): App {
 			void scenario.offline;
 			void scenario.serverError;
 			void scenario.sessionExpired;
+			void scenario.deviceRevoked;
 			untrack(() => {
 				void sync.refresh();
 				void auth.bootstrap();
@@ -191,6 +212,7 @@ export function createApp(options: AppOptions = {}): App {
 			clearTimeout(autoSyncTimer);
 			clearInterval(pollTimer);
 			if (local && typeof window !== 'undefined') window.removeEventListener('online', onOnline);
+			channel?.close();
 			stop();
 		}
 	};

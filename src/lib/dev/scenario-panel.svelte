@@ -21,6 +21,11 @@
 		},
 		{ key: 'sessionExpired', label: 'Sesión expirada', hint: 'Diálogo de sesión vencida' },
 		{
+			key: 'deviceRevoked',
+			label: 'Dispositivo revocado',
+			hint: 'Se cierra la sesión y se borra la copia local'
+		},
+		{
 			key: 'injectConflict',
 			label: 'Conflicto en la próxima sincronización',
 			hint: 'Luego pulsa "Sincronizar ahora"'

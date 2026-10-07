@@ -1,3 +1,4 @@
+import { fail } from '#lib/domain/index.js';
 import { createMockBackend, type MockBackend } from '../mock/create-mock-repositories.js';
 import { MockSyncServer } from '../mock/mock-sync-server.js';
 import { DEMO_DEVICE_ID } from '../mock/fixtures/index.js';
@@ -10,8 +11,10 @@ import { LocalSettingsRepository } from './local-settings-repository.js';
 import { LocalSyncRepository } from './local-sync-repository.js';
 
 export interface LocalBackendOptions extends MockDatabaseOptions {
-	/** Nombre de la base IndexedDB (distinto por dispositivo en las pruebas). */
+	/** Prefijo de la base IndexedDB; la de cada cuenta se llama `<prefijo>-<userId>` (distinto por dispositivo en las pruebas). */
 	dbName?: string;
+	/** Abre ya la base de esta cuenta (si no, se abre con `local.open` tras conocer la sesión). */
+	userId?: string;
 	/** Servidor compartido: permite simular varios dispositivos contra el mismo servidor. */
 	server?: MockDatabase;
 	/** Este dispositivo (por defecto, el "actual" del simulador). */
@@ -20,11 +23,20 @@ export interface LocalBackendOptions extends MockDatabaseOptions {
 
 export interface LocalBackend extends MockBackend {
 	local: {
-		db: ApunteDb;
+		/** Base de la cuenta abierta. Lanza `session-expired` si no hay ninguna. */
+		readonly db: ApunteDb;
+		/** Cuenta cuya base está abierta, o `null`. */
+		readonly userId: string | null;
 		sync: LocalSyncRepository;
 		server: MockSyncServer;
-		/** Borra la copia local (al cerrar sesión o al cambiar de datos de ejemplo). */
+		/** Abre la base de esta cuenta (cierra la anterior). Si pertenecía a otra cuenta, se borra y se recrea. */
+		open(userId: string): Promise<void>;
+		/** Cierra la base sin borrarla (otra pestaña la borró, o se cambia de cuenta). */
+		close(): void;
+		/** Borra todo el contenido de la base abierta (al cambiar de datos de ejemplo). */
 		clear(): Promise<void>;
+		/** Borra la base de la cuenta por completo y la cierra (cerrar sesión, dispositivo revocado). */
+		destroy(): Promise<void>;
 	};
 }
 
@@ -36,7 +48,19 @@ export function createLocalBackend(options: LocalBackendOptions = {}): LocalBack
 	const mock = createMockBackend({ ...options, database: options.server });
 	const serverDb = mock.db;
 	const scenario = serverDb.scenario;
-	const db = new ApunteDb(options.dbName ?? 'apunte');
+	const prefix = options.dbName ?? 'apunte';
+	const dbNameFor = (userId: string) => `${prefix}-${userId}`;
+	let holder: { db: ApunteDb; userId: string } | null = null;
+	const attach = (userId: string) => {
+		holder?.db.close();
+		holder = { db: new ApunteDb(dbNameFor(userId)), userId };
+	};
+	if (options.userId) attach(options.userId);
+	// Sin base abierta (sin sesión) nadie puede leer ni escribir: las operaciones fallan como sesión vencida.
+	const openDb = () => {
+		if (!holder) throw fail.sessionExpired();
+		return holder.db;
+	};
 
 	const current = serverDb.devices.find((d) => d.current);
 	const device = options.device ?? {
@@ -49,12 +73,22 @@ export function createLocalBackend(options: LocalBackendOptions = {}): LocalBack
 		read: () => serverDb.local('read'),
 		write: () => serverDb.local('write')
 	};
-	const deps = { db, now: serverDb.now, deviceId: device.id, gate };
+	const deps = {
+		get db() {
+			return openDb();
+		},
+		now: serverDb.now,
+		deviceId: device.id,
+		gate
+	};
 	const server = new MockSyncServer(serverDb);
 
 	const notes = new LocalNoteRepository(deps);
 	const sync = new LocalSyncRepository({
-		db,
+		get db() {
+			return openDb();
+		},
+		isOpen: () => holder !== null,
 		transport: server,
 		now: serverDb.now,
 		device,
@@ -79,6 +113,40 @@ export function createLocalBackend(options: LocalBackendOptions = {}): LocalBack
 			settings: new LocalSettingsRepository(deps),
 			sync
 		},
-		local: { db, sync, server, clear: () => db.clearAll() }
+		local: {
+			get db() {
+				return openDb();
+			},
+			get userId() {
+				return holder?.userId ?? null;
+			},
+			sync,
+			server,
+			async open(userId) {
+				if (holder?.userId === userId) return;
+				attach(userId);
+				const db = openDb();
+				await db.open();
+				const owner = await db.getMeta<string>('userId');
+				if (owner && owner !== userId) {
+					// La base no es de esta cuenta: nunca se reutiliza.
+					await db.delete();
+					attach(userId);
+					await openDb().open();
+				}
+				await openDb().setMeta('userId', userId);
+			},
+			close() {
+				holder?.db.close();
+				holder = null;
+			},
+			clear: () => (holder ? holder.db.clearAll() : Promise.resolve()),
+			async destroy() {
+				if (!holder) return;
+				const { db } = holder;
+				holder = null;
+				await db.delete();
+			}
+		}
 	};
 }

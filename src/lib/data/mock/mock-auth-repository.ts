@@ -145,6 +145,7 @@ export class MockAuthRepository implements AuthRepository {
 
 	async currentSession(): Promise<Session | null> {
 		await this.db.local('write');
+		if (this.db.scenario.deviceRevoked && this.db.session) throw fail.deviceRevoked();
 		if (this.db.scenario.sessionExpired && this.db.session) {
 			throw fail.sessionExpired();
 		}

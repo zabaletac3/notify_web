@@ -15,6 +15,8 @@ export type AppError =
 	| { kind: 'forbidden'; code?: 'email-not-verified' }
 	/** La sesión expiró (diálogo "sesión expirada"). */
 	| { kind: 'session-expired' }
+	/** Este dispositivo fue eliminado de la cuenta desde otro: hay que borrar la copia local. */
+	| { kind: 'device-revoked' }
 	| { kind: 'not-found'; entity?: string }
 	/** Datos inválidos: campo → código de validación (ver `ValidationCode`). */
 	| { kind: 'validation'; fields: Record<string, string> }
@@ -43,6 +45,7 @@ export const fail = {
 	invalidCredentials: () => new AppFailure({ kind: 'unauthorized', code: 'invalid-credentials' }),
 	emailNotVerified: () => new AppFailure({ kind: 'forbidden', code: 'email-not-verified' }),
 	sessionExpired: () => new AppFailure({ kind: 'session-expired' }),
+	deviceRevoked: () => new AppFailure({ kind: 'device-revoked' }),
 	notFound: (entity?: string) => new AppFailure({ kind: 'not-found', entity }),
 	validation: (fields: Record<string, string>) => new AppFailure({ kind: 'validation', fields }),
 	conflict: (noteId: Id) => new AppFailure({ kind: 'conflict', noteId }),

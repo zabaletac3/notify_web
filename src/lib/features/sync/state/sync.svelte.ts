@@ -26,18 +26,25 @@ export class SyncState {
 	private readonly repo: SyncRepository;
 	private readonly onSynced: () => Promise<void>;
 	private readonly onSessionExpired: () => void;
+	private readonly onDeviceRevoked: () => void;
 
 	/**
 	 * @param onSynced se llama tras sincronizar o resolver un conflicto (para recargar las notas)
 	 * @param onSessionExpired se llama cuando el servidor dice que la sesión venció
+	 * @param onDeviceRevoked se llama cuando el servidor dice que este dispositivo fue eliminado de la cuenta
 	 */
 	constructor(
 		repo: SyncRepository,
-		hooks: { onSynced?: () => Promise<void>; onSessionExpired?: () => void } = {}
+		hooks: {
+			onSynced?: () => Promise<void>;
+			onSessionExpired?: () => void;
+			onDeviceRevoked?: () => void;
+		} = {}
 	) {
 		this.repo = repo;
 		this.onSynced = hooks.onSynced ?? (async () => {});
 		this.onSessionExpired = hooks.onSessionExpired ?? (() => {});
+		this.onDeviceRevoked = hooks.onDeviceRevoked ?? (() => {});
 	}
 
 	phase: SyncPhase = $derived.by(() => {
@@ -88,6 +95,10 @@ export class SyncState {
 		if (result.error.kind === 'session-expired') {
 			this.lastError = null;
 			this.onSessionExpired();
+		}
+		if (result.error.kind === 'device-revoked') {
+			this.lastError = null;
+			this.onDeviceRevoked();
 		}
 		return result;
 	}

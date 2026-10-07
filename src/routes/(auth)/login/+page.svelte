@@ -50,6 +50,14 @@
 			/>
 		</div>
 
+		{#if auth.notice}
+			<p class="rounded-xl bg-accent px-3.5 py-3 text-label text-foreground" role="status">
+				{auth.notice === 'device-revoked'
+					? errorMessage({ kind: 'device-revoked' })
+					: 'Cerraste sesión en otra pestaña.'}
+			</p>
+		{/if}
+
 		{#if auth.error && auth.error.kind !== 'validation'}
 			<p
 				class="rounded-xl bg-destructive-soft px-3.5 py-3 text-label text-destructive"

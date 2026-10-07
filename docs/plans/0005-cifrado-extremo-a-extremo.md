@@ -688,3 +688,11 @@ el resto, un commit por fase. Push a `main` al final de cada fase con las línea
 ## Desviaciones
 
 _(Quien ejecute: anotar aquí cualquier cambio respecto al plan y por qué.)_
+
+**Fase 0**
+
+- La base local se abre con `local.open(userId)` desde `createApp` (tras `auth.bootstrap()` o al iniciar sesión). Sin base abierta, los repositorios lanzan `session-expired` y `snapshot()` devuelve un estado vacío.
+- Si la sesión ya venció al arrancar (`status: 'expired'`) no se conoce el `userId`, así que no se abre ninguna base ni se cargan datos hasta volver a iniciar sesión (antes se veían las notas guardadas). Es más seguro y evita mezclar cuentas.
+- `device-revoked` lo detectan `SyncState` y `AuthState.bootstrap`. Los estados de ajustes, dispositivos y compartir siguen tratando solo `session-expired`: lo recoge la siguiente sincronización (cada 60 s como máximo).
+- `endSession(reason)` en `AuthState` cubre revocación y cierre en otra pestaña; la pantalla de inicio de sesión muestra el aviso (`auth.notice`).
+- Cerrar sesión pone antes la sesión en `anonymous` y borra la copia local; si el servidor no responde se ignora el error. Cerrar sesión desde Cuenta pregunta antes si hay cambios pendientes.

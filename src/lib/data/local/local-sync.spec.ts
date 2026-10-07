@@ -11,6 +11,7 @@ const NOW = new Date('2026-10-07T12:00:00.000Z');
 function device(name: string, server?: MockDatabase, now: () => Date = () => NOW): LocalBackend {
 	return createLocalBackend({
 		dbName: `test-${++seq}`,
+		userId: 'u_test',
 		server,
 		now,
 		device: { id: `d_${name}`, name }

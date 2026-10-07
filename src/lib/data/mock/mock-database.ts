@@ -164,6 +164,7 @@ export class MockDatabase {
 		await this.delay();
 		if (this.scenario.offline) throw fail.network();
 		if (this.scenario.serverError) throw fail.server();
+		if (this.scenario.deviceRevoked && !options.ignoreExpired) throw fail.deviceRevoked();
 		if (this.scenario.sessionExpired && !options.ignoreExpired) throw fail.sessionExpired();
 	}
 

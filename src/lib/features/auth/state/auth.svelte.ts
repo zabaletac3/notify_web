@@ -42,6 +42,8 @@ export class AuthState {
 	pendingEmailChange = $state<string | null>(null);
 	/** Instante (ms) desde el que se puede reenviar el código. */
 	resendAvailableAt = $state(0);
+	/** Por qué se cerró la sesión sin que la persona lo pidiera (la pantalla de inicio lo explica). */
+	notice = $state<'device-revoked' | 'signed-out-elsewhere' | null>(null);
 	/** `true` cuando ya se pidió el enlace de recuperación. */
 	resetRequested = $state(false);
 
@@ -75,6 +77,8 @@ export class AuthState {
 			this.status = result.value ? 'authenticated' : 'anonymous';
 		} else if (result.error.kind === 'session-expired') {
 			this.status = 'expired';
+		} else if (result.error.kind === 'device-revoked') {
+			await this.endSession('device-revoked');
 		} else {
 			this.status = 'anonymous';
 		}
@@ -83,6 +87,17 @@ export class AuthState {
 	/** La capa de datos avisó de que la sesión venció (desde cualquier llamada remota). */
 	markExpired() {
 		if (this.status === 'authenticated') this.status = 'expired';
+	}
+
+	/**
+	 * La sesión terminó sin que la persona lo pidiera: el dispositivo fue revocado desde otro, o se
+	 * cerró sesión en otra pestaña. Limpia la copia local y deja la sesión cerrada.
+	 */
+	async endSession(reason: 'device-revoked' | 'signed-out-elsewhere') {
+		this.user = null;
+		this.status = 'anonymous';
+		this.notice = reason;
+		await this.onSignedOut();
 	}
 
 	clearErrors() {
@@ -125,6 +140,7 @@ export class AuthState {
 	async login(input: LoginInput): Promise<ActionResult> {
 		const result = await this.act(validateLogin(input), async () => {
 			const session = await this.repo.login(input);
+			this.notice = null;
 			this.user = session.user;
 			this.status = 'authenticated';
 		});
@@ -140,16 +156,23 @@ export class AuthState {
 
 	async logout(): Promise<ActionResult> {
 		return this.act({ valid: true }, async () => {
-			await this.repo.logout();
+			// Primero se borra lo local: sin red también se puede salir (el token caduca solo).
 			this.user = null;
 			this.status = 'anonymous';
+			this.notice = null;
 			await this.onSignedOut();
+			try {
+				await this.repo.logout();
+			} catch {
+				// Revocación pendiente: el servidor la hará al caducar el token.
+			}
 		});
 	}
 
 	async deleteAccount(): Promise<ActionResult> {
 		return this.act({ valid: true }, async () => {
 			await this.repo.deleteAccount();
+			this.notice = null;
 			this.user = null;
 			this.status = 'anonymous';
 			await this.onSignedOut();

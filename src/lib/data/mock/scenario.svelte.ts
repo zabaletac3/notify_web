@@ -15,6 +15,7 @@ export type Dataset =
  *  - `offline`          → banner "sin conexión"; sincronización y cuentas fallan, las notas se guardan localmente
  *  - `serverError`      → pantalla "error de servidor" (falla la carga de listas y las llamadas remotas)
  *  - `sessionExpired`   → diálogo "sesión expirada" al hacer una llamada remota
+ *  - `deviceRevoked`    → este dispositivo fue eliminado desde otro: se cierra la sesión y se borra la copia local
  *  - `injectConflict`   → el próximo "sincronizar" deja un conflicto de edición
  *  - `latencyMs` alto   → skeletons de carga
  */
@@ -23,6 +24,7 @@ export class Scenario {
 	offline = $state(false);
 	serverError = $state(false);
 	sessionExpired = $state(false);
+	deviceRevoked = $state(false);
 	injectConflict = $state(false);
 	dataset = $state<Dataset>('normal');
 
@@ -32,6 +34,7 @@ export class Scenario {
 		this.offline = false;
 		this.serverError = false;
 		this.sessionExpired = false;
+		this.deviceRevoked = false;
 		this.injectConflict = false;
 	}
 }

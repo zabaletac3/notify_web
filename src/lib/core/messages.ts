@@ -39,6 +39,8 @@ export function errorMessage(error: AppError): string {
 				: 'No tienes permiso para hacer esto.';
 		case 'session-expired':
 			return 'Tu sesión expiró. Inicia sesión de nuevo.';
+		case 'device-revoked':
+			return 'Se cerró la sesión en este dispositivo.';
 		case 'not-found':
 			return 'No encontramos lo que buscabas.';
 		case 'validation':

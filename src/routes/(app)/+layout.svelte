@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { formatCount } from '#lib/core/index.js';
 	import { getApp } from '#lib/app/index.js';
@@ -16,6 +17,11 @@
 	// Al pasar a una pantalla ancha el cajón ya no hace falta.
 	$effect(() => {
 		if (shell.wide.current) shell.drawerOpen = false;
+	});
+
+	// Sesión cerrada sin que la persona lo pidiera (dispositivo revocado, otra pestaña): a iniciar sesión.
+	$effect(() => {
+		if (app.auth.notice) void goto('/login');
 	});
 
 	// Aviso "Sincronizando N cambios…" mientras se sube lo pendiente.

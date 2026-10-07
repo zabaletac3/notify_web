@@ -11,9 +11,9 @@
 	} from '#lib/components/app/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
-	import { errorMessage, validationMessage } from '#lib/core/index.js';
+	import { errorMessage, formatCount, validationMessage } from '#lib/core/index.js';
 
-	const { auth } = getApp();
+	const { auth, sync } = getApp();
 
 	const user = $derived(auth.user);
 	const initials = $derived(
@@ -28,6 +28,27 @@
 	async function logout() {
 		const result = await auth.logout();
 		if (result.ok) await goto('/welcome');
+	}
+
+	// Con cambios sin sincronizar, salir los borraría del dispositivo: se pregunta antes.
+	let leaving = $state(false);
+	let syncingBeforeLeave = $state(false);
+	let leaveError = $state(false);
+	function requestLogout() {
+		if (sync.pendingCount > 0) {
+			leaveError = false;
+			leaving = true;
+		} else void logout();
+	}
+	async function syncAndLogout() {
+		syncingBeforeLeave = true;
+		await sync.syncNow();
+		syncingBeforeLeave = false;
+		if (sync.pendingCount > 0) leaveError = true;
+		else {
+			leaving = false;
+			await logout();
+		}
 	}
 
 	// ── Diálogos de edición ───────────────────────────────────────────
@@ -119,7 +140,7 @@
 </SettingsGroup>
 
 <SettingsGroup>
-	<SettingRow label="Cerrar sesión" danger onclick={logout} />
+	<SettingRow label="Cerrar sesión" danger onclick={requestLogout} />
 </SettingsGroup>
 
 {#snippet failure()}
@@ -129,6 +150,34 @@
 		</p>
 	{/if}
 {/snippet}
+
+<ResponsiveDialog open={leaving} onOpenChange={(isOpen) => (leaving = isOpen)}>
+	<Dialog.Title class="text-xl">Cambios sin sincronizar</Dialog.Title>
+	<p class="text-sm leading-5 text-muted-foreground">
+		Tienes {formatCount(sync.pendingCount, 'cambio', 'cambios')} sin sincronizar. Si cierras sesión ahora
+		se perderán.
+	</p>
+	{#if leaveError}
+		<p class="rounded-xl bg-destructive-soft px-3.5 py-3 text-label text-destructive" role="alert">
+			No se pudo sincronizar. Revisa tu conexión e inténtalo de nuevo.
+		</p>
+	{/if}
+	<div class={buttons}>
+		<Button type="button" variant="outline" onclick={() => (leaving = false)}>Cancelar</Button>
+		<Button
+			type="button"
+			variant="destructive"
+			disabled={syncingBeforeLeave}
+			onclick={() => {
+				leaving = false;
+				void logout();
+			}}>Salir igualmente</Button
+		>
+		<Button type="button" disabled={syncingBeforeLeave} onclick={syncAndLogout}
+			>Sincronizar y salir</Button
+		>
+	</div>
+</ResponsiveDialog>
 
 <ResponsiveDialog open={dialog === 'name'} onOpenChange={closing('name')}>
 	<Dialog.Title class="text-xl">Cambiar nombre</Dialog.Title>
