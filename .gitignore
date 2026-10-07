@@ -27,3 +27,6 @@ test-results
 # Herramientas locales
 .claude/settings.local.json
 coverage
+
+*storybook.log
+storybook-static

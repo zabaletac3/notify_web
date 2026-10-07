@@ -1,0 +1,59 @@
+# Componentes base y sistema de diseño
+
+Estado de la **Fase 2** (la parte que no requiere el MCP de Figma). Catálogo vivo: `pnpm dev` → `/dev/design-system`; Storybook: `pnpm storybook`.
+
+## Lo que ya está
+
+| Pieza               | Dónde                                        | Notas                                                                                                        |
+| ------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Tokens claro/oscuro | `src/lib/styles/tokens.css`                  | Mapa en `docs/design-tokens.md`. Prueba de contraste WCAG en `tokens.spec.ts`                                |
+| Utilidades Tailwind | `src/lib/styles/theme.css`                   | Colores propios (`bg-hover`, `bg-input-fill`, `text-tertiary`, `text-success`…), radios y escala tipográfica |
+| Variantes de shadcn | `src/lib/styles/shadcn.css`                  | `data-checked:`, `data-open:`, `data-active:`… (necesarias para los componentes)                             |
+| Componentes base    | `src/lib/components/ui/`                     | shadcn-svelte ajustado al diseño (ver abajo)                                                                 |
+| Iconos              | `src/lib/components/app/icons.ts`, `AppIcon` | Claves = componentes `icon/*` de Figma → Lucide, trazo 1.75                                                  |
+| Tema                | `ThemeToggle`                                | Claro/oscuro con mode-watcher                                                                                |
+
+### Escala tipográfica (Inter)
+
+| Clase                        | Tamaño  | Uso                             |
+| ---------------------------- | ------- | ------------------------------- |
+| `text-title font-bold`       | 28 / 34 | Títulos de pantalla             |
+| `text-heading font-semibold` | 18 / 24 | Encabezados, títulos de diálogo |
+| `text-body`                  | 15 / 22 | Texto base, botones, campos     |
+| `text-label font-medium`     | 13 / 18 | Etiquetas de campo              |
+| `text-caption`               | 12 / 16 | Ayudas, metadatos               |
+
+### Radios
+
+`rounded-sm` 8 · `rounded-lg` 12 (campos, botones) · `rounded-xl` 14 (botón grande) · `rounded-2xl` 20 (diálogos) · `rounded-3xl` 24 (bottom sheet).
+
+### Ajustes hechos a shadcn
+
+- **Button:** primario azul, `outline` = botón secundario del diseño (borde, sin relleno), `destructive` sólido y `destructive-soft` tintado. Alturas 46 (`default`) y 54 (`lg`) como en Figma (`h-11.5`, `h-13.5`).
+- **Input / Textarea:** rellenos (`bg-input-fill`), sin borde, foco con borde azul de 2 px; error con borde `destructive`.
+- **Checkbox:** circular (las tareas del diseño tienen check redondo). **Radio:** mismo estilo de borde.
+- **Switch:** 44×26 con 3 px de margen; apagado en `tertiary`.
+- **Input OTP:** casillas separadas y rellenas, foco azul (como la pantalla de verificación).
+- **Badge:** variantes `amber`, `plum` (etiquetas) y `success`.
+- **Dialog / Sheet:** radios 20 y 24, scrim sin desenfoque, títulos 18 bold.
+- **Skeleton:** `bg-hover`.
+- Se eliminaron los marcadores de estilo del CLI de shadcn que no aplican (`cn-menu-*`, `cn-font-heading`, `cn-rtl-flip`).
+
+## Contraste (resultado de `tokens.spec.ts`)
+
+Cumplen AA (≥ 4.5): texto principal y secundario sobre fondos, botón primario, enlaces, peligro, éxito. Por debajo, **por decisión del diseño actual**, a revisar con Figma:
+
+| Par                                 | Claro | Oscuro | Nota                                                                     |
+| ----------------------------------- | ----- | ------ | ------------------------------------------------------------------------ |
+| `text/tertiary` sobre `bg/editor`   | 2.92  | 3.41   | Placeholders y texto deshabilitado. Sobre `bg/input` baja a 2.34 (claro) |
+| `tag/amber` sobre `bg/editor`       | 3.58  | 7.77   | Texto pequeño de etiqueta en claro queda bajo 4.5                        |
+| `text/secondary` sobre `bg/sidebar` | 4.47  | 5.91   | Roza el mínimo en claro                                                  |
+
+## Pendiente de validar con Figma (fase de captura)
+
+Los valores de estos componentes se dedujeron del diseño conocido y deben reconciliarse al capturar cada pantalla:
+
+- Tamaños `xs` / `sm` de botón y tamaños de iconos por contexto.
+- Padding y espaciados de diálogos, sheet, menús y popover.
+- Componentes compuestos de Apunte (`SidebarItem`, `NoteCard`, `SettingRow`, `EmptyState`, `Banner`, toasts…): se construirán sobre estos primitivos con las medidas exactas.
+- Estilo final de Toaster (sonner), Command y Sidebar de shadcn.

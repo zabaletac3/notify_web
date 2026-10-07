@@ -13,7 +13,7 @@ App de notas (SvelteKit + Svelte 5 + shadcn-svelte + Tailwind v4). Lee `docs/arc
 
 ## Comandos
 
-`pnpm dev` · `pnpm check` · `pnpm lint` · `pnpm test:unit --run` · `pnpm build` · `pnpm verify` (todo junto, como la CI).
+`pnpm dev` · `pnpm storybook` · `pnpm check` · `pnpm lint` · `pnpm test:unit --run` · `pnpm build` · `pnpm verify` (todo junto, como la CI).
 
 ## shadcn-svelte
 
@@ -22,3 +22,8 @@ App de notas (SvelteKit + Svelte 5 + shadcn-svelte + Tailwind v4). Lee `docs/arc
 ## Diseño
 
 Fuente de verdad: archivo de Figma "Apunte – App de notas" (35 vistas, escritorio y móvil, claro y oscuro). No tocar Figma sin que se pida.
+
+## Sistema de diseño
+
+Ver `docs/components.md`: escala tipográfica (`text-title/heading/body/label/caption`), radios, ajustes a shadcn y pendientes con Figma. Iconos solo vía `AppIcon` (`src/lib/components/app`).
+Pruebas de navegador: si no hay Chromium de Playwright, usar `CHROMIUM_PATH=/ruta/al/chrome`.

@@ -26,6 +26,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm test:unit --run
       - run: pnpm build
+      - run: pnpm build-storybook
 
   e2e:
     name: E2E (Playwright)

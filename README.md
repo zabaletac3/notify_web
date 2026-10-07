@@ -3,7 +3,7 @@
 App de notas **original** (cálida, tipo "papel", acento azul) para web, escritorio (Tauri 2) y, por separado, móvil (Flutter).
 Este repositorio contiene la **web** y es la base de la app de escritorio.
 
-> Estado: **andamiaje listo** (fase 1). Las pantallas se construyen en las fases siguientes — ver [`docs/roadmap.md`](docs/roadmap.md).
+> Estado: **fase 1 hecha y fase 2 (parte sin Figma) hecha**. Las pantallas se construyen en las fases siguientes — ver [`docs/roadmap.md`](docs/roadmap.md).
 
 ## Stack
 
@@ -29,6 +29,8 @@ pnpm dev            # http://localhost:5173
 ```
 
 Catálogo de tokens y componentes (solo en desarrollo): <http://localhost:5173/dev/design-system>
+
+Si las pruebas de navegador no encuentran Chromium, apunta a uno instalado: `CHROMIUM_PATH=/ruta/al/chrome pnpm test:unit`.
 
 ## Scripts
 
@@ -79,5 +81,6 @@ Después de añadir uno, revisa que use los tokens (`bg-background`, `text-prima
 - [`docs/architecture.md`](docs/architecture.md) — capas, carpetas, patrón de repositorios y estado.
 - [`docs/conventions.md`](docs/conventions.md) — nombres, commits, Tailwind, pruebas, accesibilidad, seguridad.
 - [`docs/design-tokens.md`](docs/design-tokens.md) — mapa Figma → variables CSS.
+- [`docs/components.md`](docs/components.md) — componentes base, escala tipográfica, contraste y pendientes de validar con Figma.
 - [`docs/roadmap.md`](docs/roadmap.md) — fases del trabajo.
 - [`docs/adr/`](docs/adr) — decisiones de arquitectura.
