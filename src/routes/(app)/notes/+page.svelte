@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { getApp } from '#lib/app/index.js';
-	import { AppIcon, MarkdownView, NoteCard, NoteEditor } from '#lib/components/app/index.js';
+	import {
+		AppIcon,
+		EmptyState,
+		MarkdownView,
+		NoteCard,
+		NoteEditor
+	} from '#lib/components/app/index.js';
 	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Skeleton } from '#lib/components/ui/skeleton/index.js';
@@ -38,7 +44,21 @@
 	}
 
 	const placeholder = $derived(
-		inTrash ? 'Buscar en la papelera' : `Buscar en ${titleOf(notes.filter)}`
+		inTrash
+			? 'Buscar en la papelera'
+			: notes.filter.kind === 'all'
+				? 'Buscar notas'
+				: `Buscar en ${titleOf(notes.filter)}`
+	);
+
+	const searching = $derived(!inTrash && app.search.status !== 'idle');
+	const resultsLabel = $derived(
+		formatCount(app.search.results.length, 'resultado', 'resultados') +
+			(app.search.results.length
+				? app.search.scope === 'all'
+					? ' en todas las notas'
+					: ` en ${titleOf(notes.filter)}`
+				: '')
 	);
 
 	// Dentro de una carpeta o etiqueta, la búsqueda se limita a esa lista.
@@ -56,8 +76,27 @@
 
 	// Al terminar de cargar (o cambiar de lista) se abre la primera nota, como en el diseño.
 	$effect(() => {
-		if (notes.status === 'ready' && notes.selectedId === null) notes.selectFirst();
+		if (notes.status === 'ready' && notes.selectedId === null && !searching) notes.selectFirst();
 	});
+
+	// Con resultados se abre el primero; sin resultados no hay nota abierta.
+	$effect(() => {
+		if (!searching) return;
+		const results = app.search.results;
+		if (!results.length) notes.select(null);
+		else if (!results.some((r) => r.note.id === notes.selectedId)) notes.select(results[0].note.id);
+	});
+
+	function onKeydown(e: KeyboardEvent) {
+		if (!(e.ctrlKey || e.metaKey)) return;
+		if (e.key.toLowerCase() === 'n' && !inTrash) {
+			e.preventDefault();
+			void notes.create();
+		} else if (e.key.toLowerCase() === 'k') {
+			e.preventDefault();
+			document.querySelector<HTMLInputElement>('[data-search-input]')?.focus();
+		}
+	}
 
 	const note = $derived(notes.selected);
 	const folderName = $derived(note?.folderId ? folders.name(note.folderId) : '');
@@ -110,9 +149,11 @@
 >
 	<header class="flex items-center pr-0.5 pb-3 pl-1.5">
 		<div class="flex-1">
-			<h1 class="text-2xl leading-tight font-bold">{titleOf(notes.filter)}</h1>
+			<h1 class="text-2xl leading-tight font-bold">
+				{searching ? 'Resultados' : titleOf(notes.filter)}
+			</h1>
 			<p class="text-caption font-medium text-muted-foreground">
-				{formatCount(notes.visible.length, 'nota', 'notas')}
+				{searching ? resultsLabel : formatCount(notes.visible.length, 'nota', 'notas')}
 			</p>
 		</div>
 		{#if !inTrash}
@@ -140,11 +181,23 @@
 			<input
 				type="text"
 				bind:value={app.search.query}
+				data-search-input
 				{placeholder}
 				class="min-w-0 flex-1 bg-transparent outline-none placeholder:text-tertiary"
 			/>
 		{/if}
-		<kbd class="shrink-0 text-micro font-medium text-tertiary">Ctrl K</kbd>
+		{#if searching}
+			<button
+				type="button"
+				aria-label="Borrar búsqueda"
+				onclick={() => app.search.clear()}
+				class="grid shrink-0 place-content-center text-tertiary hover:text-foreground"
+			>
+				<AppIcon name="close" size={16} />
+			</button>
+		{:else}
+			<kbd class="shrink-0 text-micro font-medium text-tertiary">Ctrl K</kbd>
+		{/if}
 	</label>
 
 	{#if inTrash}
@@ -165,14 +218,36 @@
 				{trashHits ? `Sin resultados para “${trashQuery.trim()}”.` : 'La papelera está vacía.'}
 			</p>
 		{/each}
-	{:else if app.search.status !== 'idle'}
+	{:else if searching}
 		{#each app.search.results as { note: n } (n.id)}
 			{@render card(n)}
 		{:else}
-			<p class="px-2 pt-6 text-label text-muted-foreground">
-				Sin resultados para “{app.search.trimmed}”.
-			</p>
+			<EmptyState
+				icon="search"
+				title="Sin resultados"
+				description="No encontramos notas con “{app.search.trimmed}”."
+			>
+				<Button variant="outline" onclick={() => app.search.clear()}>Borrar búsqueda</Button>
+			</EmptyState>
 		{/each}
+	{:else if notes.groups.length === 0}
+		{#if notes.isFirstTime}
+			<EmptyState
+				icon="notes"
+				title="Aún no tienes notas"
+				description="Tus notas aparecerán aquí."
+			/>
+		{:else if notes.filter.kind === 'folder'}
+			<EmptyState
+				icon="folder"
+				title="Esta carpeta está vacía"
+				description="Crea una nota nueva o mueve aquí notas de otras carpetas."
+			>
+				<Button onclick={() => notes.create()}>Nueva nota</Button>
+			</EmptyState>
+		{:else}
+			<p class="px-2 pt-6 text-label text-muted-foreground">No hay notas en esta lista.</p>
+		{/if}
 	{:else}
 		{#each notes.groups as group (group.key)}
 			<h2 class="px-3.5 pt-4 pb-1.5 text-caption font-semibold text-muted-foreground">
@@ -181,11 +256,11 @@
 			{#each group.notes as n (n.id)}
 				{@render card(n)}
 			{/each}
-		{:else}
-			<p class="px-2 pt-6 text-label text-muted-foreground">No hay notas en esta lista.</p>
 		{/each}
 	{/if}
 </section>
+
+<svelte:window onkeydown={onKeydown} />
 
 <!-- Editor -->
 <main class="flex min-w-0 flex-1 flex-col bg-background">
@@ -259,9 +334,30 @@
 			)}
 		</footer>
 	{:else if notes.status === 'ready'}
-		<div class="grid flex-1 place-content-center text-body text-muted-foreground">
-			{inTrash ? 'Selecciona una nota de la papelera.' : 'Selecciona una nota para verla aquí.'}
-		</div>
+		{#if notes.isFirstTime}
+			<EmptyState
+				title="Bienvenido a Apunte"
+				description="Escribe tu primera nota. Se guarda sola y se sincroniza con tus otros dispositivos."
+				hint="Ctrl N"
+			>
+				{#snippet mark()}
+					<span
+						class="grid size-22 place-content-center rounded-[22px] bg-primary text-[40px] font-bold text-primary-foreground"
+						aria-hidden="true">A</span
+					>
+				{/snippet}
+				<Button size="default" onclick={() => notes.create()}>Crear mi primera nota</Button>
+			</EmptyState>
+		{:else}
+			<EmptyState
+				icon="notes"
+				title={inTrash ? 'Ninguna nota seleccionada' : 'Ninguna nota seleccionada'}
+				description={inTrash
+					? 'Elige una nota de la papelera para verla.'
+					: 'Elige una nota de la lista o crea una nueva.'}
+				hint={inTrash ? undefined : 'Ctrl N · Nueva nota'}
+			/>
+		{/if}
 	{/if}
 </main>
 

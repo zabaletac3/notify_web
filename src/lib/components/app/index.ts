@@ -10,3 +10,4 @@ export { default as NoteEditor } from './note-editor.svelte';
 export { default as ChoiceRow } from './choice-row.svelte';
 export { default as SettingRow } from './setting-row.svelte';
 export { default as SettingsGroup } from './settings-group.svelte';
+export { default as EmptyState } from './empty-state.svelte';
