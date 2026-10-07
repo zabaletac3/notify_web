@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { toast } from 'svelte-sonner';
+	import { formatCount } from '#lib/core/index.js';
 	import { getApp } from '#lib/app/index.js';
 	import { AppIcon, SidebarItem, ThemeToggle } from '#lib/components/app/index.js';
 	import type { NotesFilter } from '#lib/domain/index.js';
 	import NoteDialogs from './note-dialogs.svelte';
+	import SystemDialogs from './system-dialogs.svelte';
 	import { dialogs } from './dialogs.svelte.js';
 	import type { LayoutProps } from './$types';
 
@@ -15,6 +18,18 @@
 
 	const onNotes = $derived(page.url.pathname.startsWith('/notes'));
 	const is = (kind: NotesFilter['kind']) => onNotes && notes.filter.kind === kind;
+
+	// Aviso "Sincronizando N cambios…" mientras se sube lo pendiente.
+	$effect(() => {
+		if (app.sync.syncing && app.sync.snapshot.pendingCount > 0) {
+			toast.info(
+				`Sincronizando ${formatCount(app.sync.snapshot.pendingCount, 'cambio', 'cambios')}…`,
+				{ id: 'syncing', duration: Infinity }
+			);
+		} else {
+			toast.dismiss('syncing');
+		}
+	});
 
 	async function show(filter: NotesFilter) {
 		notes.setFilter(filter);
@@ -117,3 +132,4 @@
 </div>
 
 <NoteDialogs />
+<SystemDialogs />

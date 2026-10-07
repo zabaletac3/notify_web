@@ -1,13 +1,7 @@
 <script lang="ts">
 	import { mode } from 'mode-watcher';
 	import { Toaster as Sonner, type ToasterProps as SonnerProps } from 'svelte-sonner';
-	import {
-		CircleCheckIcon,
-		InfoIcon,
-		Loader2Icon,
-		OctagonXIcon,
-		TriangleAlertIcon
-	} from '@lucide/svelte';
+	import { Loader2Icon } from '@lucide/svelte';
 
 	let { ...restProps }: SonnerProps = $props();
 </script>
@@ -15,10 +9,11 @@
 <Sonner
 	theme={mode.current}
 	class="toaster group"
-	style="--normal-bg: var(--color-popover); --normal-text: var(--color-popover-foreground); --normal-border: var(--color-border);"
+	style="--width: 380px; --normal-bg: var(--color-popover); --normal-text: var(--color-popover-foreground); --normal-border: var(--color-border);"
 	toastOptions={{
 		classes: {
-			toast: 'rounded-2xl'
+			toast: 'w-95! gap-3! rounded-xl! px-3.5! py-3! text-sm! font-medium!',
+			actionButton: 'ml-auto! h-auto! bg-transparent! p-0! text-sm! font-semibold! text-primary!'
 		}
 	}}
 	{...restProps}
@@ -27,15 +22,15 @@
 		<Loader2Icon class="size-4 animate-spin" />
 	{/snippet}
 	{#snippet successIcon()}
-		<CircleCheckIcon class="size-4" />
+		<span class="size-2.5 rounded-full bg-success"></span>
 	{/snippet}
 	{#snippet errorIcon()}
-		<OctagonXIcon class="size-4" />
+		<span class="size-2.5 rounded-full bg-destructive"></span>
 	{/snippet}
 	{#snippet infoIcon()}
-		<InfoIcon class="size-4" />
+		<span class="size-2.5 rounded-full bg-primary"></span>
 	{/snippet}
 	{#snippet warningIcon()}
-		<TriangleAlertIcon class="size-4" />
+		<span class="size-2.5 rounded-full bg-tag-amber"></span>
 	{/snippet}
 </Sonner>

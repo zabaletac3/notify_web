@@ -4,6 +4,7 @@
 	import { getApp } from '#lib/app/index.js';
 	import {
 		AppIcon,
+		Banner,
 		EmptyState,
 		MarkdownView,
 		NoteCard,
@@ -29,7 +30,7 @@
 	import { dialogs } from '../dialogs.svelte.js';
 
 	const app = getApp();
-	const { notes, folders, settings } = app;
+	const { notes, folders, settings, sync } = app;
 
 	const now = new Date();
 	const inTrash = $derived(notes.filter.kind === 'trash');
@@ -274,9 +275,31 @@
 	{/if}
 
 	{#if notes.status === 'loading' || notes.status === 'idle'}
-		<div class="flex flex-col gap-3 pt-4">
-			{#each [0, 1, 2, 3, 4] as i (i)}<Skeleton class="h-20 w-full rounded-[10px]" />{/each}
-		</div>
+		<Skeleton class="mt-4 mb-2.5 ml-3.5 h-3 w-[70px]" />
+		{#each [0, 1, 2, 3, 4] as i (i)}
+			<div class="flex h-23 flex-col gap-2 px-3.5 py-3" aria-hidden="true">
+				<Skeleton class="h-3.5 w-39" />
+				<Skeleton class="h-2.5 w-68" />
+				<Skeleton class="h-2.5 w-50" />
+				<Skeleton class="h-2.5 w-[70px]" />
+			</div>
+		{/each}
+	{:else if notes.status === 'error'}
+		<EmptyState
+			title="No pudimos conectar con el servidor"
+			description="Algo falló de nuestro lado. Tus notas están a salvo en este dispositivo. Inténtalo de nuevo en unos minutos."
+			hint={notes.error?.kind === 'server' && notes.error.status
+				? `Código de error ${notes.error.status}`
+				: undefined}
+		>
+			{#snippet mark()}
+				<span
+					class="grid size-20 place-content-center rounded-full bg-destructive-soft text-[40px] font-bold text-destructive"
+					aria-hidden="true">!</span
+				>
+			{/snippet}
+			<Button onclick={() => notes.load()}>Reintentar</Button>
+		</EmptyState>
 	{:else if inTrash}
 		{#each trashHits ?? notes.visible as n (n.id)}
 			{@render card(n)}
@@ -331,7 +354,28 @@
 
 <!-- Editor -->
 <main class="flex min-w-0 flex-1 flex-col bg-background">
-	{#if note && note.deletedAt}
+	{#if sync.isOffline}
+		<Banner
+			message="Sin conexión. Tus cambios se guardan en este equipo y se sincronizarán al volver."
+			action="Reintentar"
+			onaction={() => sync.syncNow()}
+		/>
+	{/if}
+	{#if notes.status === 'loading' || notes.status === 'idle'}
+		<div class="flex flex-1 flex-col gap-3.5 px-20 pt-10" aria-hidden="true">
+			<Skeleton class="h-3 w-45" />
+			<Skeleton class="h-7.5 w-95 rounded-lg" />
+			<Skeleton class="h-3 w-133.5" />
+			<Skeleton class="h-3 w-130" />
+			<Skeleton class="h-3 w-125" />
+			<Skeleton class="h-3 w-133.5" />
+			<Skeleton class="h-3 w-75" />
+			<Skeleton class="mt-2 h-5.5 w-50" />
+			<Skeleton class="h-3 w-120" />
+			<Skeleton class="h-3 w-105" />
+			<Skeleton class="h-3 w-115" />
+		</div>
+	{:else if note && note.deletedAt}
 		<!-- Nota en la papelera: solo lectura, con avisos y acciones -->
 		<div class="flex flex-1 flex-col gap-5 overflow-y-auto px-12 pt-8">
 			<div class="flex items-center gap-3 rounded-xl bg-accent px-4 py-3.5" role="note">
@@ -401,11 +445,15 @@
 			class="flex items-center justify-end gap-2 px-6 pt-2 pb-2.5 text-caption font-medium text-tertiary"
 		>
 			<span class="size-1.5 rounded-full bg-primary"></span>
-			{note.syncStatus === 'pending' ? 'Guardando' : 'Guardado'} · {formatCount(
-				countWords(note.content),
-				'palabra',
-				'palabras'
-			)}
+			{#if sync.isOffline}
+				Guardado en este equipo · sin sincronizar
+			{:else}
+				{note.syncStatus === 'pending' ? 'Guardando' : 'Guardado'} · {formatCount(
+					countWords(note.content),
+					'palabra',
+					'palabras'
+				)}
+			{/if}
 		</footer>
 	{:else if notes.status === 'ready'}
 		{#if notes.isFirstTime}

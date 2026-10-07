@@ -13,3 +13,4 @@ export { default as SettingsGroup } from './settings-group.svelte';
 export { default as EmptyState } from './empty-state.svelte';
 export { default as NoteMenu } from './note-menu.svelte';
 export { noteActions, type NoteAction, type NoteActionId } from './note-actions.js';
+export { default as Banner } from './banner.svelte';
