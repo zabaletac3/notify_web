@@ -57,3 +57,13 @@ Los valores de estos componentes se dedujeron del diseño conocido y deben recon
 - Padding y espaciados de diálogos, sheet, menús y popover.
 - Componentes compuestos de Apunte (`SidebarItem`, `NoteCard`, `SettingRow`, `EmptyState`, `Banner`, toasts…): se construirán sobre estos primitivos con las medidas exactas.
 - Estilo final de Toaster (sonner), Command y Sidebar de shadcn.
+
+### Cifrado de extremo a extremo (sin diseño en Figma todavía)
+
+Pantallas y piezas construidas con componentes existentes; hay que diseñarlas en Figma y reconciliar medidas y textos:
+
+- `/unlock` (desbloquear con la contraseña) y `/recovery-key` (mostrar o crear la clave de recuperación).
+- `RecoveryKeyPanel` (`components/app`): clave en bloque monoespaciado (`font-mono` de Tailwind, falta un token de fuente), botones Copiar y Descargar, casilla «La guardé en un lugar seguro».
+- Reset de contraseña: elección «Sí, la tengo» / «No la tengo», campo de clave y aviso de borrado.
+- Privacidad: filas «Cifrado de extremo a extremo» (informativa) y «Clave de recuperación» (reemplazan al interruptor «Cifrar notas en este dispositivo»).
+- Cerrar sesión con cambios sin sincronizar (diálogo de tres botones).

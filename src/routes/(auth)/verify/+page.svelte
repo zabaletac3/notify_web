@@ -24,7 +24,11 @@
 
 	async function verify() {
 		const result = await auth.verify(code);
-		if (result.ok) await goto('/onboarding');
+		if (!result.ok) return;
+		// Cuenta nueva: primero se enseña la clave de recuperación. Si la app quedó bloqueada, a desbloquear.
+		await goto(
+			auth.pendingRecoveryKey ? '/recovery-key' : auth.isLocked ? '/unlock' : '/onboarding'
+		);
 	}
 
 	async function resend() {

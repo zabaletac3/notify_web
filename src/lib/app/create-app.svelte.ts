@@ -118,6 +118,13 @@ export function createApp(options: AppOptions = {}): App {
 		kdf: options.kdf ?? (import.meta.env.PROD ? DEFAULT_KDF : LIGHT_KDF),
 		// Con "bloquear al salir" activado la clave no se guarda en el dispositivo.
 		rememberDevice: () => !settings.values.lockOnExit,
+		restoreVault: async (userId) => {
+			if (await vault.restore(userId)) return true;
+			// La sesión de ejemplo del simulador arranca ya desbloqueada (tiene la clave maestra de ejemplo).
+			if (!startAuthenticated || userId !== DEMO_USER_ID) return false;
+			await vault.unlock(userId, await importMasterKeyRaw(DEMO_MASTER_KEY_RAW), false);
+			return true;
+		},
 		// Al salir, la copia local se borra (los datos siguen en el servidor).
 		onSignedOut: async () => {
 			const userId = local?.userId ?? null;
@@ -159,9 +166,6 @@ export function createApp(options: AppOptions = {}): App {
 
 	async function bootstrap() {
 		await auth.bootstrap();
-		// La sesión de ejemplo del simulador arranca ya desbloqueada (tiene la clave maestra de ejemplo).
-		if (startAuthenticated && auth.user?.id === DEMO_USER_ID && vault.status !== 'unlocked')
-			await vault.unlock(DEMO_USER_ID, await importMasterKeyRaw(DEMO_MASTER_KEY_RAW), false);
 		await loadData();
 	}
 

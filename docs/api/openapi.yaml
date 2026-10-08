@@ -924,7 +924,6 @@ components:
         - biometricLock
         - lockOnExit
         - lockTimeout
-        - encryptLocal
         - twoFactor
       properties:
         theme: { type: string, enum: [system, light, dark] }
@@ -938,7 +937,6 @@ components:
         biometricLock: { type: boolean }
         lockOnExit: { type: boolean }
         lockTimeout: { type: string, enum: [immediately, 1m, 5m, 15m] }
-        encryptLocal: { type: boolean }
         twoFactor: { type: boolean }
     AppSettingsPatch:
       type: object
@@ -957,7 +955,6 @@ components:
         biometricLock: { type: boolean }
         lockOnExit: { type: boolean }
         lockTimeout: { type: string, enum: [immediately, 1m, 5m, 15m] }
-        encryptLocal: { type: boolean }
         twoFactor: { type: boolean }
     StorageUsage:
       type: object

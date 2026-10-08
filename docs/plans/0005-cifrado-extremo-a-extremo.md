@@ -718,3 +718,18 @@ _(Quien ejecute: anotar aquí cualquier cambio respecto al plan y por qué.)_
 - `DecryptCache` se indexa por id y comprueba también `wrappedKey` (si cambia la clave de la nota, no se reutiliza lo descifrado).
 - La prueba de «la caché evita descifrar dos veces» comprueba que `itemKey` devuelve el mismo objeto `CryptoKey` (no se puede espiar `open` en módulos ESM).
 - `DeviceKeyStore.removeAll()` vuelve a abrir el almacén para poder seguir usándolo; `fake-indexeddb` guarda `CryptoKey` correctamente en Node 22.
+
+**Fase 4** (dos commits: 4a datos y estado, 4b pantallas)
+
+- **Claves de ejemplo precalculadas.** En vez de un `seedVault()` asíncrono, la cuenta de ejemplo usa constantes generadas una vez con las primitivas reales (`data/mock/fixtures/demo-keys.ts`): paquete de claves, hashes de las pruebas, clave de recuperación de ejemplo y la clave maestra en claro (`DEMO_MASTER_KEY_RAW`, solo simulador, para cifrar los datos de ejemplo en la fase 5). `demo-keys.spec.ts` comprueba que siguen siendo coherentes.
+- **Los flujos de claves viven en `AuthState`**, no en `VaultState`: el estado del cofre (`VaultState`) solo guarda la clave maestra, la recuerda en el dispositivo si se elige y la olvida; `AuthState` deriva, desbloquea y cambia contraseñas. Las funciones puras están en `data/crypto/account-keys.ts`.
+- **KDF por defecto:** `DEFAULT_KDF` en producción (`import.meta.env.PROD`) y `LIGHT_KDF` en desarrollo y pruebas; se puede forzar con `createApp({ kdf })`.
+- **`userId` lo elige el cliente** al registrarse (UUID v7), como decía el plan.
+- **Eliminar cuenta no pide contraseña:** la pantalla actual solo pide escribir «ELIMINAR», no una contraseña; el plan suponía lo contrario. Se deja así (la sesión basta); se puede añadir `authKey` más adelante.
+- **Reiniciar sin clave de recuperación (`wipe`):** el servidor borra notas, carpetas y enlaces; la clave de recuperación nueva se enseña **al iniciar sesión** justo después (no hay sesión tras restablecer).
+- **El bloqueo no se avisa a otras pestañas** (solo el cierre de sesión): cada pestaña bloquea por su cuenta según su propia inactividad. Pendiente si se quiere.
+- **Redirección a `/unlock`** en el layout raíz (no en `(app)`), para cubrir también `/settings`. La sesión se da por iniciada **después** de intentar restaurar la clave, para que no parpadee la pantalla de bloqueo.
+- **Arranques concurrentes:** `AuthState.bootstrap()` ahora solo aplica el resultado del último (los anteriores esperan a que termine); sin esto, una consulta lenta podía pisar a una más reciente.
+- **Ajuste `encryptLocal` eliminado** de `AppSettings` y de OpenAPI; en Privacidad queda una fila informativa y la de «Clave de recuperación».
+- **Pendientes de Figma:** `/unlock`, `/recovery-key`, `RecoveryKeyPanel` (usa `font-mono` de Tailwind porque no hay token de fuente monoespaciada), la sección de clave de recuperación en `/reset-password` y las filas nuevas de Privacidad.
+- **Prueba de bloqueo en navegador:** los `$effect` solo corren en las pruebas `*.svelte.spec.ts`; ahí está la de «bloquear vacía la memoria y desbloquear recarga».

@@ -13,7 +13,8 @@
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
 		const result = await auth.login({ email, password });
-		if (result.ok) return void goto('/notes');
+		if (result.ok)
+			return void goto(auth.pendingRecoveryKey ? '/recovery-key?next=/notes' : '/notes');
 		if (result.error.kind === 'forbidden' && result.error.code === 'email-not-verified')
 			await goto('/verify');
 	}
@@ -67,7 +68,9 @@
 			</p>
 		{/if}
 
-		<Button type="submit" size="lg" disabled={auth.busy}>Iniciar sesión</Button>
+		<Button type="submit" size="lg" disabled={auth.busy}>
+			{auth.busy ? 'Desbloqueando…' : 'Iniciar sesión'}
+		</Button>
 		<a
 			href="/forgot-password"
 			class="text-center text-label font-semibold text-primary outline-none focus-visible:underline"

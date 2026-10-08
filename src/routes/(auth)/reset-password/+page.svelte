@@ -5,6 +5,8 @@
 	import { getApp } from '#lib/app/index.js';
 	import { AuthCard, AuthField, StrengthMeter } from '#lib/components/app/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
+	import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+	import { cn } from '#lib/utils.js';
 	import { errorMessage, validationMessage } from '#lib/core/index.js';
 
 	const { auth } = getApp();
@@ -13,13 +15,18 @@
 	let password = $state('');
 	let confirmation = $state('');
 	let recoveryKey = $state('');
+	// ¿Tiene la clave de recuperación? Con ella se conservan las notas; sin ella se empieza de cero.
+	let choice = $state<'keep' | 'wipe'>('keep');
+	let confirmedWipe = $state(false);
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
-		const result = await auth.resetPassword(token, password, confirmation, {
-			mode: 'keep',
-			recoveryKey
-		});
+		const result = await auth.resetPassword(
+			token,
+			password,
+			confirmation,
+			choice === 'keep' ? { mode: 'keep', recoveryKey } : { mode: 'wipe', confirmed: confirmedWipe }
+		);
 		if (!result.ok) return;
 		toast.success('Contraseña actualizada. Ya puedes iniciar sesión.');
 		await goto('/login');
@@ -39,6 +46,56 @@
 		<Button size="lg" href="/forgot-password">Pedir un enlace nuevo</Button>
 	{:else}
 		<form class="flex flex-col gap-5" onsubmit={submit} novalidate>
+			<div class="flex flex-col gap-3" role="radiogroup" aria-label="Clave de recuperación">
+				<p class="text-label font-medium">¿Tienes tu clave de recuperación?</p>
+				{#each [['keep', 'Sí, la tengo', 'Conservas todas tus notas.'], ['wipe', 'No la tengo', 'Empiezas de cero: se borran tus notas.']] as const as [id, label, hint] (id)}
+					<button
+						type="button"
+						role="radio"
+						aria-checked={choice === id}
+						onclick={() => (choice = id)}
+						class={cn(
+							'flex flex-col gap-0.5 rounded-xl px-3.5 py-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+							choice === id ? 'border-2 border-primary bg-accent' : 'border bg-card'
+						)}
+					>
+						<span class="text-body font-semibold">{label}</span>
+						<span class="text-caption text-muted-foreground">{hint}</span>
+					</button>
+				{/each}
+			</div>
+
+			{#if choice === 'keep'}
+				<AuthField
+					id="recovery-key"
+					label="Clave de recuperación"
+					placeholder="XXXX-XXXX-XXXX-…"
+					autocomplete="off"
+					autocapitalize="characters"
+					spellcheck={false}
+					bind:value={recoveryKey}
+					error={validationMessage(auth.fieldErrors.recoveryKey)}
+				/>
+			{:else}
+				<div
+					class="flex flex-col gap-2.5 rounded-xl border border-destructive bg-destructive-soft p-3.5"
+					role="alert"
+				>
+					<p class="text-label font-semibold text-destructive">
+						Se borrarán todas tus notas y carpetas. No se pueden recuperar.
+					</p>
+					<div class="flex items-start gap-2.5">
+						<Checkbox id="confirm-wipe" bind:checked={confirmedWipe} class="mt-0.5" />
+						<label for="confirm-wipe" class="text-label">
+							Entiendo que se borrarán mis notas.
+						</label>
+					</div>
+					{#if auth.fieldErrors.wipe}
+						<p class="text-caption text-destructive">{validationMessage(auth.fieldErrors.wipe)}</p>
+					{/if}
+				</div>
+			{/if}
+
 			<div class="flex flex-col gap-4">
 				<AuthField
 					id="password"

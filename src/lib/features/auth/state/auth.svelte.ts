@@ -84,6 +84,7 @@ export class AuthState {
 	private readonly vault: VaultState;
 	private readonly kdf: KdfBase;
 	private readonly rememberDevice: () => boolean;
+	private readonly restoreVault: (userId: string) => Promise<boolean>;
 	/** Claves cifradas de la cuenta (no son secretas). Se piden al servidor si hace falta. */
 	private keyBundle: KeyBundle | null = null;
 	/** Claves de una cuenta recién creada, a la espera de verificar el correo. */
@@ -96,6 +97,7 @@ export class AuthState {
 	 * @param hooks.vault cofre de claves (se desbloquea al iniciar sesión)
 	 * @param hooks.kdf parámetros de Argon2id para las cuentas y contraseñas nuevas
 	 * @param hooks.rememberDevice si la clave maestra se recuerda cifrada en este dispositivo
+	 * @param hooks.restoreVault intenta desbloquear al arrancar sin pedir la contraseña
 	 */
 	constructor(
 		repo: AuthRepository,
@@ -106,6 +108,7 @@ export class AuthState {
 			vault?: VaultState;
 			kdf?: KdfBase;
 			rememberDevice?: () => boolean;
+			restoreVault?: (userId: string) => Promise<boolean>;
 		} = {}
 	) {
 		this.repo = repo;
@@ -114,6 +117,7 @@ export class AuthState {
 		this.vault = hooks.vault ?? new VaultState();
 		this.kdf = hooks.kdf ?? DEFAULT_KDF;
 		this.rememberDevice = hooks.rememberDevice ?? (() => false);
+		this.restoreVault = hooks.restoreVault ?? ((userId) => this.vault.restore(userId));
 	}
 
 	isAuthenticated = $derived(this.status === 'authenticated');
@@ -127,13 +131,27 @@ export class AuthState {
 		return Math.max(0, Math.ceil((this.resendAvailableAt - this.clock().getTime()) / 1000));
 	}
 
-	async bootstrap(): Promise<void> {
+	/** Si hay varios arranques a la vez, solo vale el último; los anteriores esperan a que termine. */
+	private bootstrapRun = 0;
+	private lastBootstrap: Promise<void> = Promise.resolve();
+
+	bootstrap(): Promise<void> {
+		const run = ++this.bootstrapRun;
+		return (this.lastBootstrap = this.runBootstrap(run));
+	}
+
+	private async runBootstrap(run: number): Promise<void> {
 		const result = await attempt(() => this.repo.currentSession());
+		if (run !== this.bootstrapRun) return this.lastBootstrap;
 		if (result.ok) {
+			// Si la clave se recordó en este dispositivo, la app se abre sin pedir la contraseña.
+			// Se intenta antes de dar la sesión por iniciada para que no parpadee la pantalla de bloqueo.
+			if (result.value) {
+				await this.restoreVault(result.value.user.id);
+				if (run !== this.bootstrapRun) return this.lastBootstrap;
+			}
 			this.user = result.value?.user ?? null;
 			this.status = result.value ? 'authenticated' : 'anonymous';
-			// Si la clave se recordó en este dispositivo, la app se abre sin pedir la contraseña.
-			if (result.value) await this.vault.restore(result.value.user.id);
 		} else if (result.error.kind === 'session-expired') {
 			this.status = 'expired';
 		} else if (result.error.kind === 'device-revoked') {

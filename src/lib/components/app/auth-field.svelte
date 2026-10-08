@@ -9,6 +9,8 @@
 		type?: 'text' | 'email' | 'password';
 		placeholder?: string;
 		autocomplete?: HTMLInputElement['autocomplete'];
+		autocapitalize?: 'off' | 'none' | 'sentences' | 'words' | 'characters';
+		spellcheck?: boolean;
 		/** Mensaje de error ya traducido. */
 		error?: string;
 		/** Ayuda o medidor bajo el campo. */
@@ -22,6 +24,8 @@
 		type = 'text',
 		placeholder,
 		autocomplete,
+		autocapitalize,
+		spellcheck,
 		error,
 		children
 	}: Props = $props();
@@ -34,6 +38,8 @@
 		{type}
 		{placeholder}
 		{autocomplete}
+		{autocapitalize}
+		{spellcheck}
 		bind:value
 		aria-invalid={error ? true : undefined}
 		aria-describedby={error ? `${id}-error` : undefined}

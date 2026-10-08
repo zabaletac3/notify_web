@@ -5,7 +5,7 @@
 	import { Switch } from '#lib/components/ui/switch/index.js';
 	import { formatCount } from '#lib/core/index.js';
 
-	const { settings, devices } = getApp();
+	const { settings, devices, vault } = getApp();
 	const values = $derived(settings.values);
 </script>
 
@@ -28,7 +28,11 @@
 			<Switch
 				aria-label="Bloquear al salir de la app"
 				checked={values.lockOnExit}
-				onCheckedChange={(lockOnExit) => settings.update({ lockOnExit })}
+				onCheckedChange={(lockOnExit) => {
+					void settings.update({ lockOnExit });
+					// Sin bloqueo al salir, la clave se recuerda (cifrada) en este dispositivo.
+					void vault.setRemember(!lockOnExit);
+				}}
 			/>
 		{/snippet}
 	</SettingRow>
@@ -45,19 +49,17 @@
 	/>
 </SettingsGroup>
 
-<SettingsGroup title="Datos">
+<SettingsGroup title="Cifrado">
 	<SettingRow
-		label="Cifrar notas en este dispositivo"
-		description="Protege tus notas si pierdes el equipo"
-	>
-		{#snippet control()}
-			<Switch
-				aria-label="Cifrar notas en este dispositivo"
-				checked={values.encryptLocal}
-				onCheckedChange={(encryptLocal) => settings.update({ encryptLocal })}
-			/>
-		{/snippet}
-	</SettingRow>
+		label="Cifrado de extremo a extremo"
+		description="Activo. Solo tú puedes leer tus notas: ni el servidor ni Apunte tienen tu clave."
+	/>
+	<SettingRow
+		label="Clave de recuperación"
+		description="Es la única forma de recuperar tus notas si olvidas la contraseña."
+		action="Crear nueva"
+		onclick={() => goto('/recovery-key?next=/settings/privacy')}
+	/>
 </SettingsGroup>
 
 <SettingsGroup title="Cuenta">

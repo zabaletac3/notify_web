@@ -14,7 +14,6 @@ export interface AppSettings {
 	biometricLock: boolean;
 	lockOnExit: boolean;
 	lockTimeout: LockTimeout;
-	encryptLocal: boolean;
 	twoFactor: boolean;
 }
 
@@ -30,6 +29,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
 	biometricLock: true,
 	lockOnExit: true,
 	lockTimeout: '1m',
-	encryptLocal: true,
 	twoFactor: false
 };
