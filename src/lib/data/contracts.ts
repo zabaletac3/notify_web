@@ -17,7 +17,9 @@ import type {
 	RecoveryKeyRotation,
 	RegisterRequest,
 	Session,
-	ShareLink,
+	PublicNote,
+	ShareInput,
+	SharedNote,
 	StorageUsage,
 	EncryptedSyncRequest,
 	EncryptedSyncResponse,
@@ -116,9 +118,17 @@ export interface SyncTransport {
 }
 
 export interface ShareRepository {
-	createLink(noteId: Id): Promise<ShareLink>;
+	/**
+	 * Crea el enlace con la copia cifrada que prepara el cliente. Si la nota ya tiene enlace, devuelve el
+	 * existente (y se ignora lo enviado).
+	 */
+	createLink(noteId: Id, input: ShareInput): Promise<SharedNote>;
+	/** Cambia la copia cifrada de un enlace existente (al editar la nota). */
+	updateLinkPayload(noteId: Id, payload: string): Promise<void>;
 	revokeLink(noteId: Id): Promise<void>;
-	getLink(noteId: Id): Promise<ShareLink | null>;
+	getLink(noteId: Id): Promise<SharedNote | null>;
+	/** Lee la copia cifrada por la parte pública del enlace. No necesita sesión. */
+	readPublic(slug: string): Promise<PublicNote>;
 }
 
 export interface StorageRepository {

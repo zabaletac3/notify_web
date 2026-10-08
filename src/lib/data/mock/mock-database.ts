@@ -10,7 +10,7 @@ import {
 	type KeyBundle,
 	type Note,
 	type Session,
-	type ShareLink,
+	type SharedNote,
 	type User
 } from '#lib/domain/index.js';
 import { buildFolders, buildNotes, DEMO_DEVICE_ID } from './fixtures/index.js';
@@ -88,7 +88,7 @@ export class MockDatabase {
 	devices: Device[] = [];
 	users: StoredUser[] = [];
 	conflicts: Conflict[] = [];
-	shareLinks: ShareLink[] = [];
+	shareLinks: SharedNote[] = [];
 	settings: AppSettings = { ...DEFAULT_SETTINGS };
 	session: Session | null = null;
 	lastSyncedAt: string | null = null;

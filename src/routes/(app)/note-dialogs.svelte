@@ -81,6 +81,11 @@
 	// ── Compartir ─────────────────────────────────────────────────────
 	const link = $derived(note ? share.linkFor(note.id) : null);
 
+	// Al abrir "Compartir", se trae el enlace que la nota ya tenga (por ejemplo tras recargar).
+	$effect(() => {
+		if (isOpen('share') && note) void share.load(note.id);
+	});
+
 	async function toggleLink(on: boolean) {
 		if (!note) return;
 		const result = on ? await share.create(note.id) : await share.revoke(note.id);
@@ -220,6 +225,10 @@
 <ResponsiveDialog open={isOpen('share')} onOpenChange={closing('share')} width="sm:max-w-120">
 	<Dialog.Title class="text-xl">Compartir nota</Dialog.Title>
 	<p class="text-sm leading-5 text-muted-foreground">“{note?.title}”</p>
+	<p class="text-caption text-muted-foreground">
+		El enlace incluye la clave para leer la nota. Quien lo tenga podrá leerla; solo se guarda
+		cifrada.
+	</p>
 	<div class="flex items-center gap-2">
 		<output
 			class="flex h-12 flex-1 items-center truncate rounded-lg bg-input-fill px-3.5 text-sm text-muted-foreground"

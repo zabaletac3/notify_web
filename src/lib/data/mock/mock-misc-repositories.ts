@@ -1,3 +1,4 @@
+import { isSealed } from '#lib/core/crypto/index.js';
 import {
 	fail,
 	type AppSettings,
@@ -6,7 +7,9 @@ import {
 	type Device,
 	type Id,
 	type Note,
-	type ShareLink,
+	type PublicNote,
+	type ShareInput,
+	type SharedNote,
 	type StorageUsage,
 	type SyncSnapshot,
 	STORAGE_QUOTA_BYTES
@@ -18,6 +21,7 @@ import type {
 	StorageRepository,
 	SyncRepository
 } from '../contracts.js';
+import { isValidSlug } from '../crypto/share-codec.js';
 import { DEMO_DEVICE_ID } from './fixtures/index.js';
 import type { MockDatabase } from './mock-database.js';
 
@@ -56,22 +60,45 @@ export class MockSettingsRepository implements SettingsRepository {
 export class MockShareRepository implements ShareRepository {
 	constructor(private db: MockDatabase) {}
 
-	async createLink(noteId: Id): Promise<ShareLink> {
+	/** ¿Existe la nota (sin estar en la papelera) en el servidor? Mira lo cifrado si ya hay, o lo de ejemplo. */
+	private noteExists(noteId: Id): boolean {
+		const account = this.db.session && this.db.accounts.get(this.db.session.user.id);
+		const notes = account?.seeded ? account.notes : this.db.notes;
+		return notes.some((n) => n.id === noteId && !n.deletedAt);
+	}
+
+	async createLink(noteId: Id, input: ShareInput): Promise<SharedNote> {
 		await this.db.remote();
-		const note = this.db.notes.find((n) => n.id === noteId && !n.deletedAt);
-		if (!note) throw fail.notFound('note');
+		if (!this.noteExists(noteId)) throw fail.notFound('note');
 		const existing = this.db.shareLinks.find((l) => l.noteId === noteId);
 		if (existing) return structuredClone(existing);
-		const id = this.db.nextId('s');
-		const link: ShareLink = {
-			id,
+		// El servidor no descifra, pero comprueba que lo que guarda tiene la forma esperada.
+		if (!isValidSlug(input.slug)) throw fail.validation({ slug: 'invalid-slug' });
+		if (!isSealed(input.payload) || !isSealed(input.wrappedShareKey))
+			throw fail.validation({ payload: 'invalid-payload' });
+		if (this.db.shareLinks.some((l) => l.slug === input.slug))
+			throw fail.validation({ slug: 'slug-taken' });
+		const now = this.db.now().toISOString();
+		const link: SharedNote = {
+			id: this.db.nextId('s'),
 			noteId,
-			url: `https://apunte.app/n/${id.replace('s_', '')}`,
-			readOnly: true,
-			createdAt: this.db.now().toISOString()
+			slug: input.slug,
+			wrappedShareKey: input.wrappedShareKey,
+			payload: input.payload,
+			createdAt: now,
+			updatedAt: now
 		};
 		this.db.shareLinks.push(link);
 		return structuredClone(link);
+	}
+
+	async updateLinkPayload(noteId: Id, payload: string): Promise<void> {
+		await this.db.remote();
+		const link = this.db.shareLinks.find((l) => l.noteId === noteId);
+		if (!link) throw fail.notFound('share');
+		if (!isSealed(payload)) throw fail.validation({ payload: 'invalid-payload' });
+		link.payload = payload;
+		link.updatedAt = this.db.now().toISOString();
 	}
 
 	async revokeLink(noteId: Id): Promise<void> {
@@ -79,10 +106,18 @@ export class MockShareRepository implements ShareRepository {
 		this.db.shareLinks = this.db.shareLinks.filter((l) => l.noteId !== noteId);
 	}
 
-	async getLink(noteId: Id): Promise<ShareLink | null> {
+	async getLink(noteId: Id): Promise<SharedNote | null> {
 		await this.db.local('write');
 		const link = this.db.shareLinks.find((l) => l.noteId === noteId);
 		return link ? structuredClone(link) : null;
+	}
+
+	async readPublic(slug: string): Promise<PublicNote> {
+		// Quien abre el enlace no tiene sesión: una sesión vencida no cuenta.
+		await this.db.remote({ ignoreExpired: true });
+		const link = this.db.shareLinks.find((l) => l.slug === slug);
+		if (!link) throw fail.notFound('share');
+		return { payload: link.payload, updatedAt: link.updatedAt };
 	}
 }
 

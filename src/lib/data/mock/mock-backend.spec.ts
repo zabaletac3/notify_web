@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { LIGHT_KDF, deriveFromPassword } from '#lib/core/crypto/index.js';
+import { createShare } from '#lib/data/crypto/index.js';
 import {
 	changePasswordKeys,
 	createAccountKeys,
@@ -8,6 +9,7 @@ import {
 } from '#lib/data/crypto/index.js';
 import { AppFailure, TRASH_RETENTION_DAYS, type AppError } from '#lib/domain/index.js';
 import {
+	createDemoVault,
 	createMockBackend,
 	DEMO_KEYS,
 	DEMO_RECOVERY_KEY,
@@ -19,6 +21,7 @@ import {
 	type MockBackend
 } from './index.js';
 
+const fakeShare = { slug: 'x'.repeat(22), payload: 'a', wrappedShareKey: 'b' };
 const NOW = new Date('2026-10-07T12:00:00.000Z');
 const make = (dataset: Dataset = 'normal', extra: { startAuthenticated?: boolean } = {}) => {
 	const backend = createMockBackend({ now: () => NOW, ...extra });
@@ -470,7 +473,7 @@ describe('escenarios del simulador', () => {
 		const { repos, scenario } = make();
 		scenario.offline = true;
 		expect((await errorOf(repos.sync.syncNow())).kind).toBe('network');
-		expect((await errorOf(repos.share.createLink('n_1'))).kind).toBe('network');
+		expect((await errorOf(repos.share.createLink('n_1', fakeShare))).kind).toBe('network');
 		expect((await errorOf(repos.devices.list())).kind).toBe('network');
 		expect((await repos.sync.snapshot()).phase).toBe('offline');
 		const n = await repos.notes.create({ title: 'Sin red' }); // las notas se guardan localmente
@@ -595,17 +598,88 @@ describe('dispositivos, ajustes y compartir', () => {
 		});
 	});
 
-	it('crea un enlace de solo lectura por nota (idempotente) y lo revoca', async () => {
-		const { repos } = make();
-		const [n] = await repos.notes.list();
-		const a = await repos.share.createLink(n.id);
-		const b = await repos.share.createLink(n.id);
-		expect(a).toEqual(b);
-		expect(a.url).toMatch(/^https:\/\/apunte\.app\/n\//);
-		expect(await repos.share.getLink(n.id)).toEqual(a);
-		await repos.share.revokeLink(n.id);
-		expect(await repos.share.getLink(n.id)).toBeNull();
-		await repos.notes.moveToTrash(n.id);
-		expect(await errorOf(repos.share.createLink(n.id))).toMatchObject({ kind: 'not-found' });
+	describe('enlaces compartidos', () => {
+		/** Lo que prepara el cliente: copia cifrada con una clave propia del enlace. */
+		async function share(note: { id: string; title: string; content: string }) {
+			return createShare(await createDemoVault(), note);
+		}
+
+		it('crea un enlace por nota (idempotente), lo lee por su slug y lo revoca', async () => {
+			const { repos } = make();
+			const [n] = await repos.notes.list();
+			const input = await share(n);
+			const a = await repos.share.createLink(n.id, input);
+			expect(a).toMatchObject({ noteId: n.id, slug: input.slug, payload: input.payload });
+			// Pedirlo otra vez no crea otro: devuelve el que ya existe.
+			const b = await repos.share.createLink(n.id, await share(n));
+			expect(b).toEqual(a);
+			expect(await repos.share.getLink(n.id)).toEqual(a);
+			expect((await repos.share.readPublic(input.slug)).payload).toBe(input.payload);
+
+			await repos.share.revokeLink(n.id);
+			expect(await repos.share.getLink(n.id)).toBeNull();
+			expect(await errorOf(repos.share.readPublic(input.slug))).toMatchObject({
+				kind: 'not-found'
+			});
+			await repos.notes.moveToTrash(n.id);
+			expect(await errorOf(repos.share.createLink(n.id, await share(n)))).toMatchObject({
+				kind: 'not-found'
+			});
+		});
+
+		it('el servidor no guarda el texto de la nota compartida', async () => {
+			const { repos, db } = make();
+			const [n] = await repos.notes.list();
+			await repos.share.createLink(n.id, await share(n));
+			const stored = JSON.stringify(db.shareLinks);
+			expect(stored).not.toContain(n.title);
+			expect(stored).not.toContain(n.content.slice(0, 20));
+		});
+
+		it('rechaza lo que no tiene forma de enlace cifrado o repite el slug', async () => {
+			const { repos } = make();
+			const [one, two] = await repos.notes.list();
+			const good = await share(one);
+			expect(await errorOf(repos.share.createLink(one.id, { ...good, slug: 'corto' }))).toEqual({
+				kind: 'validation',
+				fields: { slug: 'invalid-slug' }
+			});
+			expect(
+				await errorOf(repos.share.createLink(one.id, { ...good, payload: 'texto en claro' }))
+			).toEqual({ kind: 'validation', fields: { payload: 'invalid-payload' } });
+			await repos.share.createLink(one.id, good);
+			expect(
+				await errorOf(repos.share.createLink(two.id, { ...(await share(two)), slug: good.slug }))
+			).toEqual({ kind: 'validation', fields: { slug: 'slug-taken' } });
+		});
+
+		it('cambiar la copia de un enlace exige que exista', async () => {
+			const { repos } = make();
+			const [n] = await repos.notes.list();
+			expect(
+				await errorOf(repos.share.updateLinkPayload(n.id, 'a1.AAAAAAAAAAAAAAAA.xx'))
+			).toMatchObject({
+				kind: 'not-found'
+			});
+			const input = await share(n);
+			await repos.share.createLink(n.id, input);
+			const next = await share({ ...n, content: 'otro' });
+			await repos.share.updateLinkPayload(n.id, next.payload);
+			expect((await repos.share.readPublic(input.slug)).payload).toBe(next.payload);
+			expect(await errorOf(repos.share.updateLinkPayload(n.id, 'texto'))).toMatchObject({
+				kind: 'validation'
+			});
+		});
+
+		it('quien abre el enlace no necesita sesión, pero sí red', async () => {
+			const { repos, scenario } = make();
+			const [n] = await repos.notes.list();
+			const input = await share(n);
+			await repos.share.createLink(n.id, input);
+			scenario.sessionExpired = true;
+			expect((await repos.share.readPublic(input.slug)).payload).toBe(input.payload);
+			scenario.offline = true;
+			expect((await errorOf(repos.share.readPublic(input.slug))).kind).toBe('network');
+		});
 	});
 });

@@ -41,17 +41,23 @@ export class NotesState {
 	private readonly clock: () => Date;
 
 	private readonly onWrite: () => void;
+	private readonly onUpdated: (note: Note) => void;
 
-	/** @param onWrite se llama tras cada escritura correcta (para actualizar el contador de cambios pendientes). */
+	/**
+	 * @param onWrite se llama tras cada escritura correcta (para actualizar el contador de cambios pendientes)
+	 * @param onUpdated se llama con la nota tras editarla (para actualizar la copia de un enlace compartido)
+	 */
 	constructor(
 		repo: NoteRepository,
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fábrica del reloj, no es estado
 		clock: () => Date = () => new Date(),
-		onWrite: () => void = () => {}
+		onWrite: () => void = () => {},
+		onUpdated: (note: Note) => void = () => {}
 	) {
 		this.repo = repo;
 		this.clock = clock;
 		this.onWrite = onWrite;
+		this.onUpdated = onUpdated;
 	}
 
 	active = $derived(this.all.filter((n) => !n.deletedAt));
@@ -206,8 +212,10 @@ export class NotesState {
 			syncStatus: 'pending'
 		});
 		const result = await this.run(() => this.repo.update(id, patch));
-		if (result.ok) this.replace(result.value);
-		else this.replace(before);
+		if (result.ok) {
+			this.replace(result.value);
+			this.onUpdated(result.value);
+		} else this.replace(before);
 		return result;
 	}
 

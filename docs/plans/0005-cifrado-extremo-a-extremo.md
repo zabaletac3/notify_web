@@ -744,3 +744,13 @@ _(Quien ejecute: anotar aquí cualquier cambio respecto al plan y por qué.)_
 - **Base local versión 2:** al abrir una base de la versión anterior (en claro) se vacían notas, carpetas, cola y conflictos y se borra el cursor, para volver a descargar; los ajustes se conservan.
 - **Almacenamiento:** el uso del servidor se calcula con el tamaño de los textos cifrados cuando la cuenta ya tiene datos cifrados.
 - **Pendiente:** compartir (`MockShareRepository`) sigue comprobando las notas en claro del simulador; se rehace en la fase 6.
+
+**Fase 6**
+
+- **El `slug` lo genera el cliente** (16 bytes aleatorios, 22 caracteres base64url), no el servidor, para poder ligar la copia cifrada a la URL: los datos asociados son `apunte/v1/share/{slug}` (el plan decía `{noteId}`, pero la página pública no conoce el id de la nota y el servidor podría mentir sobre él). La clave del enlace cifrada con la clave maestra usa `apunte/v1/sharekey/{userId}/{noteId}`. El servidor rechaza slugs mal formados o repetidos.
+- **Contrato:** `createLink(noteId, { slug, payload, wrappedShareKey })` devuelve `SharedNote` (lo que guarda el servidor, sin URL); además `updateLinkPayload`, `getLink` y `readPublic(slug)` (sin sesión). La URL con `#k=` la construye el cliente (`shareUrl`). Pedir un enlace para una nota que ya tiene uno devuelve el existente.
+- **`ShareState`** recibe el cofre y hooks (`getNote`, `beforeCreate`, `onSessionExpired`, `republishDelayMs`). Antes de crear un enlace en modo `indexeddb` se sincroniza si hay cambios pendientes (la nota tiene que estar en el servidor). Nuevos: `load(noteId)` (al abrir «Compartir», para recuperar el enlace tras recargar), `open(slug, clave)` (página pública) y `republish(note)`, con espera de 1,5 s, que actualiza la copia pública al editar (`NotesState` avisa con un 4.º parámetro `onUpdated`).
+- **Página pública `/n/[slug]`** (fuera de `(app)`): lee la clave de `page.url.hash`, abre la copia y la muestra con `MarkdownView` (sanitizado). Revocado, inexistente o con la clave equivocada dan el mismo aviso («Este enlace no es válido o fue revocado»). Lleva `<meta name="referrer" content="no-referrer">` y `noindex`. Hoy lee del servidor simulado; con el backend real será una llamada HTTP sin sesión.
+- La URL base `https://apunte.app` es una constante en `share-codec.ts` (`SHARE_ORIGIN`); pasará a configuración.
+- Una nota que va a la papelera conserva su enlace; el servidor simulado solo impide crear enlaces nuevos de notas borradas.
+- La nota del diálogo de compartir avisa: «El enlace incluye la clave para leer la nota. Quien lo tenga podrá leerla; solo se guarda cifrada.»

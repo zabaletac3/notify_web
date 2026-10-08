@@ -141,12 +141,19 @@ export function createApp(options: AppOptions = {}): App {
 			if (!applyingRemote) channel?.post({ type: 'signed-out', userId });
 		}
 	});
-	const notes = new NotesState(repos.notes, now, refreshPending);
+	const notes = new NotesState(repos.notes, now, refreshPending, (note) => share.republish(note));
 	const folders = new FoldersState(repos.folders, () => notes.refresh(), refreshPending);
 	const search = new SearchState(notes);
 	const settings = new SettingsState(repos.settings);
 	const devices = new DevicesState(repos.devices, () => auth.markExpired());
-	const share = new ShareState(repos.share, () => auth.markExpired());
+	const share = new ShareState(repos.share, vault, {
+		getNote: (id) => notes.all.find((n) => n.id === id),
+		// La nota tiene que estar en el servidor para poder compartirla.
+		beforeCreate: async () => {
+			if (local && sync.pendingCount > 0) await sync.syncNow();
+		},
+		onSessionExpired: () => auth.markExpired()
+	});
 	const storage = new StorageState(repos.storage);
 	sync = new SyncState(repos.sync, {
 		onSynced: async () => {
@@ -291,6 +298,7 @@ export function createApp(options: AppOptions = {}): App {
 		destroy: () => {
 			clearTimeout(autoSyncTimer);
 			clearTimeout(lockTimer);
+			share.dispose();
 			clearInterval(pollTimer);
 			if (options.autoLock && typeof window !== 'undefined') {
 				for (const type of ACTIVITY) window.removeEventListener(type, onActivity);

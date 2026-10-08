@@ -24,3 +24,14 @@ export {
 	type RecoveredKeys,
 	type RotatedRecovery
 } from './account-keys.js';
+export {
+	SLUG_BYTES,
+	createShare,
+	isValidSlug,
+	keyFromFragment,
+	newSlug,
+	openShareKey,
+	openSharedNote,
+	sealSharedNote,
+	shareUrl
+} from './share-codec.js';

@@ -185,7 +185,9 @@ describe('compartir', () => {
 		const app = await testApp();
 		const id = app.notes.visible[0].id;
 		const r = await app.share.create(id);
-		expect(r.ok && r.value.url).toMatch(/^https:\/\/apunte\.app\/n\//);
+		expect(r.ok && r.value.url).toMatch(
+			/^https:\/\/apunte\.app\/n\/[A-Za-z0-9_-]{22}#k=[A-Za-z0-9_-]{43}$/
+		);
 		expect(app.share.linkFor(id)).not.toBeNull();
 		await app.share.revoke(id);
 		expect(app.share.linkFor(id)).toBeNull();
