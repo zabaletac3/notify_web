@@ -14,6 +14,8 @@
 		action?: string;
 		/** Fila destructiva (texto en rojo). */
 		danger?: boolean;
+		/** Si se pasa, la fila entera es un enlace. */
+		href?: string;
 		/** Si se pasa, la fila entera es un botón. */
 		onclick?: () => void;
 		/** Control a la derecha (ej. un Switch). */
@@ -27,6 +29,7 @@
 		chevron = false,
 		action,
 		danger = false,
+		href,
 		onclick,
 		control
 	}: Props = $props();
@@ -45,7 +48,17 @@
 	{@render control?.()}
 {/snippet}
 
-{#if onclick}
+{#if href}
+	<a
+		{href}
+		class={cn(
+			rowClass,
+			'outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50'
+		)}
+	>
+		{@render content()}
+	</a>
+{:else if onclick}
 	<button
 		type="button"
 		{onclick}

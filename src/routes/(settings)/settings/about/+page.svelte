@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { SettingRow, SettingsGroup } from '#lib/components/app/index.js';
+	import { APP_BUILD, APP_VERSION } from '#lib/legal/version.js';
 </script>
 
 <svelte:head><title>Acerca de · Apunte</title></svelte:head>
@@ -12,15 +13,15 @@
 		aria-hidden="true">A</span
 	>
 	<p class="text-[22px] font-bold">Apunte</p>
-	<p class="text-sm text-muted-foreground">Versión 1.0.0 (build 1)</p>
+	<p class="text-sm text-muted-foreground">Versión {APP_VERSION} (build {APP_BUILD})</p>
 </section>
 
 <SettingsGroup>
-	<SettingRow label="Notas de la versión" chevron />
-	<SettingRow label="Términos de uso" chevron />
-	<SettingRow label="Política de privacidad" chevron />
-	<SettingRow label="Licencias de código abierto" chevron />
-	<SettingRow label="Contacto y soporte" chevron />
+	<SettingRow label="Notas de la versión" chevron href="/changelog" />
+	<SettingRow label="Términos de uso" chevron href="/terms" />
+	<SettingRow label="Política de privacidad" chevron href="/privacy" />
+	<SettingRow label="Licencias de código abierto" chevron href="/licenses" />
+	<SettingRow label="Contacto y soporte" chevron href="/support" />
 </SettingsGroup>
 
 <p class="text-center text-caption text-tertiary">© 2026 Apunte. Todos los derechos reservados.</p>

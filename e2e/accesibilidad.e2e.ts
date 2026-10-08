@@ -34,7 +34,12 @@ for (const mode of ['light', 'dark'] as const) {
 			['/login', 'Iniciar sesión'],
 			['/register', 'Crear cuenta'],
 			['/forgot-password', 'Recuperar contraseña'],
-			['/verify', 'Verificar correo']
+			['/verify', 'Verificar correo'],
+			['/terms', 'Términos de uso'],
+			['/privacy', 'Política de privacidad'],
+			['/changelog', 'Notas de la versión'],
+			['/licenses', 'Licencias de código abierto'],
+			['/support', 'Contacto y soporte']
 		];
 		for (const [path, name] of publicScreens)
 			test(`${name} (${path})`, async ({ page }) => {
