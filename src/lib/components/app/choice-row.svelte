@@ -10,10 +10,13 @@
 
 	let { label, value, options, onchange }: Props = $props();
 
+	// Al elegir una opción el menú se cierra (un RadioItem de bits-ui no lo hace solo).
+	let open = $state(false);
+
 	const current = $derived(options.find((o) => o.value === value)?.label ?? '');
 </script>
 
-<DropdownMenu.Root>
+<DropdownMenu.Root bind:open>
 	<DropdownMenu.Trigger
 		class="flex w-full items-center gap-3 px-4 py-3.5 text-left outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
 	>
@@ -22,7 +25,13 @@
 		<span class="text-xl leading-none text-tertiary" aria-hidden="true">›</span>
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end">
-		<DropdownMenu.RadioGroup {value} onValueChange={(v) => onchange(v as T)}>
+		<DropdownMenu.RadioGroup
+			{value}
+			onValueChange={(v) => {
+				onchange(v as T);
+				open = false;
+			}}
+		>
 			{#each options as option (option.value)}
 				<DropdownMenu.RadioItem value={option.value}>{option.label}</DropdownMenu.RadioItem>
 			{/each}

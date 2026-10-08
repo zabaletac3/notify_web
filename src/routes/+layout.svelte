@@ -11,6 +11,16 @@
 
 	let { children }: LayoutProps = $props();
 
+	/** Aplica el tamaño del texto y lo recuerda para pintarlo bien desde el primer momento. */
+	function applyTextSize(size: string) {
+		document.documentElement.dataset.textSize = size;
+		try {
+			localStorage.setItem('apunte-text-size', size);
+		} catch {
+			// Sin almacenamiento: se aplica igual, pero no se recuerda para la próxima carga.
+		}
+	}
+
 	// Estado global de la app. En desarrollo se simula una pequeña latencia para ver los estados de carga.
 	const app = setApp(
 		createApp({
@@ -23,10 +33,11 @@
 	// Los ajustes guardados mandan sobre el tema y el orden de las notas.
 	$effect(() => {
 		if (app.settings.status !== 'ready') return;
-		const { theme, noteOrder } = app.settings.values;
+		const { theme, noteOrder, textSize } = app.settings.values;
 		untrack(() => {
 			setMode(theme);
 			app.notes.sort = noteOrder;
+			applyTextSize(textSize);
 		});
 	});
 

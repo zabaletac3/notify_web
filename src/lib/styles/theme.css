@@ -16,16 +16,16 @@
 	--radius-3xl: calc(var(--radius) + 12px); /* 24: bottom sheet */
 
 	/* Escala tipográfica de Apunte (Inter). Uso: text-title, text-body… */
-	--text-title: 1.75rem; /* 28 · títulos de pantalla (bold) */
-	--text-title--line-height: 2.125rem;
-	--text-heading: 1.125rem; /* 18 · encabezados de sección (semibold) */
-	--text-heading--line-height: 1.5rem;
-	--text-body: 0.9375rem; /* 15 · texto base y botones */
-	--text-body--line-height: 1.375rem;
-	--text-label: 0.8125rem; /* 13 · etiquetas de campo */
-	--text-label--line-height: 1.125rem;
-	--text-caption: 0.75rem; /* 12 · ayudas y metadatos */
-	--text-caption--line-height: 1rem;
+	--text-title: calc(1.75rem * var(--text-scale)); /* 28 · títulos de pantalla (bold) */
+	--text-title--line-height: calc(2.125rem * var(--text-scale));
+	--text-heading: calc(1.125rem * var(--text-scale)); /* 18 · encabezados de sección (semibold) */
+	--text-heading--line-height: calc(1.5rem * var(--text-scale));
+	--text-body: calc(0.9375rem * var(--text-scale)); /* 15 · texto base y botones */
+	--text-body--line-height: calc(1.375rem * var(--text-scale));
+	--text-label: calc(0.8125rem * var(--text-scale)); /* 13 · etiquetas de campo */
+	--text-label--line-height: calc(1.125rem * var(--text-scale));
+	--text-caption: calc(0.75rem * var(--text-scale)); /* 12 · ayudas y metadatos */
+	--text-caption--line-height: calc(1rem * var(--text-scale));
 
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
@@ -87,19 +87,37 @@
 
 /* Medidas de la vista de escritorio que no están en la escala base */
 @theme inline {
-	--text-micro: 0.6875rem; /* 11 · títulos de sección de la barra lateral */
-	--text-micro--line-height: 0.8125rem;
-	--text-prose: 1.0625rem; /* 17 · cuerpo del editor */
-	--text-prose--line-height: 1.75rem;
+	--text-micro: calc(
+		0.6875rem * var(--text-scale)
+	); /* 11 · títulos de sección de la barra lateral */
+	--text-micro--line-height: calc(0.8125rem * var(--text-scale));
+	--text-prose: calc(1.0625rem * var(--text-scale)); /* 17 · cuerpo del editor */
+	--text-prose--line-height: calc(1.75rem * var(--text-scale));
 }
 
 @theme inline {
-	--text-page: 1.625rem; /* 26 · título de las pantallas de ajustes */
-	--text-page--line-height: 2rem;
+	--text-page: calc(1.625rem * var(--text-scale)); /* 26 · título de las pantallas de ajustes */
+	--text-page--line-height: calc(2rem * var(--text-scale));
 }
 
 /* Tarjeta de las pantallas de acceso (login, registro…) */
 @theme inline {
 	--radius-4xl: calc(var(--radius) + 20px); /* 32 */
 	--shadow-auth: 0 24px 64px -8px rgb(31 29 26 / 0.1);
+}
+
+/*
+ * «Tamaño del texto» (Ajustes → General): todos los tamaños de letra se multiplican por --text-scale
+ * (tokens.css). Aquí van también las escalas por defecto de Tailwind (text-sm, text-xl…) que usan los
+ * componentes de shadcn; sus interlineados son proporcionales, así que se ajustan solos.
+ */
+@theme inline {
+	--text-xs: calc(0.75rem * var(--text-scale));
+	--text-sm: calc(0.875rem * var(--text-scale));
+	--text-base: calc(1rem * var(--text-scale));
+	--text-lg: calc(1.125rem * var(--text-scale));
+	--text-xl: calc(1.25rem * var(--text-scale));
+	--text-2xl: calc(1.5rem * var(--text-scale));
+	--text-3xl: calc(1.875rem * var(--text-scale));
+	--text-4xl: calc(2.25rem * var(--text-scale));
 }

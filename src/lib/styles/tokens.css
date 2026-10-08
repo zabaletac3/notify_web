@@ -14,6 +14,9 @@
 :root {
 	--radius: 0.75rem;
 
+	/* Factor del tamaño del texto (Ajustes → General → Tamaño del texto). Lo cambia data-text-size. */
+	--text-scale: 1;
+
 	/* --- Superficies (Figma: bg/*) --- */
 	--background: #fffdf8; /* bg/editor */
 	--foreground: #1f1d1a; /* text/primary */
@@ -111,4 +114,12 @@
 	--chart-3: #c49ad3;
 	--chart-4: #6cc79c;
 	--chart-5: #e88a7e;
+}
+
+/* Tamaño del texto: solo cambia la letra, no los espacios ni los anchos. */
+[data-text-size='small'] {
+	--text-scale: 0.9;
+}
+[data-text-size='large'] {
+	--text-scale: 1.15;
 }

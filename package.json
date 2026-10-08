@@ -21,6 +21,7 @@
 		"api:lint": "pnpm --package=@redocly/cli dlx redocly lint docs/api/openapi.yaml"
 	},
 	"devDependencies": {
+		"@axe-core/playwright": "^4.13.0",
 		"@eslint/js": "^10.0.1",
 		"@playwright/test": "^1.60.0",
 		"@storybook/addon-a11y": "^10.6.1",

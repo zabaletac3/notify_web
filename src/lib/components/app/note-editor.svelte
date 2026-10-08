@@ -58,6 +58,10 @@
 			],
 			content,
 			contentType: 'markdown',
+			// El área de escritura necesita un nombre para lectores de pantalla.
+			editorProps: {
+				attributes: { 'aria-label': 'Contenido de la nota', 'aria-multiline': 'true' }
+			},
 			onTransaction: () => tick++,
 			onUpdate: ({ editor: e }) => {
 				clearTimeout(timer);
