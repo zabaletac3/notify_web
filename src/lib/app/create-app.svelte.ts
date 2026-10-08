@@ -1,5 +1,9 @@
 import { untrack } from 'svelte';
+import { DEFAULT_KDF, LIGHT_KDF, importMasterKeyRaw } from '#lib/core/crypto/index.js';
 import {
+	DEMO_MASTER_KEY_RAW,
+	DEMO_USER_ID,
+	DeviceKeyStore,
 	createLocalBackend,
 	createSessionChannel,
 	createMockBackend,
@@ -15,6 +19,7 @@ import { DevicesState, SettingsState } from '#lib/features/settings/index.js';
 import { ShareState } from '#lib/features/share/index.js';
 import { StorageState } from '#lib/features/storage/index.js';
 import { SyncState } from '#lib/features/sync/index.js';
+import { VaultState } from '#lib/features/vault/index.js';
 
 /** Cada cuántos ms se sincroniza sola tras un cambio (agrupa ediciones seguidas). */
 export const AUTO_SYNC_DELAY_MS = 2500;
@@ -29,6 +34,13 @@ export interface AppOptions {
 	persistence?: 'memory' | 'indexeddb';
 	/** Nombre de la base IndexedDB (solo con `persistence: 'indexeddb'`). */
 	dbName?: string;
+	/**
+	 * Parámetros de Argon2id para contraseñas nuevas. Por defecto, los de producción en el build final
+	 * y unos ligeros en desarrollo y pruebas.
+	 */
+	kdf?: { alg: 'argon2id'; memoryKiB: number; iterations: number; parallelism: number };
+	/** Bloquear sola por inactividad o al ocultar la pestaña (según los ajustes de privacidad). */
+	autoLock?: boolean;
 	/** Backend simulado a usar (por defecto uno nuevo). */
 	backend?: MockBackend;
 	/** Reloj inyectable (pruebas). */
@@ -50,6 +62,7 @@ export interface App {
 	share: ShareState;
 	storage: StorageState;
 	sync: SyncState;
+	vault: VaultState;
 	/** Simulador de escenarios (ver `data/mock/scenario.svelte.ts`). */
 	scenario: MockBackend['scenario'];
 	backend: MockBackend | LocalBackend;
@@ -96,7 +109,15 @@ export function createApp(options: AppOptions = {}): App {
 			})
 		: null;
 
+	const vault = new VaultState(
+		new DeviceKeyStore(options.dbName ? `${options.dbName}-keys` : 'apunte-keys')
+	);
+
 	const auth = new AuthState(repos.auth, now, {
+		vault,
+		kdf: options.kdf ?? (import.meta.env.PROD ? DEFAULT_KDF : LIGHT_KDF),
+		// Con "bloquear al salir" activado la clave no se guarda en el dispositivo.
+		rememberDevice: () => !settings.values.lockOnExit,
 		// Al salir, la copia local se borra (los datos siguen en el servidor).
 		onSignedOut: async () => {
 			const userId = local?.userId ?? null;
@@ -125,7 +146,9 @@ export function createApp(options: AppOptions = {}): App {
 	});
 
 	/** Carga los datos. En el primer arranque de un dispositivo, antes descarga todo del servidor. */
-	async function loadData() {
+	let loading: Promise<void> | null = null;
+	const loadData = () => (loading ??= doLoadData().finally(() => (loading = null)));
+	async function doLoadData() {
 		// Cada cuenta tiene su propia base local; sin sesión no se abre ninguna.
 		if (local && auth.user) await local.open(auth.user.id);
 		await sync.refresh();
@@ -136,6 +159,9 @@ export function createApp(options: AppOptions = {}): App {
 
 	async function bootstrap() {
 		await auth.bootstrap();
+		// La sesión de ejemplo del simulador arranca ya desbloqueada (tiene la clave maestra de ejemplo).
+		if (startAuthenticated && auth.user?.id === DEMO_USER_ID && vault.status !== 'unlocked')
+			await vault.unlock(DEMO_USER_ID, await importMasterKeyRaw(DEMO_MASTER_KEY_RAW), false);
 		await loadData();
 	}
 
@@ -160,7 +186,35 @@ export function createApp(options: AppOptions = {}): App {
 		}, AUTO_SYNC_POLL_MS);
 	}
 
+	// Bloqueo automático: tras un rato sin actividad, o al ocultar la pestaña si se eligió "inmediatamente".
+	const LOCK_AFTER_MS = { immediately: 0, '1m': 60_000, '5m': 300_000, '15m': 900_000 } as const;
+	let lockTimer: ReturnType<typeof setTimeout> | undefined;
+	const armLock = () => {
+		clearTimeout(lockTimer);
+		const after = LOCK_AFTER_MS[settings.values.lockTimeout];
+		if (!auth.isAuthenticated || vault.status !== 'unlocked' || after === 0) return;
+		lockTimer = setTimeout(() => vault.lock(), after);
+	};
+	const onActivity = () => armLock();
+	const onVisibility = () => {
+		if (document.hidden && settings.values.lockTimeout === 'immediately' && auth.isAuthenticated)
+			vault.lock();
+	};
+	const ACTIVITY = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
+	if (options.autoLock && typeof window !== 'undefined') {
+		for (const type of ACTIVITY) window.addEventListener(type, onActivity, { passive: true });
+		document.addEventListener('visibilitychange', onVisibility);
+	}
+
 	const stop = $effect.root(() => {
+		// Al desbloquear (o cambiar el ajuste) se vuelve a contar el tiempo de inactividad.
+		$effect(() => {
+			void vault.status;
+			void settings.values.lockTimeout;
+			void auth.isAuthenticated;
+			if (options.autoLock) untrack(armLock);
+		});
+
 		// Tras un cambio local, se sincroniza sola a los pocos segundos (si está activado y hay red).
 		$effect(() => {
 			const pending = sync.snapshot.pendingCount;
@@ -169,6 +223,22 @@ export function createApp(options: AppOptions = {}): App {
 				clearTimeout(autoSyncTimer);
 				if (local && ready && pending > 0)
 					autoSyncTimer = setTimeout(() => void sync.syncNow(), AUTO_SYNC_DELAY_MS);
+			});
+		});
+
+		// Al bloquear, se vacía lo que hay en memoria; al desbloquear de nuevo, se vuelve a cargar.
+		let wasUnlocked = vault.status === 'unlocked';
+		$effect(() => {
+			const unlocked = vault.status === 'unlocked';
+			untrack(() => {
+				if (wasUnlocked && !unlocked) {
+					notes.reset();
+					folders.reset();
+					void sync.refresh();
+				}
+				if (!wasUnlocked && unlocked && auth.isAuthenticated && notes.status === 'idle')
+					void loadData();
+				wasUnlocked = unlocked;
 			});
 		});
 
@@ -204,13 +274,19 @@ export function createApp(options: AppOptions = {}): App {
 		share,
 		storage,
 		sync,
+		vault,
 		scenario,
 		backend,
 		bootstrap,
 		resetData,
 		destroy: () => {
 			clearTimeout(autoSyncTimer);
+			clearTimeout(lockTimer);
 			clearInterval(pollTimer);
+			if (options.autoLock && typeof window !== 'undefined') {
+				for (const type of ACTIVITY) window.removeEventListener(type, onActivity);
+				document.removeEventListener('visibilitychange', onVisibility);
+			}
 			if (local && typeof window !== 'undefined') window.removeEventListener('online', onOnline);
 			channel?.close();
 			stop();

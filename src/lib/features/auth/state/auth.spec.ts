@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { DEMO_USER_EMAIL, DEMO_USER_PASSWORD, RESET_TOKEN } from '#lib/data/index.js';
-import { RESEND_COOLDOWN_SECONDS } from '#lib/features/auth/index.js';
+import { fromUtf8, open, seal, utf8 } from '#lib/core/crypto/index.js';
+import {
+	DEMO_RECOVERY_KEY,
+	DEMO_USER_EMAIL,
+	DEMO_USER_PASSWORD,
+	RESET_TOKEN
+} from '#lib/data/index.js';
+import { MAX_UNLOCK_ATTEMPTS, RESEND_COOLDOWN_SECONDS } from '#lib/features/auth/index.js';
 import { createClock, testApp } from '#lib/test/test-app.js';
 
 const reg = {
@@ -146,15 +152,52 @@ describe('AuthState · recuperar contraseña', () => {
 		expect(auth.resetRequested).toBe(false);
 	});
 
-	it('cambia la contraseña con el token y valida la confirmación', async () => {
+	const keep = { mode: 'keep' as const, recoveryKey: DEMO_RECOVERY_KEY };
+
+	it('cambia la contraseña con el token y la clave de recuperación', async () => {
 		const { auth } = await testApp({ startAuthenticated: false });
 		await auth.forgotPassword(DEMO_USER_EMAIL);
-		expect((await auth.resetPassword(RESET_TOKEN, 'Nueva123!', 'distinta')).ok).toBe(false);
+		expect((await auth.resetPassword(RESET_TOKEN, 'Nueva123!', 'distinta', keep)).ok).toBe(false);
 		expect(auth.fieldErrors).toEqual({ confirmation: 'passwords-dont-match' });
-		expect((await auth.resetPassword('token-malo', 'Nueva123!', 'Nueva123!')).ok).toBe(false);
+		expect((await auth.resetPassword('token-malo', 'Nueva123!', 'Nueva123!', keep)).ok).toBe(false);
 		expect(auth.fieldErrors).toEqual({ token: 'invalid-token' });
-		expect((await auth.resetPassword(RESET_TOKEN, 'Nueva123!', 'Nueva123!')).ok).toBe(true);
+		expect((await auth.resetPassword(RESET_TOKEN, 'Nueva123!', 'Nueva123!', keep)).ok).toBe(true);
 		expect((await auth.login({ email: DEMO_USER_EMAIL, password: 'Nueva123!' })).ok).toBe(true);
+	});
+
+	it('sin la clave de recuperación correcta no se restablece', async () => {
+		const { auth } = await testApp({ startAuthenticated: false });
+		await auth.forgotPassword(DEMO_USER_EMAIL);
+		const empty = { mode: 'keep' as const, recoveryKey: ' ' };
+		expect((await auth.resetPassword(RESET_TOKEN, 'Nueva123!', 'Nueva123!', empty)).ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ recoveryKey: 'required' });
+		const bad = { mode: 'keep' as const, recoveryKey: 'ABCD-EFGH' };
+		expect((await auth.resetPassword(RESET_TOKEN, 'Nueva123!', 'Nueva123!', bad)).ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ recoveryKey: 'invalid-recovery-key' });
+		// La contraseña de ejemplo sigue siendo la válida.
+		expect((await auth.login({ email: DEMO_USER_EMAIL, password: DEMO_USER_PASSWORD })).ok).toBe(
+			true
+		);
+	});
+
+	it('empezar de cero exige confirmar el borrado y deja una clave de recuperación nueva', async () => {
+		const { auth, backend } = await testApp({ startAuthenticated: false });
+		await auth.forgotPassword(DEMO_USER_EMAIL);
+		const unconfirmed = { mode: 'wipe' as const, confirmed: false };
+		expect((await auth.resetPassword(RESET_TOKEN, 'Nueva123!', 'Nueva123!', unconfirmed)).ok).toBe(
+			false
+		);
+		expect(auth.fieldErrors).toEqual({ wipe: 'wipe-not-confirmed' });
+		expect(backend.db.notes.length).toBeGreaterThan(0);
+
+		const wipe = { mode: 'wipe' as const, confirmed: true };
+		expect((await auth.resetPassword(RESET_TOKEN, 'Nueva123!', 'Nueva123!', wipe)).ok).toBe(true);
+		expect(backend.db.notes).toHaveLength(0);
+		// La clave nueva se enseña al iniciar sesión.
+		expect(auth.pendingRecoveryKey).toBeNull();
+		expect((await auth.login({ email: DEMO_USER_EMAIL, password: 'Nueva123!' })).ok).toBe(true);
+		expect(auth.pendingRecoveryKey).toMatch(/^([0-9A-Z*~$=]{4}-){13}[0-9A-Z*~$=]$/);
+		expect(auth.pendingRecoveryKey).not.toBe(DEMO_RECOVERY_KEY);
 	});
 });
 
@@ -194,7 +237,9 @@ describe('AuthState · mi cuenta', () => {
 	it('no permite cambiar a un correo que ya existe', async () => {
 		const { auth, backend } = await testApp();
 		backend.db.users.push({
-			password: 'x',
+			authKeyHash: 'x',
+			recoveryAuthHash: 'x',
+			keys: backend.db.users[0].keys,
 			user: {
 				id: 'u_9',
 				email: 'otra@correo.com',
@@ -231,5 +276,101 @@ describe('AuthState · mi cuenta', () => {
 		);
 		await auth.logout();
 		expect((await auth.login({ email: DEMO_USER_EMAIL, password: 'Nueva123!x' })).ok).toBe(true);
+	});
+});
+
+describe('AuthState · cofre de claves', () => {
+	it('la sesión de ejemplo arranca desbloqueada', async () => {
+		const { auth, vault } = await testApp();
+		expect(vault.status).toBe('unlocked');
+		expect(auth.isLocked).toBe(false);
+	});
+
+	it('registrarse y verificar el correo desbloquea la app y deja la clave de recuperación para mostrar', async () => {
+		const { auth, vault } = await testApp({ startAuthenticated: false });
+		await auth.register(reg);
+		expect(vault.status).toBe('locked');
+		expect(auth.pendingRecoveryKey).toBeNull();
+		await auth.verify('123456');
+		expect(vault.status).toBe('unlocked');
+		expect(auth.pendingRecoveryKey).toMatch(/^([0-9A-Z*~$=]{4}-){13}[0-9A-Z*~$=]$/);
+		auth.acknowledgeRecoveryKey();
+		expect(auth.pendingRecoveryKey).toBeNull();
+	});
+
+	it('iniciar sesión desbloquea con la contraseña; con una errónea no', async () => {
+		const { auth, vault } = await testApp({ startAuthenticated: false });
+		expect((await auth.login({ email: DEMO_USER_EMAIL, password: 'mal' })).ok).toBe(false);
+		expect(vault.status).toBe('locked');
+		expect((await auth.login({ email: DEMO_USER_EMAIL, password: DEMO_USER_PASSWORD })).ok).toBe(
+			true
+		);
+		expect(vault.status).toBe('unlocked');
+	});
+
+	it('bloqueada, pide la contraseña: una errónea se cuenta y la correcta desbloquea', async () => {
+		const { auth, vault } = await testApp();
+		vault.lock();
+		expect(auth.isLocked).toBe(true);
+		expect((await auth.unlock('')).ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ password: 'required' });
+		expect((await auth.unlock('mal')).ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ password: 'wrong-password' });
+		expect(auth.unlockFailures).toBe(1);
+		expect(vault.status).toBe('locked');
+		expect((await auth.unlock(DEMO_USER_PASSWORD)).ok).toBe(true);
+		expect(vault.status).toBe('unlocked');
+		expect(auth.isLocked).toBe(false);
+		expect(auth.unlockFailures).toBe(0);
+	});
+
+	it('tras 5 intentos fallidos cierra la sesión', async () => {
+		const { auth, vault } = await testApp();
+		vault.lock();
+		for (let i = 0; i < MAX_UNLOCK_ATTEMPTS; i++) await auth.unlock('mal');
+		expect(auth.status).toBe('anonymous');
+		expect(auth.user).toBeNull();
+	});
+
+	it('cerrar sesión olvida la clave maestra', async () => {
+		const { auth, vault } = await testApp();
+		await auth.logout();
+		expect(vault.status).toBe('locked');
+		expect(() => vault.current).toThrow();
+	});
+
+	it('cambiar la contraseña no cambia la clave maestra: lo cifrado antes sigue abriéndose', async () => {
+		const { auth, vault } = await testApp();
+		const before = await seal(vault.current.requireKey(), utf8('nota'), 'ctx');
+		expect((await auth.changePassword(DEMO_USER_PASSWORD, 'Nueva123!x', 'Nueva123!x')).ok).toBe(
+			true
+		);
+		await auth.logout();
+		expect((await auth.login({ email: DEMO_USER_EMAIL, password: DEMO_USER_PASSWORD })).ok).toBe(
+			false
+		);
+		expect((await auth.login({ email: DEMO_USER_EMAIL, password: 'Nueva123!x' })).ok).toBe(true);
+		expect(fromUtf8(await open(vault.current.requireKey(), before, 'ctx'))).toBe('nota');
+	});
+
+	it('restablecer con la clave de recuperación conserva la clave maestra', async () => {
+		const { auth, vault } = await testApp();
+		const before = await seal(vault.current.requireKey(), utf8('nota'), 'ctx');
+		await auth.logout();
+		await auth.forgotPassword(DEMO_USER_EMAIL);
+		const keep = { mode: 'keep' as const, recoveryKey: DEMO_RECOVERY_KEY };
+		expect((await auth.resetPassword(RESET_TOKEN, 'Nueva123!', 'Nueva123!', keep)).ok).toBe(true);
+		await auth.login({ email: DEMO_USER_EMAIL, password: 'Nueva123!' });
+		expect(fromUtf8(await open(vault.current.requireKey(), before, 'ctx'))).toBe('nota');
+	});
+
+	it('crear una clave de recuperación nueva exige la contraseña y deja la clave para mostrar', async () => {
+		const { auth } = await testApp();
+		expect((await auth.rotateRecoveryKey('mal')).ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ password: 'wrong-password' });
+		expect(auth.pendingRecoveryKey).toBeNull();
+		expect((await auth.rotateRecoveryKey(DEMO_USER_PASSWORD)).ok).toBe(true);
+		expect(auth.pendingRecoveryKey).not.toBe(DEMO_RECOVERY_KEY);
+		expect(auth.pendingRecoveryKey).toMatch(/^([0-9A-Z*~$=]{4}-){13}[0-9A-Z*~$=]$/);
 	});
 });

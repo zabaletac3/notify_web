@@ -1,17 +1,28 @@
+import { toB64u, utf8 } from '#lib/core/crypto/index.js';
 import {
 	fail,
 	isValidEmail,
-	PASSWORD_MIN_LENGTH,
-	type LoginInput,
-	type RegisterInput,
+	type KdfParams,
+	type KeyBundle,
+	type LoginResult,
+	type PasswordChangeRequest,
+	type PasswordResetBundle,
+	type PasswordResetRequest,
+	type RecoveryKeyRotation,
+	type RegisterRequest,
 	type Session,
 	type User
 } from '#lib/domain/index.js';
 import type { AuthRepository } from '../contracts.js';
+import { DEMO_KEYS } from './fixtures/demo-keys.js';
 import { RESET_TOKEN, type MockDatabase } from './mock-database.js';
 
 const MAX_FAILED_LOGINS = 5;
 const norm = (email: string) => email.trim().toLowerCase();
+
+/** El servidor real guarda Argon2id del valor recibido; aquí basta un hash. */
+const hashOf = async (value: string) =>
+	toB64u(new Uint8Array(await crypto.subtle.digest('SHA-256', utf8(value))));
 
 export class MockAuthRepository implements AuthRepository {
 	constructor(private db: MockDatabase) {}
@@ -29,14 +40,25 @@ export class MockAuthRepository implements AuthRepository {
 		return structuredClone(session);
 	}
 
-	async register(input: RegisterInput): Promise<{ email: string }> {
+	async prelogin(email: string): Promise<{ kdf: KdfParams }> {
+		await this.db.remote({ ignoreExpired: true });
+		const stored = this.findByEmail(email);
+		if (stored) return { kdf: structuredClone(stored.keys.kdf) };
+		// Cuenta inexistente: parámetros falsos pero estables, iguales a los de las cuentas reales.
+		const fake = (await hashOf(`apunte-fake-salt:${norm(email)}`)).slice(0, 22);
+		return { kdf: { ...DEMO_KEYS.kdf, salt: fake } };
+	}
+
+	async register(input: RegisterRequest): Promise<{ email: string }> {
 		await this.db.remote();
 		const email = norm(input.email);
 		if (this.findByEmail(email)) throw fail.validation({ email: 'email-taken' });
 		this.db.users.push({
-			password: input.password,
+			authKeyHash: await hashOf(input.authKey),
+			recoveryAuthHash: await hashOf(input.recoveryAuth),
+			keys: structuredClone(input.keys),
 			user: {
-				id: this.db.nextId('u'),
+				id: input.userId,
 				email,
 				fullName: input.fullName.trim(),
 				emailVerified: false,
@@ -82,10 +104,11 @@ export class MockAuthRepository implements AuthRepository {
 		return structuredClone(stored.user);
 	}
 
-	async requestEmailChange(newEmail: string, password: string): Promise<{ email: string }> {
+	async requestEmailChange(newEmail: string, authKey: string): Promise<{ email: string }> {
 		await this.db.remote();
 		const stored = this.requireUser();
-		if (stored.password !== password) throw fail.validation({ password: 'wrong-password' });
+		if (stored.authKeyHash !== (await hashOf(authKey)))
+			throw fail.validation({ password: 'wrong-password' });
 		const email = norm(newEmail);
 		if (!isValidEmail(email)) throw fail.validation({ email: 'invalid-email' });
 		if (this.findByEmail(email)) throw fail.validation({ email: 'email-taken' });
@@ -106,31 +129,34 @@ export class MockAuthRepository implements AuthRepository {
 		return structuredClone(stored.user);
 	}
 
-	async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+	async changePassword(input: PasswordChangeRequest): Promise<void> {
 		await this.db.remote();
 		const stored = this.requireUser();
-		if (stored.password !== currentPassword)
+		if (stored.authKeyHash !== (await hashOf(input.currentAuthKey)))
 			throw fail.validation({ currentPassword: 'wrong-password' });
-		if (newPassword.length < PASSWORD_MIN_LENGTH)
-			throw fail.validation({ password: 'password-too-short' });
-		if (newPassword === currentPassword) throw fail.validation({ password: 'same-password' });
-		stored.password = newPassword;
+		stored.authKeyHash = await hashOf(input.newAuthKey);
+		stored.keys = { ...structuredClone(input.keys), keysVersion: stored.keys.keysVersion + 1 };
 	}
 
-	async login(input: LoginInput): Promise<Session> {
+	async login(input: { email: string; authKey: string }): Promise<LoginResult> {
 		// Iniciar sesión funciona aunque la sesión anterior haya vencido.
 		await this.db.remote({ ignoreExpired: true });
 		const email = norm(input.email);
 		if ((this.db.failedLogins.get(email) ?? 0) >= MAX_FAILED_LOGINS) throw fail.rateLimited();
 		const stored = this.findByEmail(email);
 		// Mismo error para correo inexistente y contraseña incorrecta (no revela qué cuentas existen).
-		if (!stored || stored.password !== input.password) {
+		if (!stored || stored.authKeyHash !== (await hashOf(input.authKey))) {
 			this.db.failedLogins.set(email, (this.db.failedLogins.get(email) ?? 0) + 1);
 			throw fail.invalidCredentials();
 		}
 		if (!stored.user.emailVerified) throw fail.emailNotVerified();
 		this.db.failedLogins.delete(email);
-		return this.startSession(stored.user);
+		return { ...this.startSession(stored.user), keys: structuredClone(stored.keys) };
+	}
+
+	async keys(): Promise<KeyBundle> {
+		await this.db.remote();
+		return structuredClone(this.requireUser().keys);
 	}
 
 	async logout(): Promise<void> {
@@ -159,14 +185,53 @@ export class MockAuthRepository implements AuthRepository {
 		// Siempre resuelve, exista o no la cuenta.
 	}
 
-	async resetPassword(token: string, newPassword: string): Promise<void> {
+	async passwordResetBundle(token: string): Promise<PasswordResetBundle> {
 		await this.db.remote({ ignoreExpired: true });
+		const stored = this.userForToken(token);
+		return {
+			userId: stored.user.id,
+			recoveryWrappedMasterKey: stored.keys.recoveryWrappedMasterKey,
+			kdf: structuredClone(stored.keys.kdf)
+		};
+	}
+
+	private userForToken(token: string) {
 		const email = this.db.resetTokens.get(token);
-		if (!email) throw fail.validation({ token: 'invalid-token' });
-		const stored = this.findByEmail(email);
+		const stored = email ? this.findByEmail(email) : undefined;
 		if (!stored) throw fail.validation({ token: 'invalid-token' });
-		stored.password = newPassword;
-		this.db.resetTokens.delete(token);
-		this.db.failedLogins.delete(email);
+		return stored;
+	}
+
+	async resetPassword(input: PasswordResetRequest): Promise<void> {
+		await this.db.remote({ ignoreExpired: true });
+		const stored = this.userForToken(input.token);
+		if (input.mode === 'keep') {
+			// Conservar las notas exige la prueba de la clave de recuperación vigente.
+			if (stored.recoveryAuthHash !== (await hashOf(input.recoveryAuth)))
+				throw fail.validation({ recoveryKey: 'invalid-recovery-key' });
+		} else {
+			// Empezar de cero: las notas cifradas con la clave anterior ya no se podrían leer.
+			this.db.notes = [];
+			this.db.folders = [];
+			this.db.shareLinks = [];
+			stored.recoveryAuthHash = await hashOf(input.recoveryAuth);
+		}
+		stored.authKeyHash = await hashOf(input.newAuthKey);
+		stored.keys = { ...structuredClone(input.keys), keysVersion: stored.keys.keysVersion + 1 };
+		this.db.resetTokens.delete(input.token);
+		this.db.failedLogins.delete(stored.user.email);
+	}
+
+	async rotateRecoveryKey(input: RecoveryKeyRotation): Promise<void> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		if (stored.authKeyHash !== (await hashOf(input.authKey)))
+			throw fail.validation({ password: 'wrong-password' });
+		stored.recoveryAuthHash = await hashOf(input.recoveryAuth);
+		stored.keys = {
+			...stored.keys,
+			recoveryWrappedMasterKey: input.recoveryWrappedMasterKey,
+			keysVersion: stored.keys.keysVersion + 1
+		};
 	}
 }

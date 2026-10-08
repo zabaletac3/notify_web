@@ -10,3 +10,17 @@ export {
 	unreadableNote
 } from './note-codec.js';
 export { DeviceKeyStore } from './device-keys.js';
+export {
+	changePasswordKeys,
+	createAccountKeys,
+	deriveAuthKey,
+	masterKeyAad,
+	recoverWithRecoveryKey,
+	rotateRecoveryKeys,
+	unlockWithPassword,
+	type KdfBase,
+	type NewAccountKeys,
+	type PasswordChangeKeys,
+	type RecoveredKeys,
+	type RotatedRecovery
+} from './account-keys.js';

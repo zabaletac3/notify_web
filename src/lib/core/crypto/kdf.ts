@@ -18,6 +18,14 @@ export const DEFAULT_KDF: Omit<KdfParams, 'salt'> = {
 	parallelism: 1
 };
 
+/** Parámetros ligeros (1 MiB, 1 iteración): solo para desarrollo y pruebas, nunca en producción. */
+export const LIGHT_KDF: Omit<KdfParams, 'salt'> = {
+	alg: 'argon2id',
+	memoryKiB: 1024,
+	iterations: 1,
+	parallelism: 1
+};
+
 const SALT_BYTES = 16;
 
 export function newKdfParams(base: Omit<KdfParams, 'salt'> = DEFAULT_KDF): KdfParams {

@@ -5,11 +5,17 @@ import type {
 	Device,
 	Folder,
 	Id,
-	LoginInput,
+	LoginResult,
 	Note,
 	NoteDraft,
 	NoteQuery,
-	RegisterInput,
+	KdfParams,
+	KeyBundle,
+	PasswordChangeRequest,
+	PasswordResetBundle,
+	PasswordResetRequest,
+	RecoveryKeyRotation,
+	RegisterRequest,
 	Session,
 	ShareLink,
 	StorageUsage,
@@ -50,28 +56,40 @@ export interface FolderRepository {
 }
 
 export interface AuthRepository {
-	/** Crea la cuenta (sin verificar) y envía el código al correo. */
-	register(input: RegisterInput): Promise<{ email: string }>;
+	/**
+	 * Parámetros de derivación de la contraseña de esa cuenta. Para correos que no existen devuelve
+	 * parámetros falsos y estables, para no revelar qué cuentas hay.
+	 */
+	prelogin(email: string): Promise<{ kdf: KdfParams }>;
+	/** Crea la cuenta (sin verificar) y envía el código al correo. La contraseña nunca llega aquí. */
+	register(input: RegisterRequest): Promise<{ email: string }>;
 	verifyEmail(email: string, code: string): Promise<User>;
 	resendVerificationCode(email: string): Promise<void>;
-	login(input: LoginInput): Promise<Session>;
+	/** `authKey` se deriva de la contraseña en el cliente. Devuelve la sesión y las claves cifradas. */
+	login(input: { email: string; authKey: string }): Promise<LoginResult>;
+	/** Claves cifradas de la cuenta con sesión vigente (para desbloquear sin volver a iniciar sesión). */
+	keys(): Promise<KeyBundle>;
 	logout(): Promise<void>;
 	/** Cambia el nombre visible. */
 	updateProfile(patch: { fullName: string }): Promise<User>;
 	/**
-	 * Pide cambiar el correo: exige la contraseña actual y envía un código al correo nuevo.
+	 * Pide cambiar el correo: exige la prueba de la contraseña actual y envía un código al correo nuevo.
 	 * El cambio no se aplica hasta `confirmEmailChange`.
 	 */
-	requestEmailChange(newEmail: string, password: string): Promise<{ email: string }>;
+	requestEmailChange(newEmail: string, authKey: string): Promise<{ email: string }>;
 	confirmEmailChange(email: string, code: string): Promise<User>;
-	changePassword(currentPassword: string, newPassword: string): Promise<void>;
+	changePassword(input: PasswordChangeRequest): Promise<void>;
 	/** Elimina la cuenta y todos sus datos (se conservan 30 días antes del borrado definitivo). */
 	deleteAccount(): Promise<void>;
 	/** Sesión vigente, o `null` si no hay sesión. Lanza `session-expired` si venció. */
 	currentSession(): Promise<Session | null>;
 	/** Siempre resuelve, exista o no la cuenta (no revela qué correos están registrados). */
 	requestPasswordReset(email: string): Promise<void>;
-	resetPassword(token: string, newPassword: string): Promise<void>;
+	/** Con el token del correo: lo necesario para restablecer conservando las notas. */
+	passwordResetBundle(token: string): Promise<PasswordResetBundle>;
+	resetPassword(input: PasswordResetRequest): Promise<void>;
+	/** Cambia la clave de recuperación (la anterior deja de servir). */
+	rotateRecoveryKey(input: RecoveryKeyRotation): Promise<void>;
 }
 
 export interface DeviceRepository {

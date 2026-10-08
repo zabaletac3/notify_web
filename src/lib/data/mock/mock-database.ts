@@ -5,18 +5,27 @@ import {
 	type Conflict,
 	type Device,
 	type Folder,
+	type KeyBundle,
 	type Note,
 	type Session,
 	type ShareLink,
 	type User
 } from '#lib/domain/index.js';
 import { buildFolders, buildNotes, DEMO_DEVICE_ID } from './fixtures/index.js';
+import { DEMO_AUTH_KEY_HASH, DEMO_KEYS, DEMO_RECOVERY_AUTH_HASH } from './fixtures/demo-keys.js';
 import { Scenario, type Dataset } from './scenario.svelte.js';
 
 export interface StoredUser {
 	user: User;
-	/** Texto plano: solo existe en el mock. */
-	password: string;
+	/**
+	 * Hash de la prueba de la contraseña (`authKey`). El servidor nunca conoce la contraseña.
+	 * (El real guarda Argon2id del `authKey`; aquí basta SHA-256.)
+	 */
+	authKeyHash: string;
+	/** Hash de la prueba de la clave de recuperación. */
+	recoveryAuthHash: string;
+	/** Claves cifradas de la cuenta: sin la contraseña o la clave de recuperación no sirven de nada. */
+	keys: KeyBundle;
 }
 
 export interface MockDatabaseOptions {
@@ -30,6 +39,7 @@ export interface MockDatabaseOptions {
 }
 
 export const DEMO_USER_EMAIL = 'ana@correo.com';
+export const DEMO_USER_ID = 'u_1';
 export const DEMO_USER_PASSWORD = 'Secret123!';
 export const RESET_TOKEN = 'token-de-prueba';
 
@@ -110,13 +120,20 @@ export class MockDatabase {
 			}
 		];
 		const demo: User = {
-			id: 'u_1',
+			id: DEMO_USER_ID,
 			email: DEMO_USER_EMAIL,
 			fullName: 'Ana Pérez',
 			emailVerified: true,
 			createdAt: iso(60 * 24 * 90)
 		};
-		this.users = [{ user: demo, password: DEMO_USER_PASSWORD }];
+		this.users = [
+			{
+				user: demo,
+				authKeyHash: DEMO_AUTH_KEY_HASH,
+				recoveryAuthHash: DEMO_RECOVERY_AUTH_HASH,
+				keys: structuredClone(DEMO_KEYS)
+			}
+		];
 		this.settings = { ...DEFAULT_SETTINGS };
 		this.conflicts = [];
 		this.shareLinks = [];

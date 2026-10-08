@@ -42,4 +42,24 @@ describe('reacción a los escenarios (en el navegador)', () => {
 		expect(app.auth.status).toBe('authenticated');
 		app.destroy();
 	});
+
+	it('al bloquear la app se vacía lo que hay en memoria y al desbloquear se vuelve a cargar', async () => {
+		const app = createApp({ latencyMs: 0 });
+		await app.bootstrap();
+		expect(app.notes.all.length).toBeGreaterThan(0);
+
+		app.vault.lock();
+		flushSync();
+		await settle();
+		expect(app.auth.isLocked).toBe(true);
+		expect(app.notes.all).toHaveLength(0);
+		expect(app.folders.list).toHaveLength(0);
+
+		expect((await app.auth.unlock('Secret123!')).ok).toBe(true);
+		flushSync();
+		await settle();
+		await settle();
+		expect(app.notes.all.length).toBeGreaterThan(0);
+		app.destroy();
+	});
 });

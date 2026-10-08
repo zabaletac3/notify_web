@@ -1,3 +1,4 @@
+import type { Session } from './auth.js';
 import type { Id } from './ids.js';
 
 /**
@@ -42,4 +43,50 @@ export interface RegisterKeys {
 	/** Derivada de la clave de recuperación (base64url). El servidor guarda un hash. */
 	recoveryAuth: string;
 	keys: KeyBundle;
+}
+
+/** Respuesta al iniciar sesión: la sesión y las claves cifradas de la cuenta. */
+export interface LoginResult extends Session {
+	keys: KeyBundle;
+}
+
+/** Alta de cuenta: los datos de la persona más las claves generadas en el cliente. */
+export interface RegisterRequest extends RegisterKeys {
+	fullName: string;
+	email: string;
+	acceptedTerms: boolean;
+}
+
+export interface PasswordChangeRequest {
+	/** Prueba de que conoce la contraseña actual. */
+	currentAuthKey: string;
+	newAuthKey: string;
+	/** La misma clave maestra, ahora cifrada con la contraseña nueva. */
+	keys: KeyBundle;
+}
+
+/** Lo que devuelve el servidor al abrir el enlace de restablecimiento. */
+export interface PasswordResetBundle {
+	userId: Id;
+	recoveryWrappedMasterKey: Sealed;
+	kdf: KdfParams;
+}
+
+/**
+ * Restablecer la contraseña desde el enlace del correo. `keep` conserva las notas (hace falta la
+ * clave de recuperación); `wipe` borra todas las notas y empieza con claves nuevas.
+ */
+export interface PasswordResetRequest {
+	token: string;
+	mode: 'keep' | 'wipe';
+	newAuthKey: string;
+	/** `keep`: prueba de la clave de recuperación vigente. `wipe`: la de la clave nueva. */
+	recoveryAuth: string;
+	keys: KeyBundle;
+}
+
+export interface RecoveryKeyRotation {
+	authKey: string;
+	recoveryAuth: string;
+	recoveryWrappedMasterKey: Sealed;
 }

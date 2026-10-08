@@ -1,2 +1,7 @@
 // API pública de la feature "auth". Importar siempre desde aquí, nunca desde sus carpetas internas.
-export { AuthState, RESEND_COOLDOWN_SECONDS } from './state/auth.svelte.js';
+export {
+	AuthState,
+	MAX_UNLOCK_ATTEMPTS,
+	RESEND_COOLDOWN_SECONDS,
+	type PasswordResetChoice
+} from './state/auth.svelte.js';

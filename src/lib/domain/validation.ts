@@ -15,7 +15,9 @@ export type ValidationCode =
 	| 'invalid-token'
 	| 'email-taken'
 	| 'wrong-password'
-	| 'same-password';
+	| 'same-password'
+	| 'invalid-recovery-key'
+	| 'wipe-not-confirmed';
 
 export type FieldErrors = Record<string, ValidationCode>;
 
@@ -81,6 +83,20 @@ export function validateNewPassword(password: string, confirmation: string): Val
 	const errors: FieldErrors = {};
 	if (password.length < PASSWORD_MIN_LENGTH) errors.password = 'password-too-short';
 	if (confirmation !== password) errors.confirmation = 'passwords-dont-match';
+	return done(errors);
+}
+
+/** Restablecer la contraseña: contraseña nueva y, según la opción, la clave de recuperación o la confirmación de borrado. */
+export function validatePasswordReset(
+	password: string,
+	confirmation: string,
+	choice: { mode: 'keep'; recoveryKey: string } | { mode: 'wipe'; confirmed: boolean }
+): Validation {
+	const errors: FieldErrors = {};
+	if (password.length < PASSWORD_MIN_LENGTH) errors.password = 'password-too-short';
+	if (confirmation !== password) errors.confirmation = 'passwords-dont-match';
+	if (choice.mode === 'keep' && !choice.recoveryKey.trim()) errors.recoveryKey = 'required';
+	if (choice.mode === 'wipe' && !choice.confirmed) errors.wipe = 'wipe-not-confirmed';
 	return done(errors);
 }
 

@@ -16,8 +16,10 @@ export const validationMessages: Record<ValidationCode, string> = {
 	'invalid-code': 'El código debe tener 6 dígitos.',
 	'invalid-token': 'El enlace no es válido o ya venció.',
 	'email-taken': 'Ya existe una cuenta con ese correo.',
-	'wrong-password': 'La contraseña actual no es correcta.',
-	'same-password': 'La nueva contraseña debe ser distinta de la actual.'
+	'wrong-password': 'La contraseña no es correcta.',
+	'same-password': 'La nueva contraseña debe ser distinta de la actual.',
+	'invalid-recovery-key': 'La clave de recuperación no es correcta.',
+	'wipe-not-confirmed': 'Confirma que entiendes que se borrarán tus notas.'
 };
 
 export function validationMessage(code: string | undefined): string | undefined {

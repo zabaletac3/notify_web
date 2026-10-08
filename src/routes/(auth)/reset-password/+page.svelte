@@ -12,10 +12,14 @@
 	const token = $derived(page.url.searchParams.get('token') ?? '');
 	let password = $state('');
 	let confirmation = $state('');
+	let recoveryKey = $state('');
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
-		const result = await auth.resetPassword(token, password, confirmation);
+		const result = await auth.resetPassword(token, password, confirmation, {
+			mode: 'keep',
+			recoveryKey
+		});
 		if (!result.ok) return;
 		toast.success('Contraseña actualizada. Ya puedes iniciar sesión.');
 		await goto('/login');

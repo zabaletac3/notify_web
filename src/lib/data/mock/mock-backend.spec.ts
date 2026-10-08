@@ -1,8 +1,18 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { LIGHT_KDF, deriveFromPassword } from '#lib/core/crypto/index.js';
+import {
+	changePasswordKeys,
+	createAccountKeys,
+	recoverWithRecoveryKey,
+	rotateRecoveryKeys
+} from '#lib/data/crypto/index.js';
 import { AppFailure, TRASH_RETENTION_DAYS, type AppError } from '#lib/domain/index.js';
 import {
 	createMockBackend,
+	DEMO_KEYS,
+	DEMO_RECOVERY_KEY,
 	DEMO_USER_EMAIL,
+	DEMO_USER_ID,
 	DEMO_USER_PASSWORD,
 	RESET_TOKEN,
 	type Dataset,
@@ -222,14 +232,33 @@ describe('carpetas', () => {
 });
 
 describe('cuentas', () => {
+	type Repos = MockBackend['repos'];
+
+	/** Lo que hace el cliente al registrarse: crea las claves y manda solo pruebas y claves cifradas. */
+	async function signUp(repos: Repos, email = 'luis@correo.com', password = 'Secret123!') {
+		const account = await createAccountKeys(password, LIGHT_KDF);
+		const result = await repos.auth.register({
+			fullName: 'Luis Gómez',
+			email,
+			acceptedTerms: true,
+			userId: account.userId,
+			authKey: account.authKey,
+			recoveryAuth: account.recoveryAuth,
+			keys: account.keys
+		});
+		return { ...result, account };
+	}
+
+	/** Lo que hace el cliente al iniciar sesión: consulta los parámetros, deriva y envía la prueba. */
+	async function logIn(repos: Repos, email: string, password: string) {
+		const { kdf } = await repos.auth.prelogin(email);
+		const { authKey } = await deriveFromPassword(password, kdf);
+		return repos.auth.login({ email, authKey });
+	}
+
 	it('registro → verificación → sesión iniciada', async () => {
 		const { repos } = make('normal', { startAuthenticated: false });
-		const { email } = await repos.auth.register({
-			fullName: 'Luis Gómez',
-			email: ' Luis@Correo.com ',
-			password: 'Secret123!',
-			acceptedTerms: true
-		});
+		const { email } = await signUp(repos, ' Luis@Correo.com ');
 		expect(email).toBe('luis@correo.com');
 		expect(await errorOf(repos.auth.verifyEmail(email, '000000'))).toEqual({
 			kind: 'validation',
@@ -240,31 +269,28 @@ describe('cuentas', () => {
 		expect((await repos.auth.currentSession())?.user.email).toBe('luis@correo.com');
 	});
 
+	it('el servidor no guarda ni la contraseña ni nada con lo que descifrar las notas', async () => {
+		const { repos, db } = make('normal', { startAuthenticated: false });
+		const { account } = await signUp(repos, 'luis@correo.com', 'UnaClaveMuyPropia9!');
+		const stored = JSON.stringify(db.users.find((u) => u.user.email === 'luis@correo.com'));
+		expect(stored).not.toContain('UnaClaveMuyPropia9!');
+		expect(stored).not.toContain(account.authKey);
+		expect(stored).not.toContain(account.recoveryAuth);
+		expect(stored).not.toContain(account.recoveryKey);
+	});
+
 	it('no permite registrar un correo repetido', async () => {
 		const { repos } = make();
-		expect(
-			await errorOf(
-				repos.auth.register({
-					fullName: 'Otra',
-					email: DEMO_USER_EMAIL,
-					password: 'x',
-					acceptedTerms: true
-				})
-			)
-		).toEqual({ kind: 'validation', fields: { email: 'email-taken' } });
+		expect(await errorOf(signUp(repos, DEMO_USER_EMAIL))).toEqual({
+			kind: 'validation',
+			fields: { email: 'email-taken' }
+		});
 	});
 
 	it('sin verificar no inicia sesión', async () => {
 		const { repos } = make('normal', { startAuthenticated: false });
-		await repos.auth.register({
-			fullName: 'Luis',
-			email: 'luis@correo.com',
-			password: 'Secret123!',
-			acceptedTerms: true
-		});
-		expect(
-			await errorOf(repos.auth.login({ email: 'luis@correo.com', password: 'Secret123!' }))
-		).toEqual({
+		await signUp(repos);
+		expect(await errorOf(logIn(repos, 'luis@correo.com', 'Secret123!'))).toEqual({
 			kind: 'forbidden',
 			code: 'email-not-verified'
 		});
@@ -272,49 +298,169 @@ describe('cuentas', () => {
 
 	it('mismo error para correo inexistente y contraseña errónea', async () => {
 		const { repos } = make();
-		const a = await errorOf(repos.auth.login({ email: 'no@existe.com', password: 'x' }));
-		const b = await errorOf(repos.auth.login({ email: DEMO_USER_EMAIL, password: 'mal' }));
+		const a = await errorOf(logIn(repos, 'no@existe.com', 'x'));
+		const b = await errorOf(logIn(repos, DEMO_USER_EMAIL, 'mal'));
 		expect(a).toEqual(b);
 		expect(a).toEqual({ kind: 'unauthorized', code: 'invalid-credentials' });
 	});
 
-	it('bloquea tras 5 intentos fallidos', async () => {
+	it('prelogin de un correo inexistente da parámetros falsos pero estables', async () => {
 		const { repos } = make();
-		for (let i = 0; i < 5; i++)
-			await errorOf(repos.auth.login({ email: DEMO_USER_EMAIL, password: 'mal' }));
-		expect(
-			(await errorOf(repos.auth.login({ email: DEMO_USER_EMAIL, password: DEMO_USER_PASSWORD })))
-				.kind
-		).toBe('rate-limited');
+		const a = await repos.auth.prelogin('no@existe.com');
+		const b = await repos.auth.prelogin('NO@existe.com ');
+		const real = await repos.auth.prelogin(DEMO_USER_EMAIL);
+		expect(a).toEqual(b);
+		expect(a.kdf.salt).not.toBe(real.kdf.salt);
+		expect({ ...a.kdf, salt: '' }).toEqual({ ...real.kdf, salt: '' });
 	});
 
-	it('inicia y cierra sesión', async () => {
+	it('bloquea tras 5 intentos fallidos', async () => {
+		const { repos } = make();
+		for (let i = 0; i < 5; i++) await errorOf(logIn(repos, DEMO_USER_EMAIL, 'mal'));
+		expect((await errorOf(logIn(repos, DEMO_USER_EMAIL, DEMO_USER_PASSWORD))).kind).toBe(
+			'rate-limited'
+		);
+	});
+
+	it('inicia y cierra sesión, y devuelve las claves cifradas de la cuenta', async () => {
 		const { repos } = make('normal', { startAuthenticated: false });
 		expect(await repos.auth.currentSession()).toBeNull();
-		const session = await repos.auth.login({
-			email: DEMO_USER_EMAIL,
-			password: DEMO_USER_PASSWORD
-		});
+		const session = await logIn(repos, DEMO_USER_EMAIL, DEMO_USER_PASSWORD);
 		expect(session.user.fullName).toBe('Ana Pérez');
+		expect(session.keys).toEqual(DEMO_KEYS);
+		expect(await repos.auth.keys()).toEqual(DEMO_KEYS);
 		await repos.auth.logout();
 		expect(await repos.auth.currentSession()).toBeNull();
 	});
 
-	it('recuperación: no revela si el correo existe y cambia la contraseña con el token', async () => {
-		const { repos } = make('normal', { startAuthenticated: false });
-		await repos.auth.requestPasswordReset('no@existe.com'); // no lanza
-		expect(await errorOf(repos.auth.resetPassword(RESET_TOKEN, 'Nueva123!'))).toEqual({
-			kind: 'validation',
-			fields: { token: 'invalid-token' }
-		});
-		await repos.auth.requestPasswordReset(DEMO_USER_EMAIL);
-		await repos.auth.resetPassword(RESET_TOKEN, 'Nueva123!');
+	it('cambiar la contraseña exige la prueba de la actual y conserva la clave maestra', async () => {
+		const { repos } = make();
+		const change = await changePasswordKeys(
+			DEMO_USER_PASSWORD,
+			'Nueva123!x',
+			DEMO_USER_ID,
+			DEMO_KEYS,
+			LIGHT_KDF
+		);
 		expect(
-			(await repos.auth.login({ email: DEMO_USER_EMAIL, password: 'Nueva123!' })).user.email
-		).toBe(DEMO_USER_EMAIL);
-		// el token es de un solo uso
-		expect(await errorOf(repos.auth.resetPassword(RESET_TOKEN, 'Otra123!'))).toMatchObject({
-			kind: 'validation'
+			await errorOf(
+				repos.auth.changePassword({
+					currentAuthKey: 'prueba-falsa',
+					newAuthKey: change.newAuthKey,
+					keys: change.keys
+				})
+			)
+		).toEqual({ kind: 'validation', fields: { currentPassword: 'wrong-password' } });
+		await repos.auth.changePassword({
+			currentAuthKey: change.currentAuthKey,
+			newAuthKey: change.newAuthKey,
+			keys: change.keys
+		});
+		expect((await repos.auth.keys()).keysVersion).toBe(DEMO_KEYS.keysVersion + 1);
+		await repos.auth.logout();
+		expect((await logIn(repos, DEMO_USER_EMAIL, 'Nueva123!x')).user.email).toBe(DEMO_USER_EMAIL);
+		expect((await errorOf(logIn(repos, DEMO_USER_EMAIL, DEMO_USER_PASSWORD))).kind).toBe(
+			'unauthorized'
+		);
+	});
+
+	describe('recuperación', () => {
+		it('no revela si el correo existe y el token es de un solo uso', async () => {
+			const { repos } = make('normal', { startAuthenticated: false });
+			await repos.auth.requestPasswordReset('no@existe.com'); // no lanza
+			expect(await errorOf(repos.auth.passwordResetBundle(RESET_TOKEN))).toEqual({
+				kind: 'validation',
+				fields: { token: 'invalid-token' }
+			});
+			await repos.auth.requestPasswordReset(DEMO_USER_EMAIL);
+			const bundle = await repos.auth.passwordResetBundle(RESET_TOKEN);
+			expect(bundle.userId).toBe(DEMO_USER_ID);
+			const recovered = await recoverWithRecoveryKey(
+				DEMO_RECOVERY_KEY,
+				'Nueva123!',
+				bundle.userId,
+				bundle,
+				LIGHT_KDF
+			);
+			const request = {
+				token: RESET_TOKEN,
+				mode: 'keep' as const,
+				newAuthKey: recovered.newAuthKey,
+				recoveryAuth: recovered.recoveryAuth,
+				keys: recovered.keys
+			};
+			await repos.auth.resetPassword(request);
+			expect((await logIn(repos, DEMO_USER_EMAIL, 'Nueva123!')).user.email).toBe(DEMO_USER_EMAIL);
+			expect(await errorOf(repos.auth.resetPassword(request))).toMatchObject({
+				kind: 'validation'
+			});
+		});
+
+		it('conservar las notas exige la prueba de la clave de recuperación', async () => {
+			const { repos } = make('normal', { startAuthenticated: false });
+			await repos.auth.requestPasswordReset(DEMO_USER_EMAIL);
+			const bundle = await repos.auth.passwordResetBundle(RESET_TOKEN);
+			const recovered = await recoverWithRecoveryKey(
+				DEMO_RECOVERY_KEY,
+				'Nueva123!',
+				bundle.userId,
+				bundle,
+				LIGHT_KDF
+			);
+			expect(
+				await errorOf(
+					repos.auth.resetPassword({
+						token: RESET_TOKEN,
+						mode: 'keep',
+						newAuthKey: recovered.newAuthKey,
+						recoveryAuth: 'prueba-falsa',
+						keys: recovered.keys
+					})
+				)
+			).toEqual({ kind: 'validation', fields: { recoveryKey: 'invalid-recovery-key' } });
+		});
+
+		it('empezar de cero borra las notas del servidor y da claves nuevas', async () => {
+			const { repos, db } = make('normal', { startAuthenticated: false });
+			expect(db.notes.length).toBeGreaterThan(0);
+			await repos.auth.requestPasswordReset(DEMO_USER_EMAIL);
+			const bundle = await repos.auth.passwordResetBundle(RESET_TOKEN);
+			const account = await createAccountKeys('Nueva123!', LIGHT_KDF, bundle.userId);
+			await repos.auth.resetPassword({
+				token: RESET_TOKEN,
+				mode: 'wipe',
+				newAuthKey: account.authKey,
+				recoveryAuth: account.recoveryAuth,
+				keys: account.keys
+			});
+			expect(db.notes).toHaveLength(0);
+			expect(db.folders).toHaveLength(0);
+			const session = await logIn(repos, DEMO_USER_EMAIL, 'Nueva123!');
+			expect(session.keys.wrappedMasterKey).not.toBe(DEMO_KEYS.wrappedMasterKey);
+		});
+
+		it('cambiar la clave de recuperación invalida la anterior', async () => {
+			const { repos } = make();
+			const rotated = await rotateRecoveryKeys(DEMO_USER_PASSWORD, DEMO_USER_ID, DEMO_KEYS);
+			await repos.auth.rotateRecoveryKey({
+				authKey: rotated.authKey,
+				recoveryAuth: rotated.recoveryAuth,
+				recoveryWrappedMasterKey: rotated.recoveryWrappedMasterKey
+			});
+			await repos.auth.requestPasswordReset(DEMO_USER_EMAIL);
+			const bundle = await repos.auth.passwordResetBundle(RESET_TOKEN);
+			// La clave anterior ya no abre la clave maestra guardada.
+			await expect(
+				recoverWithRecoveryKey(DEMO_RECOVERY_KEY, 'Nueva123!', bundle.userId, bundle, LIGHT_KDF)
+			).rejects.toThrow();
+			const ok = await recoverWithRecoveryKey(
+				rotated.recoveryKey,
+				'Nueva123!',
+				bundle.userId,
+				bundle,
+				LIGHT_KDF
+			);
+			expect(ok.recoveryAuth).toBe(rotated.recoveryAuth);
 		});
 	});
 });
@@ -346,9 +492,11 @@ describe('escenarios del simulador', () => {
 		scenario.sessionExpired = true;
 		expect((await errorOf(repos.auth.currentSession())).kind).toBe('session-expired');
 		expect((await errorOf(repos.sync.syncNow())).kind).toBe('session-expired');
-		expect(
-			(await repos.auth.login({ email: DEMO_USER_EMAIL, password: DEMO_USER_PASSWORD })).user.email
-		).toBe(DEMO_USER_EMAIL);
+		const { kdf } = await repos.auth.prelogin(DEMO_USER_EMAIL);
+		const { authKey } = await deriveFromPassword(DEMO_USER_PASSWORD, kdf);
+		expect((await repos.auth.login({ email: DEMO_USER_EMAIL, authKey })).user.email).toBe(
+			DEMO_USER_EMAIL
+		);
 	});
 
 	it('la latencia retrasa las llamadas', async () => {

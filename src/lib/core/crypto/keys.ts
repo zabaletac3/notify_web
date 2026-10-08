@@ -32,6 +32,16 @@ export async function unwrap(
 	return crypto.subtle.importKey('raw', raw as BufferSource, 'AES-GCM', true, usages);
 }
 
+/** Bytes de una clave en base64url (solo para generar los datos de ejemplo). */
+export const exportKeyRaw = exportRawForShare;
+
+/** Importa una clave maestra guardada en claro. Solo para los datos de ejemplo del simulador. */
+export function importMasterKeyRaw(b64u: string): Promise<CryptoKey> {
+	const raw = fromB64u(b64u);
+	if (raw.length !== 32) throw new CryptoFormatError('longitud de clave inválida');
+	return crypto.subtle.importKey('raw', raw, 'AES-GCM', true, BOTH);
+}
+
 /** La clave de un enlace público, para ponerla en el fragmento de la URL. */
 export async function exportRawForShare(key: CryptoKey): Promise<string> {
 	return toB64u(new Uint8Array(await crypto.subtle.exportKey('raw', key)));
