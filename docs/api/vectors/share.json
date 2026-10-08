@@ -1,0 +1,27 @@
+{
+  "contentAad": "apunte/v1/share/NZr_ZMkuk_hdwieM8Va7IA",
+  "decrypted": {
+    "content": "# Ingredientes\n\n- 2 huevos",
+    "title": "Receta secreta",
+    "updatedAt": "2026-02-03T04:05:06.000Z"
+  },
+  "description": "Enlace público: la copia (`{title, content}` rellenada) se cifra con una clave propia del enlace y el AAD del slug; la clave va en el fragmento `#k=` (base64url) y, cifrada con la maestra, en `wrappedShareKey`.",
+  "keyAad": "apunte/v1/sharekey/018f6f9a-7b1c-7c3e-8c9d-000000000001/018f6f9a-7b1c-7c3e-8c9d-000000000101",
+  "keyFragment": "#k=oQZr0DWa_2TJLpP4XcInjPFWuyCF6k-0GX7jSK0Sd9w",
+  "keyIv": "8Va7IIXqT7QZfuNI",
+  "masterKey": "Mpf8YcYrkPVavySJ7lO4HYLnTLEWe-BFqg902T6jCG0",
+  "note": {
+    "content": "# Ingredientes\n\n- 2 huevos",
+    "title": "Receta secreta"
+  },
+  "noteId": "018f6f9a-7b1c-7c3e-8c9d-000000000101",
+  "origin": "https://apunte.app",
+  "payload": "a1.FnvgRaoPdNk-owht.vaYmoWVlPJEcoQJJ8N_IvDohHuYj6Xesja1L6CncRPeAf3NzmCFDxoST4_ZVffqNad1zV8VyEIX9jebFk6f7gjH52L8CS6skJbxoSitpdG-f6Nd4UT3HJ7xrZ9cDpSqE_pCbLWdV9-6HHlrimseLLAPa0XLkfs_wVv3Nslb02qXa6QghB72Yma_OqMwbaIprjJGGqlpa4vJOKhmxCF66pvu5L0J0ezX9i5ejFuOKHwG2MestDmhsV90FuaeybfHttZjPKDehHghK18C3rQRNATXO7vEcvSNLbXqC1muvesdARGkAfOI0aRi063XMzwVL1gnXu_yVdFQu0OuO2xY1nfrtHyT4iyNdIlaJih8HnJk",
+  "payloadIv": "FnvgRaoPdNk-owht",
+  "shareKey": "oQZr0DWa_2TJLpP4XcInjPFWuyCF6k-0GX7jSK0Sd9w",
+  "slug": "NZr_ZMkuk_hdwieM8Va7IA",
+  "url": "https://apunte.app/n/NZr_ZMkuk_hdwieM8Va7IA#k=oQZr0DWa_2TJLpP4XcInjPFWuyCF6k-0GX7jSK0Sd9w",
+  "userId": "018f6f9a-7b1c-7c3e-8c9d-000000000001",
+  "version": 1,
+  "wrappedShareKey": "a1.8Va7IIXqT7QZfuNI.2fd2mlxgaWkdccOPFvyWmtcf_iLF21TV5NyXf5bEye-y8BvUo-KOGAdhHoFBW1HI"
+}

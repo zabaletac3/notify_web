@@ -7,3 +7,7 @@ bun.lockb
 
 # Miscellaneous
 /static/
+
+# Vectores de prueba generados (formato propio: 2 espacios y claves ordenadas, ver
+# docs/api/vectors/README.md). Se regeneran con `pnpm vectors:generate`; no se formatean a mano.
+/docs/api/vectors/

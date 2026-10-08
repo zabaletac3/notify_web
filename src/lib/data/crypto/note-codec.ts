@@ -11,14 +11,14 @@ import type {
 import type { Vault } from './vault.js';
 
 /** Lo que va dentro del texto cifrado de una nota. */
-interface NotePayload {
+export interface NotePayload {
 	title: string;
 	content: string;
 	tags: string[];
 	pinned: boolean;
 }
 
-interface FolderPayload {
+export interface FolderPayload {
 	name: string;
 }
 
@@ -56,7 +56,17 @@ function parseFolderPayload(json: string): FolderPayload {
 	return { name: p.name };
 }
 
-const encode = (value: unknown) => pad(utf8(JSON.stringify(value)));
+/**
+ * Serializa y rellena el contenido de una nota tal y como se cifra. Es la forma canónica del
+ * `payload`: JSON `{ title, content, tags, pinned }` (en ese orden) rellenado a múltiplos de 256.
+ * Lo usan `encryptNote` y el generador de vectores (`docs/api/vectors`).
+ */
+export const encodeNotePayload = (payload: NotePayload): Uint8Array<ArrayBuffer> =>
+	pad(utf8(JSON.stringify(payload)));
+
+/** Serializa y rellena el nombre de una carpeta: JSON `{ name }` rellenado a múltiplos de 256. */
+export const encodeFolderPayload = (payload: FolderPayload): Uint8Array<ArrayBuffer> =>
+	pad(utf8(JSON.stringify(payload)));
 
 /**
  * Cifra una nota. Si llega `wrapped` (la clave que ya tenía) se reutiliza; si no, se crea una nueva.
@@ -85,7 +95,7 @@ export async function encryptNote(
 		revision: note.revision,
 		lastEditedDeviceId: note.lastEditedDeviceId,
 		wrappedKey: item.wrapped,
-		payload: await seal(item.key, encode(payload), vault.dataAad('note', note.id))
+		payload: await seal(item.key, encodeNotePayload(payload), vault.dataAad('note', note.id))
 	};
 }
 
@@ -150,7 +160,7 @@ export async function encryptFolder(
 		wrappedKey: item.wrapped,
 		payload: await seal(
 			item.key,
-			encode({ name: folder.name } satisfies FolderPayload),
+			encodeFolderPayload({ name: folder.name }),
 			vault.dataAad('folder', folder.id)
 		)
 	};
