@@ -70,7 +70,25 @@
 				<div class="flex items-start gap-2.5">
 					<Checkbox id="terms" bind:checked={acceptedTerms} class="mt-0.5" />
 					<label for="terms" class="text-label text-muted-foreground">
-						Acepto los Términos de uso y la Política de privacidad de Apunte.
+						Acepto los
+						<a
+							href="/terms"
+							target="_blank"
+							rel="noopener"
+							onclick={(e) => e.stopPropagation()}
+							class="font-semibold text-primary underline underline-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+							>Términos de uso</a
+						>
+						y la
+						<a
+							href="/privacy"
+							target="_blank"
+							rel="noopener"
+							onclick={(e) => e.stopPropagation()}
+							class="font-semibold text-primary underline underline-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+							>Política de privacidad</a
+						>
+						de Apunte.
 					</label>
 				</div>
 				{#if auth.fieldErrors.acceptedTerms}

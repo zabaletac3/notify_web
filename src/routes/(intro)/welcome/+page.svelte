@@ -55,7 +55,20 @@
 				Continuar sin cuenta
 			</a>
 			<p class="text-center text-caption leading-[17px] text-tertiary md:hidden">
-				Al continuar aceptas los Términos de uso y la Política de privacidad.
+				Al continuar aceptas los
+				<a
+					href="/terms"
+					target="_blank"
+					rel="noopener"
+					class="font-semibold text-primary underline underline-offset-2">Términos de uso</a
+				>
+				y la
+				<a
+					href="/privacy"
+					target="_blank"
+					rel="noopener"
+					class="font-semibold text-primary underline underline-offset-2">Política de privacidad</a
+				>.
 			</p>
 		</div>
 	</section>
