@@ -35,8 +35,9 @@
 	)}
 >
 	<span class="flex w-full items-center gap-1.5">
+		<!-- Como en Figma: el icono de fijado va antes del título, en color ámbar (tag/amber). -->
+		{#if pinned}<AppIcon name="pin" size={13} class="shrink-0 text-tag-amber" />{/if}
 		<span class="min-w-0 flex-1 truncate text-sm leading-[17px] font-semibold">{title}</span>
-		{#if pinned}<AppIcon name="pin" size={13} class="shrink-0 text-tertiary" />{/if}
 	</span>
 	<span class="flex w-full items-center gap-2 text-caption leading-[15px]">
 		<span class="shrink-0 font-medium text-muted-foreground">{date}</span>

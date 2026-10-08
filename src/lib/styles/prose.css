@@ -82,7 +82,8 @@
 	margin: 0 0 0.875rem;
 	padding: 0.75rem 1rem;
 	background: var(--card);
-	border: 1px solid var(--primary);
+	/* Como la «Callout» de Figma: solo una barra de acento a la izquierda (3 px). */
+	border-left: 3px solid var(--primary);
 	border-radius: 0.625rem;
 	color: var(--muted-foreground);
 	font-style: italic;

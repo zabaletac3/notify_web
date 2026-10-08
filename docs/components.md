@@ -49,14 +49,34 @@ Cumplen AA (≥ 4.5): texto principal y secundario sobre fondos, botón primario
 | `tag/amber` sobre `bg/editor`       | 3.58  | 7.77   | Texto pequeño de etiqueta en claro queda bajo 4.5                        |
 | `text/secondary` sobre `bg/sidebar` | 4.47  | 5.91   | Roza el mínimo en claro                                                  |
 
-## Pendiente de validar con Figma (fase de captura)
+## Medidas base validadas contra Figma
 
-Los valores de estos componentes se dedujeron del diseño conocido y deben reconciliarse al capturar cada pantalla:
+Se leyeron las medidas de los componentes base y de sus instancias en las vistas del archivo de Figma y se compararon con el código:
 
-- Tamaños `xs` / `sm` de botón y tamaños de iconos por contexto.
-- Padding y espaciados de diálogos, sheet, menús y popover.
-- Componentes compuestos de Apunte (`SidebarItem`, `NoteCard`, `SettingRow`, `EmptyState`, `Banner`, toasts…): se construirán sobre estos primitivos con las medidas exactas.
-- Estilo final de Toaster (sonner), Command y Sidebar de shadcn.
+| Componente                     | Figma                                                          | Código                                                                                              | Resultado                                                                                                                                           |
+| ------------------------------ | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Button `sm` / `default` / `lg` | 36 / 46 / 54 de alto; relleno 14 / 20 / 24; radio 12 / 12 / 14 | `h-9` / `h-11.5` / `h-13.5`; `px-3.5` / `px-5` / `px-6`; `rounded-lg` / `rounded-lg` / `rounded-xl` | ✓ (el tamaño `xs` y los `icon-*` de shadcn no existen en Figma: no se usan en las pantallas)                                                        |
+| Input                          | 52 de alto, radio 12, relleno 14                               | `h-13 rounded-lg px-3.5`                                                                            | ✓                                                                                                                                                   |
+| Switch · Checkbox · Radio      | 44×26 · 20 · 20                                                | igual                                                                                               | ✓                                                                                                                                                   |
+| OTP slot · Badge               | 48×60 radio 12 · 20 de alto                                    | `h-15` · `h-5`                                                                                      | ✓                                                                                                                                                   |
+| NoteCard                       | 80 de alto, radio 10, relleno 12/14, hueco 4                   | `h-20 rounded-[10px] px-3.5 py-3 gap-1`                                                             | ✓                                                                                                                                                   |
+| BottomSheet                    | relleno 12/20/36/20, hueco 16                                  | `px-5 pt-3 pb-9 gap-4`                                                                              | ✓                                                                                                                                                   |
+| MenuItem                       | 38 de alto, relleno 9/12, hueco 12                             | `py-2.25 px-3 gap-3`                                                                                | ✓                                                                                                                                                   |
+| **SidebarItem**                | 34 de alto, **radio 8**, relleno 7/10, hueco 10                | `rounded-lg` (12)                                                                                   | **Corregido** → `rounded-sm`                                                                                                                        |
+| **ToolbarButton**              | 32 (40 en móvil), **radio 8**                                  | `rounded-lg` (12)                                                                                   | **Corregido** → `rounded-sm`                                                                                                                        |
+| Diálogo (base)                 | 420, relleno 24, hueco 16, radio 20                            | `p-7` (28), `gap-4`, anchos 420/440/480/520                                                         | El código sigue las **vistas** (28, hueco 16, radio 20, esos anchos); el componente base de Figma quedó con 24 y 420: pendiente de igualar en Figma |
+| Toast                          | 360                                                            | 380                                                                                                 | El código sigue la vista (380)                                                                                                                      |
+
+Además, comparando la vista de escritorio en modo oscuro con la app:
+
+- **Cita (`blockquote`)**: Figma («Callout») tiene fondo `bg/app`, **solo una barra de acento a la izquierda de 3 px**, radio 10 y relleno 12/16; el código dibujaba un borde de 1 px alrededor. **Corregido** (`prose.css`).
+- **Nota fijada**: Figma pone el icono de fijado **antes del título**, de 13 px y color `tag/amber`; el código lo ponía a la derecha y gris. **Corregido** (`NoteCard`).
+- Colores, tipografía, listas, etiquetas y la barra lateral coinciden en claro y en oscuro.
+
+## Pendiente de validar con Figma
+
+- Tamaño del icono por contexto y el estilo final de Toaster (sonner), Command y Sidebar de shadcn.
+- Igualar en Figma el componente base «Dialog» con las vistas (relleno 28).
 
 ### Cifrado de extremo a extremo (sin diseño en Figma todavía)
 

@@ -22,7 +22,7 @@
 	title={label}
 	class={cn(
 		size === 'lg' ? 'size-10' : 'size-8',
-		'grid place-content-center rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+		'grid place-content-center rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
 		active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-hover'
 	)}
 >

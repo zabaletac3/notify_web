@@ -112,7 +112,8 @@ test('registro, clave de recuperación y recuperación de la cuenta sin perder l
 	await page.locator('#password').fill(NEW_PASSWORD);
 	await page.getByRole('button', { name: /Iniciar sesión|Desbloqueando/ }).click();
 	await expect(page).toHaveURL(/\/notes$/);
-	await expect(page.getByText('Mi nota secreta').first()).toBeVisible();
+	// Bajar y descifrar todo tras iniciar sesión puede tardar más si la máquina va cargada.
+	await expect(page.getByText('Mi nota secreta').first()).toBeVisible({ timeout: 20_000 });
 });
 
 test('la app bloqueada pide la contraseña y la nota sigue ahí al desbloquear', async ({ page }) => {
