@@ -20,6 +20,29 @@ async function navigate(page: Page, href: string) {
 	}, href);
 }
 
+/**
+ * Cualquier recurso que la política de seguridad de contenido (CSP) bloquee hace fallar la prueba:
+ * así se nota enseguida si una librería nueva necesita scripts, estilos o conexiones no permitidos.
+ */
+test.beforeEach(async ({ page }) => {
+	await page.addInitScript(() => {
+		const violations: string[] = [];
+		(window as unknown as { __csp: string[] }).__csp = violations;
+		document.addEventListener('securitypolicyviolation', (e) =>
+			violations.push(
+				`${e.violatedDirective} → ${e.blockedURI || 'inline'} (${e.sourceFile ?? ''})`
+			)
+		);
+	});
+});
+
+test.afterEach(async ({ page }) => {
+	const violations = await page.evaluate(
+		() => (window as unknown as { __csp?: string[] }).__csp ?? []
+	);
+	expect(violations, 'La CSP bloqueó algo').toEqual([]);
+});
+
 const PASSWORD = 'Secret123!';
 const NEW_PASSWORD = 'Nueva456!x';
 const KEY_FORMAT = /^([0-9A-Z*~$=]{4}-){13}[0-9A-Z*~$=]$/;

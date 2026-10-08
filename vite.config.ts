@@ -6,7 +6,37 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import path from 'node:path';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
-export default defineConfig({
+
+/**
+ * Política de seguridad de contenido (CSP). Las notas y sus claves viven en el navegador, así que
+ * lo que pueda ejecutar código ajeno es el riesgo principal: nada de scripts de terceros ni inline
+ * (SvelteKit añade solo los hashes de los suyos). Ver docs/architecture.md → «Seguridad».
+ */
+const API_ORIGIN = 'https://api.apunte.app';
+type CspDirectives = NonNullable<
+	NonNullable<NonNullable<Parameters<typeof sveltekit>[0]>['csp']>['directives']
+>;
+const cspDirectives = (dev: boolean): CspDirectives => ({
+	'default-src': ['self'],
+	// `wasm-unsafe-eval`: Argon2id (hash-wasm) es WebAssembly. No permite `eval` de texto.
+	'script-src': ['self', 'wasm-unsafe-eval'],
+	// Hace falta `unsafe-inline`: Vite (en desarrollo) y las librerías de componentes (bits-ui, sonner)
+	// crean elementos <style> al ejecutarse y no admiten nonce, y hay atributos `style=""` para
+	// posicionar menús y diálogos. Es un riesgo bajo: una hoja de estilos no ejecuta código, y no hay
+	// por dónde sacar datos (`img-src`, `font-src` y `connect-src` solo admiten el propio origen y la API).
+	'style-src': ['self', 'unsafe-inline'],
+	'img-src': ['self', 'data:', 'blob:'],
+	'font-src': ['self', 'data:'],
+	'connect-src': dev ? ['self', API_ORIGIN, 'ws:', 'http:'] : ['self', API_ORIGIN],
+	'worker-src': ['self', 'blob:'],
+	'base-uri': ['none'],
+	'form-action': ['self'],
+	'object-src': ['none'],
+	// Solo vale como cabecera (los navegadores la ignoran en <meta>): ver src/hooks.server.ts.
+	'frame-ancestors': ['none']
+});
+
+export default defineConfig(({ command }) => ({
 	plugins: [
 		tailwindcss(),
 		sveltekit({
@@ -18,7 +48,8 @@ export default defineConfig({
 			// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
 			// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
 			// See https://svelte.dev/docs/kit/adapters for more information about adapters.
-			adapter: adapter()
+			adapter: adapter(),
+			csp: { mode: 'auto', directives: cspDirectives(command === 'serve') }
 		})
 	],
 	test: {
@@ -88,4 +119,4 @@ export default defineConfig({
 			}
 		]
 	}
-});
+}));

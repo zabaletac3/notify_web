@@ -48,7 +48,8 @@
 	<title>Apunte</title>
 </svelte:head>
 
-<ModeWatcher />
+<!-- El script del tema va en `static/theme-init.js` (la CSP no admite scripts en línea). -->
+<ModeWatcher disableHeadScriptInjection />
 
 {@render children()}
 
