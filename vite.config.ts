@@ -1,5 +1,5 @@
 import tailwindcss from '@tailwindcss/vite';
-import { loadEnv } from 'vite';
+import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import adapter from '@sveltejs/adapter-auto';
@@ -48,10 +48,40 @@ const cspDirectives = (dev: boolean, apiOrigin: string): CspDirectives => ({
 	'frame-ancestors': ['none']
 });
 
+/**
+ * Al arrancar `pnpm dev`, dice en la terminal a qué backend habla la web (simulado o la API real) y,
+ * si es la API, si responde. Así se ve enseguida un `.env` sin `PUBLIC_BACKEND=http` o la API apagada.
+ */
+const backendBanner = (mode: string): Plugin => ({
+	name: 'apunte-backend-banner',
+	apply: 'serve',
+	configureServer(server) {
+		server.httpServer?.once('listening', async () => {
+			const env = { ...loadEnv(mode, process.cwd(), 'PUBLIC_'), ...process.env };
+			const log = server.config.logger;
+			if (env.PUBLIC_BACKEND !== 'http' || !env.PUBLIC_API_URL) {
+				log.info(
+					'\n  Apunte → backend SIMULADO (sin API; el código de verificación es 123456).\n' +
+						'  Para la API real: PUBLIC_BACKEND=http y PUBLIC_API_URL en .env, y reinicia.\n'
+				);
+				return;
+			}
+			const url = env.PUBLIC_API_URL.replace(/\/$/, '');
+			try {
+				const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(3000) });
+				log.info(`\n  Apunte → API real ${url} (health: ${res.status}).\n`);
+			} catch {
+				log.warn(`\n  Apunte → API real ${url}, pero NO responde. ¿Está corriendo \`make run\`?\n`);
+			}
+		});
+	}
+});
+
 export default defineConfig(({ command, mode }) => ({
 	// PUBLIC_* llegan al navegador (import.meta.env.PUBLIC_API_URL, PUBLIC_BACKEND); el resto no.
 	envPrefix: ['VITE_', 'PUBLIC_'],
 	plugins: [
+		backendBanner(mode),
 		tailwindcss(),
 		sveltekit({
 			compilerOptions: {

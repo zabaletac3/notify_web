@@ -21,15 +21,21 @@
 		}
 	}
 
+	// PUBLIC_BACKEND=http usa la API real (PUBLIC_API_URL); por defecto, el simulador.
+	const api =
+		import.meta.env.PUBLIC_BACKEND === 'http' && import.meta.env.PUBLIC_API_URL
+			? { baseUrl: import.meta.env.PUBLIC_API_URL }
+			: undefined;
+	if (import.meta.env.DEV && typeof window !== 'undefined')
+		console.info(
+			api ? `Apunte: API real ${api.baseUrl}` : 'Apunte: backend simulado (código 123456)'
+		);
+
 	// Estado global de la app. En desarrollo se simula una pequeña latencia para ver los estados de carga.
 	const app = setApp(
 		createApp({
 			persistence: 'indexeddb',
-			// PUBLIC_BACKEND=http usa la API real (PUBLIC_API_URL); por defecto, el simulador.
-			api:
-				import.meta.env.PUBLIC_BACKEND === 'http' && import.meta.env.PUBLIC_API_URL
-					? { baseUrl: import.meta.env.PUBLIC_API_URL }
-					: undefined,
+			api,
 			autoLock: true,
 			latencyMs: import.meta.env.DEV ? 250 : 0
 		})
