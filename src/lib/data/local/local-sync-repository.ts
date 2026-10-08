@@ -31,6 +31,9 @@ export interface LocalSyncDeps {
 	beforeSync?: () => Promise<void>;
 }
 
+/** Tope de páginas por sincronización (500 elementos por página: 50 000 elementos). */
+const MAX_SYNC_PAGES = 100;
+
 const entryKey = (e: { entity: string; entityId: string }) => `${e.entity}:${e.entityId}`;
 
 /**
@@ -124,25 +127,31 @@ export class LocalSyncRepository implements SyncRepository {
 	private async run(): Promise<SyncSnapshot> {
 		await this.d.beforeSync?.();
 		const { db } = this.d;
-		const cursor = (await db.getMeta<string>('cursor')) ?? null;
 		const inConflict = new Set((await db.conflicts.toArray()).map((c) => c.noteId));
 		const sent = (await db.outbox.orderBy('seq').toArray()).filter(
 			(e) => !(e.entity === 'note' && inConflict.has(e.entityId))
 		);
-		const request: EncryptedSyncRequest = {
-			deviceId: this.d.device.id,
-			deviceName: this.d.device.name,
-			cursor,
-			changes: sent.map((e) => ({
-				entity: e.entity,
-				id: e.entityId,
-				op: e.op,
-				baseRevision: e.baseRevision,
-				data: e.data
-			}))
-		};
-		const response = await this.d.transport.sync(request);
-		await this.d.lock.run(() => this.apply(response, sent));
+		let toSend: OutboxEntry[] = sent;
+		// El servidor pagina lo que baja (cuentas grandes): se repite, ya sin cambios que subir, hasta estar al día.
+		for (let page = 0; page < MAX_SYNC_PAGES; page++) {
+			const cursor = (await db.getMeta<string>('cursor')) ?? null;
+			const request: EncryptedSyncRequest = {
+				deviceId: this.d.device.id,
+				deviceName: this.d.device.name,
+				cursor,
+				changes: toSend.map((e) => ({
+					entity: e.entity,
+					id: e.entityId,
+					op: e.op,
+					baseRevision: e.baseRevision,
+					data: e.data
+				}))
+			};
+			const response = await this.d.transport.sync(request);
+			await this.d.lock.run(() => this.apply(response, toSend));
+			if (!response.hasMore) break;
+			toSend = [];
+		}
 		return this.snapshot();
 	}
 

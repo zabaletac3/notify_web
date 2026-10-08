@@ -71,6 +71,8 @@ export interface SyncResponse {
 	applied: SyncApplied[];
 	remoteChanges: SyncRemoteChange[];
 	conflicts: SyncConflictReport[];
+	/** El servidor pagina lo que baja: si es `true`, hay que volver a sincronizar con este `cursor`. */
+	hasMore?: boolean;
 }
 
 // ── Variante cifrada (ver `docs/adr/0005-cifrado-extremo-a-extremo.md`) ──────────────────────

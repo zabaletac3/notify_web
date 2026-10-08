@@ -25,6 +25,11 @@
 	const app = setApp(
 		createApp({
 			persistence: 'indexeddb',
+			// PUBLIC_BACKEND=http usa la API real (PUBLIC_API_URL); por defecto, el simulador.
+			api:
+				import.meta.env.PUBLIC_BACKEND === 'http' && import.meta.env.PUBLIC_API_URL
+					? { baseUrl: import.meta.env.PUBLIC_API_URL }
+					: undefined,
 			autoLock: true,
 			latencyMs: import.meta.env.DEV ? 250 : 0
 		})
@@ -46,6 +51,14 @@
 		const path = page.url.pathname;
 		if (app.auth.isLocked && (path.startsWith('/notes') || path.startsWith('/settings')))
 			void goto('/unlock');
+	});
+
+	// Sesión cerrada sin que la persona lo pidiera (dispositivo revocado, otra pestaña): a iniciar sesión,
+	// estén donde estén (notas o ajustes).
+	$effect(() => {
+		const path = page.url.pathname;
+		if (app.auth.notice && (path.startsWith('/notes') || path.startsWith('/settings')))
+			void goto('/login');
 	});
 
 	onMount(() => {

@@ -36,6 +36,8 @@ Ver `docs/data-and-state.md`. La UI obtiene todo con `getApp()` (`#lib/app/index
 
 Borrador del contrato HTTP en `docs/api/openapi.yaml` (`pnpm api:lint` lo valida) y decisiones abiertas en `docs/api/decisions.md`. Si cambias un contrato de `src/lib/data/contracts.ts`, actualiza la especificación.
 
+Servidor real: `PUBLIC_BACKEND=http` + `PUBLIC_API_URL` (ver `.env.example`); cliente en `src/lib/data/remote`. `pnpm e2e:http` prueba la web contra la API Go real (repo `notify_backend`, PostgreSQL local).
+
 ## Cifrado
 
 Las notas, carpetas y enlaces se cifran en el cliente (ADR 0005, `core/crypto` y `data/crypto`); el servidor solo ve metadatos y textos cifrados. Nunca registrar contraseñas, claves ni textos descifrados; todo dato nuevo con texto de la persona debe cifrarse. El modo `memory` (pruebas) no cifra.

@@ -18,7 +18,8 @@
 		"verify": "pnpm check && pnpm lint && pnpm test:unit --run && pnpm build",
 		"storybook": "storybook dev -p 6006",
 		"build-storybook": "storybook build",
-		"api:lint": "pnpm --package=@redocly/cli dlx redocly lint docs/api/openapi.yaml"
+		"api:lint": "pnpm --package=@redocly/cli dlx redocly lint docs/api/openapi.yaml",
+		"e2e:http": "playwright test -c playwright.http.config.ts"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.13.0",

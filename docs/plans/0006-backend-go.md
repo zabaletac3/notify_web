@@ -1,6 +1,6 @@
 # Plan 0006 · Backend de Apunte en Go + PostgreSQL
 
-Estado: **propuesta lista para ejecutar** (nada ejecutado). Repo: `github.com/zabaletac3/notify_backend` (vacío).
+Estado: **fases 0–11 aplicadas** (backend en `github.com/zabaletac3/notify_backend`, Go 1.26.8; cliente web en `src/lib/data/remote`; e2e real con `pnpm e2e:http`). Pendiente operativo: primer despliegue real en el VPS y verificaciones marcadas en `docs/deploy.md`.
 Contrato: `docs/api/openapi.yaml`. Protocolo: ADR 0004. Cifrado: ADR 0005.
 Sustituye a la versión con MongoDB: se elige **PostgreSQL** (D4) y se descarta Meilisearch (la búsqueda es del cliente, D11).
 

@@ -6,6 +6,14 @@ import {
 	DeviceKeyStore,
 	createLocalBackend,
 	createSessionChannel,
+	HttpAuthRepository,
+	HttpClient,
+	HttpDeviceRepository,
+	HttpShareRepository,
+	HttpStorageRepository,
+	HttpSyncTransport,
+	LocalStorageTokenStore,
+	type TokenStore,
 	createMockBackend,
 	type Dataset,
 	type LocalBackend,
@@ -41,6 +49,11 @@ export interface AppOptions {
 	kdf?: { alg: 'argon2id'; memoryKiB: number; iterations: number; parallelism: number };
 	/** Bloquear sola por inactividad o al ocultar la pestaña (según los ajustes de privacidad). */
 	autoLock?: boolean;
+	/**
+	 * API real. Con esto, la cuenta, los dispositivos, los enlaces, el espacio y la sincronización van al
+	 * servidor (las notas siguen en IndexedDB y se sincronizan). Requiere `persistence: 'indexeddb'`.
+	 */
+	api?: { baseUrl: string; tokens?: TokenStore; fetch?: typeof fetch };
 	/** Backend simulado a usar (por defecto uno nuevo). */
 	backend?: MockBackend;
 	/** Reloj inyectable (pruebas). */
@@ -83,7 +96,8 @@ export function createApp(options: AppOptions = {}): App {
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fábrica del reloj, no es estado
 	const now = options.now ?? (() => new Date());
 	const persistence = options.persistence ?? 'memory';
-	const startAuthenticated = options.startAuthenticated ?? true;
+	// Con la API real no hay sesión de ejemplo: se empieza sin iniciar sesión.
+	const startAuthenticated = options.startAuthenticated ?? !options.api;
 	const vault = new VaultState(
 		new DeviceKeyStore(options.dbName ? `${options.dbName}-keys` : 'apunte-keys')
 	);
@@ -91,6 +105,7 @@ export function createApp(options: AppOptions = {}): App {
 		options.backend ??
 		(persistence === 'indexeddb'
 			? createLocalBackend({
+					remote: options.api ? remoteServices(options.api) : undefined,
 					now,
 					startAuthenticated,
 					dbName: options.dbName,
@@ -308,5 +323,21 @@ export function createApp(options: AppOptions = {}): App {
 			channel?.close();
 			stop();
 		}
+	};
+}
+
+/** Cliente HTTP y repositorios reales para la API. */
+function remoteServices(api: NonNullable<AppOptions['api']>) {
+	const http = new HttpClient({
+		baseUrl: api.baseUrl.replace(/\/+$/, ''),
+		tokens: api.tokens ?? new LocalStorageTokenStore(),
+		fetch: api.fetch
+	});
+	return {
+		auth: new HttpAuthRepository(http),
+		devices: new HttpDeviceRepository(http),
+		share: new HttpShareRepository(http),
+		storage: new HttpStorageRepository(http),
+		transport: new HttpSyncTransport(http)
 	};
 }

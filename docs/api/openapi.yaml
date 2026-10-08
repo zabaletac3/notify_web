@@ -1163,6 +1163,9 @@ components:
       required: [cursor, applied, remoteChanges, conflicts]
       properties:
         cursor: { type: string }
+        hasMore:
+          type: boolean
+          description: Hay más cambios remotos por bajar. El cliente repite `POST /sync` (sin cambios propios) con el `cursor` recibido hasta que sea `false`/ausente.
         applied:
           type: array
           items: { $ref: '#/components/schemas/SyncApplied' }

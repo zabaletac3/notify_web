@@ -1,5 +1,12 @@
 import { fail } from '#lib/domain/index.js';
 import type { Vault } from '../crypto/vault.js';
+import type {
+	AuthRepository,
+	DeviceRepository,
+	ShareRepository,
+	StorageRepository,
+	SyncTransport
+} from '../contracts.js';
 import { createMockBackend, type MockBackend } from '../mock/create-mock-repositories.js';
 import { MockSyncServer } from '../mock/mock-sync-server.js';
 import { DEMO_DEVICE_ID } from '../mock/fixtures/index.js';
@@ -13,7 +20,18 @@ import { LocalNoteRepository } from './local-note-repository.js';
 import { LocalSettingsRepository } from './local-settings-repository.js';
 import { LocalSyncRepository } from './local-sync-repository.js';
 
+/** Servicios reales (API HTTP) que sustituyen a los simulados de cuenta, dispositivos, enlaces, espacio y sincronización. */
+export interface RemoteServices {
+	auth: AuthRepository;
+	devices: DeviceRepository;
+	share: ShareRepository;
+	storage: StorageRepository;
+	transport: SyncTransport;
+}
+
 export interface LocalBackendOptions extends MockDatabaseOptions {
+	/** Si se indica, la cuenta, los dispositivos, los enlaces y la sincronización van a la API en vez de al simulador. */
+	remote?: RemoteServices;
 	/** Cofre de claves de la sesión: cifra y descifra las notas y carpetas. Lanza `locked` si está bloqueado. */
 	vault: () => Vault;
 	/** Prefijo de la base IndexedDB; la de cada cuenta se llama `<prefijo>-<userId>` (distinto por dispositivo en las pruebas). */
@@ -100,14 +118,23 @@ export function createLocalBackend(options: LocalBackendOptions): LocalBackend {
 		codec,
 		lock,
 		isOpen: () => holder !== null,
-		transport: server,
+		transport: options.remote?.transport ?? server,
 		now: serverDb.now,
 		device,
 		gate,
-		connectivity: () => (scenario.offline ? 'offline' : scenario.serverError ? 'error' : 'online'),
+		connectivity: () =>
+			options.remote
+				? typeof navigator !== 'undefined' && navigator.onLine === false
+					? 'offline'
+					: 'online'
+				: scenario.offline
+					? 'offline'
+					: scenario.serverError
+						? 'error'
+						: 'online',
 		// "Conflicto en la próxima sincronización": otro dispositivo edita la nota y aquí también.
 		beforeSync: async () => {
-			if (!scenario.injectConflict) return;
+			if (options.remote || !scenario.injectConflict) return;
 			scenario.injectConflict = false;
 			const target = (await notes.list()).find((n) => n.revision > 0 && !n.deletedAt);
 			if (!target || !(await server.simulateRemoteEdit(target.id))) return;
@@ -119,6 +146,14 @@ export function createLocalBackend(options: LocalBackendOptions): LocalBackend {
 		...mock,
 		repos: {
 			...mock.repos,
+			...(options.remote
+				? {
+						auth: options.remote.auth,
+						devices: options.remote.devices,
+						share: options.remote.share,
+						storage: options.remote.storage
+					}
+				: {}),
 			notes,
 			folders: new LocalFolderRepository(deps),
 			settings: new LocalSettingsRepository(deps),

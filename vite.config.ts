@@ -1,4 +1,5 @@
 import tailwindcss from '@tailwindcss/vite';
+import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import adapter from '@sveltejs/adapter-auto';
@@ -12,11 +13,20 @@ import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
  * lo que pueda ejecutar código ajeno es el riesgo principal: nada de scripts de terceros ni inline
  * (SvelteKit añade solo los hashes de los suyos). Ver docs/architecture.md → «Seguridad».
  */
-const API_ORIGIN = 'https://api.apunte.app';
+// Origen de la API: PUBLIC_API_URL en el momento de construir (si no, el de producción).
+const apiOrigin = (mode: string): string => {
+	const url = loadEnv(mode, process.cwd(), 'PUBLIC_').PUBLIC_API_URL;
+	try {
+		return url ? new URL(url).origin : 'https://api.apunte.app';
+	} catch {
+		return 'https://api.apunte.app';
+	}
+};
 type CspDirectives = NonNullable<
 	NonNullable<NonNullable<Parameters<typeof sveltekit>[0]>['csp']>['directives']
 >;
-const cspDirectives = (dev: boolean): CspDirectives => ({
+type CspSource = NonNullable<CspDirectives['connect-src']>[number];
+const cspDirectives = (dev: boolean, apiOrigin: string): CspDirectives => ({
 	'default-src': ['self'],
 	// `wasm-unsafe-eval`: Argon2id (hash-wasm) es WebAssembly. No permite `eval` de texto.
 	'script-src': ['self', 'wasm-unsafe-eval'],
@@ -27,7 +37,9 @@ const cspDirectives = (dev: boolean): CspDirectives => ({
 	'style-src': ['self', 'unsafe-inline'],
 	'img-src': ['self', 'data:', 'blob:'],
 	'font-src': ['self', 'data:'],
-	'connect-src': dev ? ['self', API_ORIGIN, 'ws:', 'http:'] : ['self', API_ORIGIN],
+	'connect-src': dev
+		? ['self', apiOrigin as CspSource, 'ws:', 'http:']
+		: ['self', apiOrigin as CspSource],
 	'worker-src': ['self', 'blob:'],
 	'base-uri': ['none'],
 	'form-action': ['self'],
@@ -36,7 +48,9 @@ const cspDirectives = (dev: boolean): CspDirectives => ({
 	'frame-ancestors': ['none']
 });
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, mode }) => ({
+	// PUBLIC_* llegan al navegador (import.meta.env.PUBLIC_API_URL, PUBLIC_BACKEND); el resto no.
+	envPrefix: ['VITE_', 'PUBLIC_'],
 	plugins: [
 		tailwindcss(),
 		sveltekit({
@@ -49,7 +63,7 @@ export default defineConfig(({ command }) => ({
 			// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
 			// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 			adapter: adapter(),
-			csp: { mode: 'auto', directives: cspDirectives(command === 'serve') }
+			csp: { mode: 'auto', directives: cspDirectives(command === 'serve', apiOrigin(mode)) }
 		})
 	],
 	test: {

@@ -2,4 +2,5 @@
 export * from './contracts.js';
 export * from './mock/index.js';
 export * from './local/index.js';
+export * from './remote/index.js';
 export * from './crypto/index.js';
