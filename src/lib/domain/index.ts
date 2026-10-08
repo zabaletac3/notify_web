@@ -11,6 +11,7 @@ export * from './auth.js';
 export * from './device.js';
 export * from './share.js';
 export * from './sync.js';
+export * from './crypto.js';
 export * from './sync-protocol.js';
 export * from './settings.js';
 export * from './storage.js';

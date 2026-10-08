@@ -704,3 +704,8 @@ _(Quien ejecute: anotar aquí cualquier cambio respecto al plan y por qué.)_
 - La clave de recuperación formateada mide 53 caracteres (52 + control) en 13 grupos de 4 más un carácter final; la contraseña se normaliza a NFKC antes de Argon2id.
 - `setArgon2Impl(null)` restaura la implementación real. `importRawForShare` es síncrona en validación (lanza `CryptoFormatError` antes de importar).
 - El worker de Argon2id se crea por derivación y se termina al acabar; en `MODE === 'test'` se usa `hash-wasm` directamente.
+
+**Fase 2**
+
+- El plan decía sustituir `SyncChange.data`, `SyncRemoteChange.note/folder` y `SyncConflictReport.remote` por las variantes cifradas ya en esta fase. Eso rompería la compilación del simulador y de la capa local hasta la fase 5, así que los tipos cifrados se añaden **al lado** (`EncryptedSyncChange`, `EncryptedSyncRequest`, `EncryptedSyncRemoteChange`, `EncryptedSyncConflictReport`, `EncryptedSyncResponse`) y la fase 5 hace el cambio: `SyncTransport` pasa a usar `EncryptedSyncRequest`/`EncryptedSyncResponse` y los tipos en claro se quedan solo para uso interno del codec.
+- `EncryptedNote` y `EncryptedFolder` usan `string` para las fechas (como `IsoDate`) y `Sealed` es `string` en dominio. Se añadió `RegisterKeys` (lo que viaja al registrarse) para la fase 4.

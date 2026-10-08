@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
+	type EncryptedFolderFields,
+	type EncryptedNote,
+	type EncryptedNoteFields,
+	type EncryptedSyncChange,
+	type EncryptedSyncResponse,
 	TRASH_RETENTION_DAYS,
 	countWords,
 	daysUntilPurge,
@@ -224,5 +229,31 @@ describe('agrupación: orden de los grupos', () => {
 			now
 		);
 		expect(groups.map((g) => g.key)).toEqual(['pinned', 'today', '2026-09', '2026-08']);
+	});
+});
+
+describe('protocolo cifrado', () => {
+	it('una nota cifrada solo expone metadatos y textos cifrados', () => {
+		const note: EncryptedNote = {
+			id: 'n1',
+			folderId: null,
+			createdAt: '2026-10-07T12:00:00.000Z',
+			updatedAt: '2026-10-07T12:00:00.000Z',
+			deletedAt: null,
+			revision: 1,
+			lastEditedDeviceId: 'd1',
+			wrappedKey: 'a1.AAAAAAAAAAAAAAAA.xx',
+			payload: 'a1.AAAAAAAAAAAAAAAA.yy'
+		};
+		expect(Object.keys(note)).not.toEqual(expect.arrayContaining(['title']));
+		expectTypeOf(note).not.toHaveProperty('title');
+		expectTypeOf(note).not.toHaveProperty('content');
+		expectTypeOf<EncryptedNoteFields>().not.toHaveProperty('revision');
+		expectTypeOf<
+			EncryptedSyncResponse['conflicts'][number]['remote']
+		>().toEqualTypeOf<EncryptedNote>();
+		expectTypeOf<EncryptedSyncChange['data']>().toEqualTypeOf<
+			EncryptedNoteFields | EncryptedFolderFields | undefined
+		>();
 	});
 });
