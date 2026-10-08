@@ -696,3 +696,11 @@ _(Quien ejecute: anotar aquí cualquier cambio respecto al plan y por qué.)_
 - `device-revoked` lo detectan `SyncState` y `AuthState.bootstrap`. Los estados de ajustes, dispositivos y compartir siguen tratando solo `session-expired`: lo recoge la siguiente sincronización (cada 60 s como máximo).
 - `endSession(reason)` en `AuthState` cubre revocación y cierre en otra pestaña; la pantalla de inicio de sesión muestra el aviso (`auth.notice`).
 - Cerrar sesión pone antes la sesión en `anonymous` y borra la copia local; si el servidor no responde se ignora el error. Cerrar sesión desde Cuenta pregunta antes si hay cambios pendientes.
+
+**Fase 1**
+
+- `hash-wasm` 4.12.0. `core/crypto` no se re-exporta desde `core/index.ts` (importar siempre `#lib/core/crypto/index.js`) para no cargar WASM donde no hace falta.
+- La clave de dispositivo (`generateDeviceKey`) usa los usos `encrypt`/`decrypt` (no `wrapKey`/`unwrapKey`), porque `wrap`/`unwrap` se implementan con `exportKey('raw')` + `seal`, como fija el plan.
+- La clave de recuperación formateada mide 53 caracteres (52 + control) en 13 grupos de 4 más un carácter final; la contraseña se normaliza a NFKC antes de Argon2id.
+- `setArgon2Impl(null)` restaura la implementación real. `importRawForShare` es síncrona en validación (lanza `CryptoFormatError` antes de importar).
+- El worker de Argon2id se crea por derivación y se termina al acabar; en `MODE === 'test'` se usa `hash-wasm` directamente.
