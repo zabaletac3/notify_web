@@ -709,3 +709,12 @@ _(Quien ejecute: anotar aquí cualquier cambio respecto al plan y por qué.)_
 
 - El plan decía sustituir `SyncChange.data`, `SyncRemoteChange.note/folder` y `SyncConflictReport.remote` por las variantes cifradas ya en esta fase. Eso rompería la compilación del simulador y de la capa local hasta la fase 5, así que los tipos cifrados se añaden **al lado** (`EncryptedSyncChange`, `EncryptedSyncRequest`, `EncryptedSyncRemoteChange`, `EncryptedSyncConflictReport`, `EncryptedSyncResponse`) y la fase 5 hace el cambio: `SyncTransport` pasa a usar `EncryptedSyncRequest`/`EncryptedSyncResponse` y los tipos en claro se quedan solo para uso interno del codec.
 - `EncryptedNote` y `EncryptedFolder` usan `string` para las fechas (como `IsoDate`) y `Sealed` es `string` en dominio. Se añadió `RegisterKeys` (lo que viaja al registrarse) para la fase 4.
+
+**Fase 3**
+
+- `Vault` no usa runas (vive en `data`): su estado reactivo lo expondrá `VaultState` (fase 4). `status` se deriva de si hay clave maestra.
+- `encryptFolder(vault, folder, revision, wrapped?)` recibe la revisión porque `Folder` no la lleva (el repositorio local la guarda aparte).
+- Además de lo previsto: `unreadableNote`/`unreadableFolder` (marcadores «Nota ilegible» / «Carpeta ilegible») y errores nuevos `locked` y `decrypt` con sus mensajes.
+- `DecryptCache` se indexa por id y comprueba también `wrappedKey` (si cambia la clave de la nota, no se reutiliza lo descifrado).
+- La prueba de «la caché evita descifrar dos veces» comprueba que `itemKey` devuelve el mismo objeto `CryptoKey` (no se puede espiar `open` en módulos ESM).
+- `DeviceKeyStore.removeAll()` vuelve a abrir el almacén para poder seguir usándolo; `fake-indexeddb` guarda `CryptoKey` correctamente en Node 22.
