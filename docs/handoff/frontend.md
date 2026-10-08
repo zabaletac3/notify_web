@@ -93,9 +93,11 @@ pequeños, con husky + lint-staged).
    `docs/api/vectors/*.json` casos de KDF, envoltura de claves, `a1.`, clave de recuperación, enlaces y
    sincronización, y una prueba que los regenere/verifique en la CI. Es lo que garantiza que otra app
    lea las notas escritas aquí.
-5. **Tokens fuera de `localStorage`**: hoy el refresh token vive en `localStorage` (riesgo si hay XSS;
-   mitigado por la CSP estricta). Valorar memoria + refresh al arrancar, o cookie `HttpOnly` (requiere
-   cambio de contrato y CORS con credenciales en el backend).
+5. **Tokens fuera de `localStorage`** (hecho para la web en D15): la web usa cookie `HttpOnly`
+   (`apunte_rt`) con `X-Apunte-Session: cookie` y el token de acceso solo en memoria
+   (`PUBLIC_SESSION_MODE=cookie`, por defecto). Escritorio/móvil siguen en modo cuerpo
+   (`Authorization: Bearer` + `refreshToken` en el cuerpo, `PUBLIC_SESSION_MODE=body`); para ellos
+   valorar el llavero del sistema (`TokenStore` inyectable, ver `escritorio.md`).
 6. **Pantallas pendientes** (roadmap fase 5): landing por rediseñar, comparación del modo oscuro con
    Figma, imágenes en notas (requiere diseño de cifrado de adjuntos + API).
 7. **Calidad** (roadmap fase 6): auditoría de accesibilidad (axe ya está instalado), pruebas de

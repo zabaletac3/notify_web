@@ -130,8 +130,13 @@ paths:
       operationId: postAuthVerifyEmail
       tags: [auth]
       summary: Verifica el correo con el código de 6 dígitos e inicia sesión
+      description: |
+        Con `X-Apunte-Session: cookie` el token de renovación llega solo como cookie `HttpOnly`
+        (no en `refreshToken`); sin la cabecera, la respuesta es la de siempre.
       x-contract: AuthRepository.verifyEmail
       security: []
+      parameters:
+        - { $ref: '#/components/parameters/SessionMode' }
       requestBody:
         required: true
         content:
@@ -145,6 +150,8 @@ paths:
       responses:
         '200':
           description: Correo verificado; sesión iniciada
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Session' }
@@ -180,8 +187,12 @@ paths:
         Mismo error (`unauthorized`) para correo inexistente y contraseña incorrecta.
         `403 forbidden/email-not-verified` si falta verificar el correo.
         Bloqueo temporal tras 5 intentos fallidos (`429`).
+        Con `X-Apunte-Session: cookie` el token de renovación llega solo como cookie `HttpOnly`
+        (no en `refreshToken`); sin la cabecera, la respuesta es la de siempre.
       x-contract: AuthRepository.login
       security: []
+      parameters:
+        - { $ref: '#/components/parameters/SessionMode' }
       requestBody:
         required: true
         content:
@@ -190,6 +201,8 @@ paths:
       responses:
         '200':
           description: Sesión iniciada, con las claves cifradas de la cuenta
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LoginResult' }
@@ -201,33 +214,66 @@ paths:
       operationId: postAuthRefresh
       tags: [auth]
       summary: Renueva el token de acceso con el de renovación
+      description: |
+        Dos modos:
+        - Sin `X-Apunte-Session`, el `refreshToken` viaja en el cuerpo como hasta ahora (escritorio,
+          móvil y bundles web antiguos no cambian).
+        - Con `X-Apunte-Session: cookie` la petición no lleva cuerpo: el servidor lee la cookie
+          `apunte_rt`, la rota (nueva `Set-Cookie`) y devuelve el nuevo token de acceso en el cuerpo.
+        La rotación y la detección de reutilización no cambian: reutilizar una cookie ya usada revoca
+        la familia y el dispositivo, con el mismo error que hoy.
+        En modo cookie la cabecera es obligatoria (fuerza el preflight CORS) y, si la petición trae
+        `Origin`, debe estar en `ALLOWED_ORIGINS`; si no, `403` con `kind: forbidden` (anti-CSRF).
       x-status: draft
       x-contract: Session (renovación gestionada por la capa de datos)
       security: []
+      parameters:
+        - { $ref: '#/components/parameters/SessionMode' }
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
               required: [refreshToken]
               properties:
-                refreshToken: { type: string }
+                refreshToken:
+                  {
+                    type: string,
+                    description: 'Solo en modo cuerpo (sin la cookie `X-Apunte-Session: cookie`)'
+                  }
       responses:
         '200':
-          description: Nuevo par de tokens (rotación del de renovación)
+          description: Nuevo token de acceso; en modo cookie rota la cookie de renovación
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/SetRefreshCookie' }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Session' }
         '401': { $ref: '#/components/responses/SessionExpired' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /auth/logout:
     post:
       operationId: postAuthLogout
       tags: [auth]
       summary: Cierra la sesión de este dispositivo
+      description: |
+        En modo cookie (`X-Apunte-Session: cookie`) se acepta aunque el token de acceso haya vencido:
+        la sesión se revoca con la cookie de renovación y **siempre** se responde borrándola
+        (`Set-Cookie` con `Max-Age=0`). En modo cookie la cabecera es obligatoria y un `Origin`
+        presente debe estar en `ALLOWED_ORIGINS`; si no, `403` con `kind: forbidden` (anti-CSRF).
       x-contract: AuthRepository.logout
+      security:
+        - bearerAuth: []
+        - refreshCookie: []
+      parameters:
+        - { $ref: '#/components/parameters/SessionMode' }
       responses:
-        '204': { description: Sesión cerrada }
+        '204':
+          description: Sesión cerrada; en modo cookie se borra la cookie de renovación
+          headers:
+            Set-Cookie: { $ref: '#/components/headers/ClearRefreshCookie' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /auth/session:
     get:
       operationId: getAuthSession
@@ -738,7 +784,25 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: Token de acceso de corta duración (ver decisión D2).
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: apunte_rt
+      description: |
+        Cookie `HttpOnly` con el token de renovación (modo cookie, cabecera
+        `X-Apunte-Session: cookie`). En `POST /auth/logout` permite cerrar la sesión aunque el token
+        de acceso haya vencido.
   parameters:
+    SessionMode:
+      name: X-Apunte-Session
+      in: header
+      required: false
+      description: |
+        Modo cookie de la sesión. Si vale `cookie`, el servidor entrega el token de renovación solo
+        como cookie `HttpOnly` (`apunte_rt`) y omite `refreshToken` del cuerpo; sin esta cabecera todo
+        funciona como hasta ahora, con el `refreshToken` en el cuerpo (escritorio, móvil y bundles web
+        antiguos). En modo cookie la cabecera es obligatoria y exige un `Origin` permitido (anti-CSRF).
+      schema: { type: string, enum: [cookie] }
     NoteId:
       name: noteId
       in: path
@@ -752,6 +816,18 @@ components:
       name: limit
       in: query
       schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+  headers:
+    SetRefreshCookie:
+      description: |
+        Solo en modo cookie: token de renovación como cookie `HttpOnly`, con la forma
+        `apunte_rt=<valor>; HttpOnly; Secure; SameSite=Strict; Path=/v1/auth; Max-Age=<segundos>`
+        (sin `Domain` por defecto).
+      schema: { type: string }
+    ClearRefreshCookie:
+      description: |
+        Solo en modo cookie: borra la cookie de renovación con
+        `apunte_rt=; Max-Age=0; Path=/v1/auth; HttpOnly; Secure; SameSite=Strict`.
+      schema: { type: string }
   responses:
     ValidationError:
       description: Datos inválidos. `fields` mapea campo → código de validación.
@@ -764,7 +840,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Forbidden:
-      description: Acción no permitida (ej. correo sin verificar)
+      description: 'Acción no permitida (`kind: forbidden`): correo sin verificar, o CSRF en modo cookie (cabecera ausente u `Origin` fuera de `ALLOWED_ORIGINS`)'
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -852,7 +928,11 @@ components:
         user: { $ref: '#/components/schemas/User' }
         expiresAt: { type: string, format: date-time }
         accessToken: { type: string }
-        refreshToken: { type: string }
+        refreshToken:
+          {
+            type: string,
+            description: 'Ausente en modo cookie (cabecera X-Apunte-Session: cookie): llega como cookie HttpOnly'
+          }
     Sealed:
       type: string
       description: |

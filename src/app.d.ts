@@ -11,6 +11,8 @@ declare global {
 		readonly PUBLIC_API_URL?: string;
 		/** `http` = API real; cualquier otro valor = datos simulados. */
 		readonly PUBLIC_BACKEND?: string;
+		/** `cookie` (por defecto, web: refresh en cookie HttpOnly) o `body` (escritorio/móvil). */
+		readonly PUBLIC_SESSION_MODE?: 'cookie' | 'body';
 	}
 
 	namespace App {

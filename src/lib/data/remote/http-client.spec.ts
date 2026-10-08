@@ -1,8 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppFailure } from '#lib/domain/index.js';
-import { HttpClient, toFailure } from './http-client.js';
+import { HttpClient, SESSION_HEADER, toFailure } from './http-client.js';
 import { HttpAuthRepository, HttpShareRepository, describeDevice } from './http-repositories.js';
-import { MemoryTokenStore } from './token-store.js';
+import {
+	LocalStorageSessionMarker,
+	LocalStorageTokenStore,
+	MemorySessionMarker,
+	MemoryTokenStore,
+	SESSION_MARKER_KEY,
+	TOKENS_KEY
+} from './token-store.js';
 
 type Call = { url: string; init: RequestInit };
 
@@ -356,5 +363,243 @@ describe('HttpShareRepository', () => {
 		expect(await repo.getLink('n1')).toBeNull();
 		await repo.readPublic('a/b?c').catch(() => undefined);
 		expect(calls[1].url).toBe('https://api.test/v1/public/notes/a%2Fb%3Fc');
+	});
+});
+
+/** localStorage falso para probar el modo cookie sin un navegador. */
+function fakeLocalStorage() {
+	const map = new Map<string, string>();
+	return {
+		store: map,
+		getItem: (k: string) => map.get(k) ?? null,
+		setItem: (k: string, v: string) => void map.set(k, String(v)),
+		removeItem: (k: string) => void map.delete(k),
+		clear: () => map.clear(),
+		key: (i: number) => [...map.keys()][i] ?? null,
+		get length() {
+			return map.size;
+		}
+	};
+}
+
+/** Cliente en modo cookie: tokens en memoria (el store no se usa) + marcador. */
+const cookieClient = (
+	marker: MemorySessionMarker,
+	f: typeof fetch,
+	timeoutMs?: number
+): HttpClient =>
+	new HttpClient({
+		baseUrl: 'https://api.test',
+		tokens: new MemoryTokenStore(),
+		sessionMode: 'cookie',
+		marker,
+		fetch: f,
+		timeoutMs
+	});
+
+const cookieSession = {
+	user: {
+		id: 'u1',
+		email: 'a@b.com',
+		fullName: 'Ana',
+		emailVerified: true,
+		createdAt: '2026-01-01T00:00:00Z'
+	},
+	expiresAt: '2026-01-01T00:15:00Z'
+};
+
+describe('HttpClient en modo cookie', () => {
+	afterEach(() => vi.unstubAllGlobals());
+
+	it('login guarda el marcador y NO deja el token en localStorage', async () => {
+		const ls = fakeLocalStorage();
+		vi.stubGlobal('localStorage', ls);
+		const { fn, calls } = fakeFetch(() =>
+			json(200, {
+				...cookieSession,
+				accessToken: 'ACCESS-SECRET-XYZ',
+				keys: { wrappedMasterKey: 'k' }
+			})
+		);
+		const http = new HttpClient({
+			baseUrl: 'https://api.test',
+			tokens: new LocalStorageTokenStore(),
+			sessionMode: 'cookie',
+			marker: new LocalStorageSessionMarker(),
+			fetch: fn
+		});
+		const repo = new HttpAuthRepository(http, () => 'Chrome en Linux');
+		await repo.login({ email: 'a@b.com', authKey: 'x' });
+
+		expect(ls.getItem(SESSION_MARKER_KEY)).toBe('{"v":1}');
+		expect(ls.getItem(TOKENS_KEY)).toBeNull();
+		// Ninguna clave ni valor de localStorage contiene el token.
+		for (const [key, value] of ls.store) {
+			expect(key).not.toContain('ACCESS-SECRET-XYZ');
+			expect(value).not.toContain('ACCESS-SECRET-XYZ');
+		}
+		const loginCall = calls[0];
+		expect((loginCall.init.headers as Record<string, string>)[SESSION_HEADER]).toBe('cookie');
+		expect(loginCall.init.credentials).toBe('include');
+	});
+
+	it('la cabecera X-Apunte-Session solo va en login, verify-email, refresh y logout', async () => {
+		const marker = new MemorySessionMarker();
+		const { fn, calls } = fakeFetch((c) => {
+			if (c.url.endsWith('/auth/login'))
+				return json(200, { ...cookieSession, accessToken: 'acc1' });
+			if (c.url.endsWith('/auth/verify-email')) return json(200, { ...cookieSession });
+			if (c.url.endsWith('/auth/refresh'))
+				return json(200, { accessToken: 'acc2', expiresAt: 'x' });
+			return json(200, { ok: 1 });
+		});
+		const http = cookieClient(marker, fn);
+		const repo = new HttpAuthRepository(http);
+		await repo.login({ email: 'a@b.com', authKey: 'x' });
+		await repo.verifyEmail('a@b.com', '123456');
+		await http.request('GET', '/me');
+		await repo.logout();
+
+		const header = (i: number) => (calls[i].init.headers as Record<string, string>)[SESSION_HEADER];
+		expect(header(0)).toBe('cookie');
+		expect(header(1)).toBe('cookie');
+		expect(header(2)).toBeUndefined(); // /me
+		expect(header(3)).toBe('cookie'); // logout
+		expect(calls.every((c) => c.init.credentials === 'include')).toBe(true);
+	});
+
+	it('al arrancar con marcador renueva sin cuerpo y reintenta la petición', async () => {
+		const marker = new MemorySessionMarker();
+		marker.set();
+		const { fn, calls } = fakeFetch((c) => {
+			if (c.url.endsWith('/auth/refresh'))
+				return json(200, { accessToken: 'acc-new', expiresAt: '2031-01-01T00:00:00Z' });
+			return (c.init.headers as Record<string, string>).Authorization === 'Bearer acc-new'
+				? json(200, { ok: 1 })
+				: json(401, { kind: 'session-expired' });
+		});
+		expect(await cookieClient(marker, fn).request('GET', '/me')).toEqual({ ok: 1 });
+		const refresh = calls.find((c) => c.url.endsWith('/auth/refresh'))!;
+		expect(refresh.init.body).toBeUndefined();
+		expect((refresh.init.headers as Record<string, string>)[SESSION_HEADER]).toBe('cookie');
+		expect(calls.map((c) => c.url.replace('https://api.test/v1', ''))).toEqual([
+			'/auth/refresh',
+			'/me'
+		]);
+	});
+
+	it('una petición con 401 renueva una vez y reintenta con el token nuevo', async () => {
+		const marker = new MemorySessionMarker();
+		const { fn, calls } = fakeFetch((c) => {
+			if (c.url.endsWith('/auth/login'))
+				return json(200, { ...cookieSession, accessToken: 'acc1' });
+			if (c.url.endsWith('/auth/refresh'))
+				return json(200, { accessToken: 'acc2', expiresAt: '2031-01-01T00:00:00Z' });
+			return (c.init.headers as Record<string, string>).Authorization === 'Bearer acc2'
+				? json(200, { ok: 1 })
+				: json(401, { kind: 'session-expired' });
+		});
+		const http = cookieClient(marker, fn);
+		await new HttpAuthRepository(http).login({ email: 'a@b.com', authKey: 'x' });
+		expect(await http.request('GET', '/me')).toEqual({ ok: 1 });
+		expect(calls.map((c) => c.url.replace('https://api.test/v1', ''))).toEqual([
+			'/auth/login',
+			'/me',
+			'/auth/refresh',
+			'/me'
+		]);
+	});
+
+	it('varias peticiones comparten UNA sola renovación en modo cookie', async () => {
+		const marker = new MemorySessionMarker();
+		marker.set();
+		const { fn, calls } = fakeFetch(async (c) => {
+			if (c.url.endsWith('/auth/refresh')) {
+				await new Promise((r) => setTimeout(r, 20));
+				return json(200, { accessToken: 'acc2', expiresAt: '2031-01-01T00:00:00Z' });
+			}
+			return (c.init.headers as Record<string, string>).Authorization === 'Bearer acc2'
+				? json(200, { ok: 1 })
+				: json(401, { kind: 'session-expired' });
+		});
+		const http = cookieClient(marker, fn);
+		await Promise.all([
+			http.request('GET', '/a'),
+			http.request('GET', '/b'),
+			http.request('GET', '/c')
+		]);
+		expect(calls.filter((c) => c.url.endsWith('/auth/refresh'))).toHaveLength(1);
+	});
+
+	it('si no hay red al renovar, conserva el marcador', async () => {
+		const marker = new MemorySessionMarker();
+		marker.set();
+		const { fn } = fakeFetch(() => Promise.reject(new TypeError('x')));
+		const e = await failureOf(cookieClient(marker, fn).request('GET', '/me'));
+		expect(e.error.kind).toBe('network');
+		expect(marker.has()).toBe(true);
+	});
+
+	it('session-expired borra el marcador; device-revoked también', async () => {
+		const expired = new MemorySessionMarker();
+		expired.set();
+		const e1 = await failureOf(
+			cookieClient(expired, fakeFetch(() => json(401, { kind: 'session-expired' })).fn).request(
+				'GET',
+				'/me'
+			)
+		);
+		expect(e1.error.kind).toBe('session-expired');
+		expect(expired.has()).toBe(false);
+
+		const revoked = new MemorySessionMarker();
+		revoked.set();
+		const e2 = await failureOf(
+			cookieClient(revoked, fakeFetch(() => json(401, { kind: 'device-revoked' })).fn).request(
+				'GET',
+				'/me'
+			)
+		);
+		expect(e2.error.kind).toBe('device-revoked');
+		expect(revoked.has()).toBe(false);
+	});
+
+	it('ignora un refreshToken que llegara por error en el JSON del refresh', async () => {
+		const marker = new MemorySessionMarker();
+		marker.set();
+		const { fn, calls } = fakeFetch((c) => {
+			if (c.url.endsWith('/auth/refresh'))
+				return json(200, {
+					accessToken: 'acc2',
+					refreshToken: 'SHOULD-IGNORE',
+					expiresAt: '2031-01-01T00:00:00Z'
+				});
+			return (c.init.headers as Record<string, string>).Authorization === 'Bearer acc2'
+				? json(200, { ok: 1 })
+				: json(401, { kind: 'session-expired' });
+		});
+		expect(await cookieClient(marker, fn).request('GET', '/me')).toEqual({ ok: 1 });
+		expect(JSON.stringify(calls)).not.toContain('SHOULD-IGNORE');
+	});
+
+	it('logout limpia el marcador aunque el servidor falle', async () => {
+		const marker = new MemorySessionMarker();
+		marker.set();
+		const { fn } = fakeFetch(() => Promise.reject(new TypeError('sin red')));
+		const http = cookieClient(marker, fn);
+		const repo = new HttpAuthRepository(http);
+		await repo.logout();
+		expect(marker.has()).toBe(false);
+	});
+
+	it('la migración borra apunte.tokens pero no toca IndexedDB', () => {
+		const ls = fakeLocalStorage();
+		ls.setItem(TOKENS_KEY, JSON.stringify({ accessToken: 'a', refreshToken: 'r', expiresAt: 'x' }));
+		vi.stubGlobal('localStorage', ls);
+		const indexedDB = { open: vi.fn() };
+		vi.stubGlobal('indexedDB', indexedDB);
+		new LocalStorageSessionMarker();
+		expect(ls.getItem(TOKENS_KEY)).toBeNull();
+		expect(indexedDB.open).not.toHaveBeenCalled();
 	});
 });
