@@ -367,6 +367,19 @@ describe('cuentas', () => {
 		);
 	});
 
+	it('eliminar la cuenta exige la prueba de la contraseña', async () => {
+		const { repos, db } = make();
+		expect(await errorOf(repos.auth.deleteAccount('prueba-falsa'))).toEqual({
+			kind: 'validation',
+			fields: { password: 'wrong-password' }
+		});
+		expect(db.session).not.toBeNull();
+		const { kdf } = await repos.auth.prelogin(DEMO_USER_EMAIL);
+		const { authKey } = await deriveFromPassword(DEMO_USER_PASSWORD, kdf);
+		await repos.auth.deleteAccount(authKey);
+		expect(db.session).toBeNull();
+	});
+
 	describe('recuperación', () => {
 		it('no revela si el correo existe y el token es de un solo uso', async () => {
 			const { repos } = make('normal', { startAuthenticated: false });

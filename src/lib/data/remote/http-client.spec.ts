@@ -309,10 +309,28 @@ describe('HttpAuthRepository', () => {
 		expect(calls).toHaveLength(0);
 	});
 
-	it('eliminar la cuenta y restablecer la contraseña cierran la sesión local', async () => {
+	it('eliminar la cuenta pide la contraseña y cierra la sesión local', async () => {
 		const a = tokens();
-		await new HttpAuthRepository(client(a, fakeFetch(() => json(202)).fn)).deleteAccount();
+		const { fn, calls } = fakeFetch(() => json(202));
+		await new HttpAuthRepository(client(a, fn)).deleteAccount('prueba');
+		expect(calls[0].init.method).toBe('POST');
+		expect(calls[0].url).toBe('https://api.test/v1/me/delete');
+		expect(JSON.parse(String(calls[0].init.body))).toEqual({ authKey: 'prueba' });
 		expect(a.read()).toBeNull();
+	});
+
+	it('si el servidor rechaza la contraseña, la sesión local se conserva', async () => {
+		const store = tokens();
+		const { fn } = fakeFetch(() =>
+			json(422, { kind: 'validation', fields: { password: 'wrong-password' } })
+		);
+		await expect(new HttpAuthRepository(client(store, fn)).deleteAccount('mala')).rejects.toThrow(
+			AppFailure
+		);
+		expect(store.read()).not.toBeNull();
+	});
+
+	it('restablecer la contraseña también cierra la sesión local', async () => {
 		const b = tokens();
 		await new HttpAuthRepository(client(b, fakeFetch(() => json(204)).fn)).resetPassword(
 			{} as never

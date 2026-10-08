@@ -164,8 +164,11 @@ export class MockAuthRepository implements AuthRepository {
 		this.db.session = null;
 	}
 
-	async deleteAccount(): Promise<void> {
-		await this.db.local('write');
+	async deleteAccount(authKey: string): Promise<void> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		if (stored.authKeyHash !== (await hashOf(authKey)))
+			throw fail.validation({ password: 'wrong-password' });
 		this.db.session = null;
 	}
 

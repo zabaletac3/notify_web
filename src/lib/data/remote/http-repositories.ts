@@ -132,8 +132,8 @@ export class HttpAuthRepository implements AuthRepository {
 		await this.http.request('POST', '/me/password', { body: input });
 	}
 
-	async deleteAccount(): Promise<void> {
-		await this.http.request('DELETE', '/me');
+	async deleteAccount(authKey: string): Promise<void> {
+		await this.http.request('POST', '/me/delete', { body: { authKey } });
 		this.http.clearSession();
 	}
 
