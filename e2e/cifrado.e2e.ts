@@ -75,8 +75,15 @@ test('registro, clave de recuperación y recuperación de la cuenta sin perder l
 
 	// 3. Una nota nueva, cifrada y guardada.
 	await navigate(page, '/notes');
+	// La lista abre sola la primera nota. Crear una nota tarda un instante (se cifra y se escribe en
+	// IndexedDB); si el título se escribe antes de que la nota nueva quede abierta, el texto iría a la
+	// nota anterior. Se espera a que la tarjeta activa cambie y el editor sea el de la nota nueva.
+	const selected = page.locator('[aria-current="true"]');
+	await expect(selected).toHaveCount(1);
+	const previouslyOpen = await selected.innerText();
 	await page.getByRole('button', { name: 'Nueva nota' }).first().click();
-	await expect(page.locator('.ProseMirror').first()).toBeVisible();
+	await expect.poll(() => selected.innerText()).not.toBe(previouslyOpen);
+	await expect(page.getByLabel('Título')).toHaveValue('');
 	await page.getByLabel('Título').fill('Mi nota secreta');
 	await page.locator('.ProseMirror').first().click();
 	await page.keyboard.type('Contenido que solo yo puedo leer');

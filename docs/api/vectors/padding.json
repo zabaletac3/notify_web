@@ -1,0 +1,52 @@
+{
+  "block": 256,
+  "description": "Relleno a múltiplos de 256 bytes con espacios (0x20). `unpad` muestra que al leer se recorta el espacio final.",
+  "lengths": [
+    {
+      "input": 0,
+      "padded": 256
+    },
+    {
+      "input": 1,
+      "padded": 256
+    },
+    {
+      "input": 2,
+      "padded": 256
+    },
+    {
+      "input": 255,
+      "padded": 256
+    },
+    {
+      "input": 256,
+      "padded": 256
+    },
+    {
+      "input": 257,
+      "padded": 512
+    },
+    {
+      "input": 511,
+      "padded": 512
+    },
+    {
+      "input": 512,
+      "padded": 512
+    },
+    {
+      "input": 513,
+      "padded": 768
+    },
+    {
+      "input": 1000,
+      "padded": 1024
+    }
+  ],
+  "unpad": {
+    "padded": "eyJhIjoxfSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIA",
+    "paddedLength": 256,
+    "text": "{\"a\":1}"
+  },
+  "version": 1
+}

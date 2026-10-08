@@ -1,0 +1,67 @@
+{
+  "cases": [
+    {
+      "aad": "ctx",
+      "iv": "yS6T-F3CJ4zxVrsg",
+      "key": "V7whhutQtRp_5EmuE3jdQqcMcdY7oAVqzzSZ_mPILZI",
+      "name": "contexto",
+      "plaintext": "hola ñandú 🙂",
+      "sealed": "a1.yS6T-F3CJ4zxVrsg.hX2oWP0VQhZ9qPtIofgkeBmfSg75P_tjep6FJKBPYw7I"
+    },
+    {
+      "aad": "apunte/v1/data/018f6f9a-7b1c-7c3e-8c9d-000000000001/note/018f6f9a-7b1c-7c3e-8c9d-000000000101",
+      "iv": "gudMsRZ74EWqD3TZ",
+      "key": "V7whhutQtRp_5EmuE3jdQqcMcdY7oAVqzzSZ_mPILZI",
+      "name": "nota-data",
+      "plaintext": "# Ingredientes\n\n- 2 huevos\n- 100 g de azúcar",
+      "sealed": "a1.gudMsRZ74EWqD3TZ.oATGyR1lwx3kUXp7P4pTbNcngPvsU16BAIQxQM8f0TimXQF-otBCQajikWB1kV4XcUMt7Ucave-4FBcN4A"
+    },
+    {
+      "aad": "ctx-vacio",
+      "iv": "OJ0CZ8wxlvtgxSqP",
+      "key": "V7whhutQtRp_5EmuE3jdQqcMcdY7oAVqzzSZ_mPILZI",
+      "name": "vacio",
+      "plaintext": "",
+      "sealed": "a1.OJ0CZ8wxlvtgxSqP.B1T3UzvKB4qpNK44MvbfTw"
+    }
+  ],
+  "description": "AES-256-GCM con IV de 12 bytes y AAD, en formato `a1.<iv>.<ct>` (base64url sin relleno; `ct` incluye la etiqueta de 16 bytes).",
+  "failures": [
+    {
+      "aad": "apunte/v1/data/018f6f9a-7b1c-7c3e-8c9d-000000000001/note/otra",
+      "case": "nota-data",
+      "error": "DecryptError",
+      "name": "aad-distinto",
+      "reason": "Los datos asociados no coinciden."
+    },
+    {
+      "case": "nota-data",
+      "error": "DecryptError",
+      "name": "texto-alterado",
+      "reason": "Un byte del texto cifrado está cambiado; la etiqueta GCM no cuadra.",
+      "sealed": "a1.gudMsRZ74EWqD3TZ.oQTGyR1lwx3kUXp7P4pTbNcngPvsU16BAIQxQM8f0TimXQF-otBCQajikWB1kV4XcUMt7Ucave-4FBcN4A"
+    },
+    {
+      "case": "nota-data",
+      "error": "DecryptError",
+      "key": "fOFGqxB12j-kCW7TOJ0CZ8wxlvtgxSqP9Fm-I4jtUrc",
+      "name": "otra-clave",
+      "reason": "Clave distinta."
+    },
+    {
+      "case": "nota-data",
+      "error": "CryptoFormatError",
+      "name": "formato-version",
+      "reason": "Versión de formato desconocida.",
+      "sealed": "a2.AAAAAAAAAAAAAAAA.xx"
+    },
+    {
+      "case": "nota-data",
+      "error": "CryptoFormatError",
+      "name": "formato-iv-corto",
+      "reason": "IV que no mide 12 bytes.",
+      "sealed": "a1.corto.xx"
+    }
+  ],
+  "version": 1
+}

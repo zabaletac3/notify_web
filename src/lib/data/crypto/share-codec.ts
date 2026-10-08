@@ -30,9 +30,9 @@ export const isValidSlug = (slug: string) => SLUG_PATTERN.test(slug);
 export const newSlug = () => toB64u(randomBytes(SLUG_BYTES));
 
 /** Datos asociados de la copia: la ligan a la parte pública de la URL que se comparte. */
-const contentAad = (slug: string) => `apunte/v1/share/${slug}`;
+export const shareContentAad = (slug: string) => `apunte/v1/share/${slug}`;
 /** Datos asociados de la clave del enlace, ligada a la cuenta y a la nota. */
-const keyAad = (userId: Id, noteId: Id) => `apunte/v1/sharekey/${userId}/${noteId}`;
+export const shareKeyAad = (userId: Id, noteId: Id) => `apunte/v1/sharekey/${userId}/${noteId}`;
 
 /** Cifra la copia compartida (solo título y texto; ni etiquetas ni carpeta). */
 export async function sealSharedNote(
@@ -41,7 +41,7 @@ export async function sealSharedNote(
 	note: Pick<Note, 'title' | 'content'>
 ): Promise<Sealed> {
 	const json = JSON.stringify({ title: note.title, content: note.content });
-	return seal(shareKey, pad(utf8(json)), contentAad(slug));
+	return seal(shareKey, pad(utf8(json)), shareContentAad(slug));
 }
 
 /** Prepara un enlace nuevo: clave propia, copia cifrada y la clave cifrada con la clave maestra. */
@@ -54,13 +54,17 @@ export async function createShare(
 	return {
 		slug,
 		payload: await sealSharedNote(shareKey, slug, note),
-		wrappedShareKey: await wrap(vault.requireKey(), shareKey, keyAad(vault.userId, note.id))
+		wrappedShareKey: await wrap(vault.requireKey(), shareKey, shareKeyAad(vault.userId, note.id))
 	};
 }
 
 /** La clave de un enlace ya creado (para actualizar la copia o reconstruir la URL). */
 export function openShareKey(vault: Vault, shared: SharedNote): Promise<CryptoKey> {
-	return unwrap(vault.requireKey(), shared.wrappedShareKey, keyAad(vault.userId, shared.noteId));
+	return unwrap(
+		vault.requireKey(),
+		shared.wrappedShareKey,
+		shareKeyAad(vault.userId, shared.noteId)
+	);
 }
 
 const SHARE_ORIGIN = 'https://apunte.app';
@@ -87,7 +91,7 @@ export async function openSharedNote(
 	updatedAt: string
 ): Promise<SharedNoteContent> {
 	const key = await importRawForShare(keyFragment);
-	const bytes = await open(key, payload, contentAad(slug));
+	const bytes = await open(key, payload, shareContentAad(slug));
 	let value: unknown;
 	try {
 		value = JSON.parse(unpadJson(bytes));

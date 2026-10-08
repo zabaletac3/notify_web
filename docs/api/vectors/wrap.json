@@ -1,0 +1,56 @@
+{
+  "cases": [
+    {
+      "aad": "apunte/v1/mk/018f6f9a-7b1c-7c3e-8c9d-000000000001/password",
+      "iv": "7lO4HYLnTLEWe-BF",
+      "kdf": {
+        "alg": "argon2id",
+        "iterations": 1,
+        "memoryKiB": 1024,
+        "parallelism": 1,
+        "salt": "61C1Gn_kSa4TeN1Cpwxx1g"
+      },
+      "name": "maestra-con-kek",
+      "password": "contraseña",
+      "plaintextKey": "Mpf8YcYrkPVavySJ7lO4HYLnTLEWe-BFqg902T6jCG0",
+      "sealed": "a1.7lO4HYLnTLEWe-BF.FE1IcorteOv5PnxlLwcCojsucVKuVg6cJbL8iQ8sDB89qklqj8Bkk4OPLJmCpkBu",
+      "wrapping": "kek de la contraseña"
+    },
+    {
+      "aad": "apunte/v1/mk/018f6f9a-7b1c-7c3e-8c9d-000000000001/recovery",
+      "iv": "E3jdQqcMcdY7oAVq",
+      "name": "maestra-con-clave-de-recuperacion",
+      "plaintextKey": "Mpf8YcYrkPVavySJ7lO4HYLnTLEWe-BFqg902T6jCG0",
+      "recoveryBytes": "xiuQ9Vq_JInuU7gdgudMsRZ74EWqD3TZPqMIbdI3nAE",
+      "sealed": "a1.E3jdQqcMcdY7oAVq.JFvvhnYaHJBsmYuHTKbpnBWp7-Q2Ycr52VfuyT9AJ5t4eHW3TP_0epW3iyZvzZ3a",
+      "wrapping": "rkWrap"
+    },
+    {
+      "aad": "apunte/v1/key/018f6f9a-7b1c-7c3e-8c9d-000000000001/note/018f6f9a-7b1c-7c3e-8c9d-000000000101",
+      "iv": "OJ0CZ8wxlvtgxSqP",
+      "masterKey": "Mpf8YcYrkPVavySJ7lO4HYLnTLEWe-BFqg902T6jCG0",
+      "name": "elemento-con-maestra",
+      "plaintextKey": "V7whhutQtRp_5EmuE3jdQqcMcdY7oAVqzzSZ_mPILZI",
+      "sealed": "a1.OJ0CZ8wxlvtgxSqP.i6JL6OucwBX5nsa4fYQnB-m3_D6OuRL7wJoBXul2Vl9P3psBdkMAGT11bNqja3Em",
+      "wrapping": "clave maestra"
+    }
+  ],
+  "description": "Envoltura de claves (exportar `raw` + `seal`): la maestra con la kek de la contraseña y con la clave de recuperación, y una clave de elemento con la maestra.",
+  "keyBundle": {
+    "kdf": {
+      "alg": "argon2id",
+      "iterations": 1,
+      "memoryKiB": 1024,
+      "parallelism": 1,
+      "salt": "61C1Gn_kSa4TeN1Cpwxx1g"
+    },
+    "keysVersion": 1,
+    "recoveryWrappedMasterKey": "a1.E3jdQqcMcdY7oAVq.JFvvhnYaHJBsmYuHTKbpnBWp7-Q2Ycr52VfuyT9AJ5t4eHW3TP_0epW3iyZvzZ3a",
+    "wrappedMasterKey": "a1.7lO4HYLnTLEWe-BF.FE1IcorteOv5PnxlLwcCojsucVKuVg6cJbL8iQ8sDB89qklqj8Bkk4OPLJmCpkBu"
+  },
+  "password": "contraseña",
+  "recoveryAuth": "O8JVieGRgynNtaqkG7jKCVylMjQBqXqRwhs89bTIqxo",
+  "recoveryKey": "RRNS-1XAT-QWJ8-KVJK-Q0ER-5STC-P4B7-QR25-N87Q-9P9Y-MC46-VMHQ-KG0G-E",
+  "userId": "018f6f9a-7b1c-7c3e-8c9d-000000000001",
+  "version": 1
+}
