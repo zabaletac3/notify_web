@@ -20,4 +20,5 @@ export { default as GoogleButton } from './google-button.svelte';
 export { default as RecoveryKeyPanel } from './recovery-key-panel.svelte';
 export { default as StrengthMeter } from './strength-meter.svelte';
 export { default as ResponsiveDialog } from './responsive-dialog.svelte';
+export { default as LegalDocumentView } from './legal-document.svelte';
 export { viewport } from './viewport.svelte.js';
