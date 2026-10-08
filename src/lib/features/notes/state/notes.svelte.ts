@@ -201,6 +201,28 @@ export class NotesState {
 		});
 	}
 
+	/**
+	 * Crea varias notas de una vez (importación). Cada una es independiente: si una falla, las demás se
+	 * crean igual. Devuelve cuántas se crearon y cuántas fallaron. No cambia la nota seleccionada.
+	 */
+	async importNotes(
+		drafts: NoteDraft[]
+	): Promise<ActionResult<{ created: number; failed: number }>> {
+		return this.run(async () => {
+			let failed = 0;
+			const created: Note[] = [];
+			for (const draft of drafts) {
+				try {
+					created.push(await this.repo.create(draft));
+				} catch {
+					failed += 1;
+				}
+			}
+			this.all = [...created, ...this.all];
+			return { created: created.length, failed };
+		});
+	}
+
 	/** Edita una nota. Se refleja al instante (optimista) y se revierte si falla. */
 	async update(id: Id, patch: NoteDraft): Promise<ActionResult<Note>> {
 		const before = this.all.find((n) => n.id === id);

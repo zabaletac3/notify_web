@@ -3,6 +3,7 @@ export * from './ids.js';
 export * from './errors.js';
 export * from './note.js';
 export * from './note-text.js';
+export * from './markdown-import.js';
 export * from './note-groups.js';
 export * from './note-query.js';
 export * from './folder.js';

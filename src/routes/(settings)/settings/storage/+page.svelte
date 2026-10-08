@@ -5,7 +5,8 @@
 	import { SettingRow, SettingsGroup } from '#lib/components/app/index.js';
 	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
 	import { Skeleton } from '#lib/components/ui/skeleton/index.js';
-	import { formatBytes } from '#lib/core/index.js';
+	import { formatBytes, formatCount } from '#lib/core/index.js';
+	import { IMPORT_MAX_BYTES, parseMarkdownNote } from '#lib/domain/index.js';
 
 	const { notes, storage } = getApp();
 
@@ -19,6 +20,40 @@
 	const usage = $derived(storage.usage);
 
 	let confirmEmpty = $state(false);
+
+	// ── Importar notas desde archivos Markdown ─────────────────────
+	let fileInput: HTMLInputElement;
+	let importing = $state(false);
+
+	async function importFiles(files: FileList | null) {
+		if (!files?.length) return;
+		importing = true;
+		const drafts = [];
+		let skipped = 0;
+		for (const file of files) {
+			// Archivos enormes o que no se pueden leer como texto se saltan.
+			if (file.size > IMPORT_MAX_BYTES) {
+				skipped += 1;
+				continue;
+			}
+			try {
+				drafts.push(parseMarkdownNote(file.name, await file.text()));
+			} catch {
+				skipped += 1;
+			}
+		}
+		const result = drafts.length ? await notes.importNotes(drafts) : null;
+		importing = false;
+		fileInput.value = '';
+		const created = result?.ok ? result.value.created : 0;
+		const failed = (result?.ok ? result.value.failed : 0) + skipped;
+		if (created)
+			toast.success(
+				`${formatCount(created, 'nota importada', 'notas importadas')}` +
+					(failed ? ` · ${formatCount(failed, 'archivo omitido', 'archivos omitidos')}` : '')
+			);
+		else toast.error('No se importó ninguna nota');
+	}
 
 	async function emptyTrash() {
 		const result = await notes.emptyTrash();
@@ -72,7 +107,12 @@
 <SettingsGroup title="Exportar">
 	<SettingRow label="Exportar todas las notas" description="Archivo .zip con Markdown" chevron />
 	<SettingRow label="Exportar como PDF" chevron />
-	<SettingRow label="Importar notas" chevron />
+	<SettingRow
+		label="Importar notas"
+		description="Archivos .md: el título sale de la primera línea «# …» o del nombre del archivo"
+		chevron
+		onclick={() => !importing && fileInput.click()}
+	/>
 </SettingsGroup>
 
 <SettingsGroup>
@@ -93,3 +133,15 @@
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>
+
+<!-- Selector de archivos para «Importar notas» (varios a la vez) -->
+<input
+	bind:this={fileInput}
+	type="file"
+	accept=".md,.markdown,.txt,text/markdown,text/plain"
+	multiple
+	class="sr-only"
+	tabindex="-1"
+	aria-label="Archivos Markdown a importar"
+	onchange={(e) => importFiles(e.currentTarget.files)}
+/>

@@ -198,3 +198,32 @@ describe('NotesState · acciones', () => {
 		expect(r.ok && r.value.updatedAt).toBe(TEST_NOW.toISOString());
 	});
 });
+
+describe('NotesState · importar', () => {
+	it('crea todas las notas importadas, sin cambiar la selección, y las deja arriba', async () => {
+		const { notes } = await testApp();
+		const before = notes.all.length;
+		const selected = notes.selectedId;
+		const r = await notes.importNotes([
+			{ title: 'Importada 1', content: 'uno' },
+			{ title: 'Importada 2', content: 'dos' }
+		]);
+		expect(r.ok && r.value).toEqual({ created: 2, failed: 0 });
+		expect(notes.all).toHaveLength(before + 2);
+		expect(notes.all.slice(0, 2).map((n) => n.title)).toEqual(['Importada 1', 'Importada 2']);
+		expect(notes.selectedId).toBe(selected);
+	});
+
+	it('si una falla, las demás se crean y se cuenta la que falló', async () => {
+		const { notes, backend } = await testApp();
+		const create = backend.repos.notes.create.bind(backend.repos.notes);
+		let calls = 0;
+		backend.repos.notes.create = async (draft) => {
+			if (++calls === 2) throw new Error('falló');
+			return create(draft);
+		};
+		const r = await notes.importNotes([{ title: 'a' }, { title: 'b' }, { title: 'c' }]);
+		expect(r.ok && r.value).toEqual({ created: 2, failed: 1 });
+		expect(notes.all.filter((n) => ['a', 'c'].includes(n.title))).toHaveLength(2);
+	});
+});
