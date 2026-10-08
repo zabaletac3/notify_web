@@ -80,10 +80,9 @@ pequeños, con husky + lint-staged).
 
 ## 6. Lo que falta (por prioridad)
 
-1. **Dónde se aloja la web en producción.** Hoy usa `adapter-auto` (no despliega en ningún sitio).
-   Decidir: `adapter-static` en Cloudflare Pages (recomendado: la app ya es SPA y el escritorio también
-   necesita estático) poniendo las cabeceras de `src/hooks.server.ts` y la CSP en `_headers`, o
-   `adapter-node` detrás del Caddy del VPS. Ver `docs/architecture.md` → «Seguridad».
+1. **Desplegar en Cloudflare Pages** (decidido: `main` → `app.<dominio>`, `develop` → `qa.<dominio>`;
+   ver `docs/handoff/despliegue.md` §6). Hoy usa `adapter-auto` (no despliega en ningún sitio): cambiar a
+   `adapter-static` con `fallback`, pasar las cabeceras de `src/hooks.server.ts` y la CSP a `_headers`.
 2. **Configuración por entorno**: `SHARE_ORIGIN` está fijo en `https://apunte.app`
    (`src/lib/data/crypto/share-codec.ts`) y el origen de la API por defecto en `vite.config.ts` también;
    volverlos `PUBLIC_*` (QA y prod tienen dominios distintos; el escritorio no debe usar `tauri://`).
