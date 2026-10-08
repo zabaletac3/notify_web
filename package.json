@@ -19,7 +19,8 @@
 		"storybook": "storybook dev -p 6006",
 		"build-storybook": "storybook build",
 		"api:lint": "pnpm --package=@redocly/cli dlx redocly lint docs/api/openapi.yaml",
-		"e2e:http": "playwright test -c playwright.http.config.ts"
+		"e2e:http": "playwright test -c playwright.http.config.ts",
+		"dev:http": "bash scripts/dev-http.sh"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.13.0",

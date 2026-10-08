@@ -32,3 +32,5 @@ coverage
 storybook-static
 e2e-http/.api*
 e2e-http/.migrate
+.dev-api
+.dev-api.log

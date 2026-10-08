@@ -36,7 +36,7 @@ Ver `docs/data-and-state.md`. La UI obtiene todo con `getApp()` (`#lib/app/index
 
 Borrador del contrato HTTP en `docs/api/openapi.yaml` (`pnpm api:lint` lo valida) y decisiones abiertas en `docs/api/decisions.md`. Si cambias un contrato de `src/lib/data/contracts.ts`, actualiza la especificación.
 
-Servidor real: `PUBLIC_BACKEND=http` + `PUBLIC_API_URL` (ver `.env.example`); cliente en `src/lib/data/remote`. `pnpm e2e:http` prueba la web contra la API Go real (repo `notify_backend`, PostgreSQL local).
+Servidor real: `PUBLIC_BACKEND=http` + `PUBLIC_API_URL` (ver `.env.example`); cliente en `src/lib/data/remote`. `pnpm dev:http` levanta todo para desarrollar (PostgreSQL en contenedor con docker o podman, migraciones, API y web; ver `scripts/dev-http.sh`). `pnpm e2e:http` prueba la web contra la API Go real (repo `notify_backend`, PostgreSQL local).
 
 ## Cifrado
 
