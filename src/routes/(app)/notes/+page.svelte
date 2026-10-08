@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { getApp } from '#lib/app/index.js';
 	import {
@@ -190,10 +190,19 @@
 	const folderName = $derived(note?.folderId ? folders.name(note.folderId) : '');
 
 	let titleTimer: ReturnType<typeof setTimeout> | undefined;
+	let pendingTitle: { id: string; title: string } | null = null;
+	function commitTitle() {
+		clearTimeout(titleTimer);
+		if (pendingTitle) void notes.update(pendingTitle.id, { title: pendingTitle.title });
+		pendingTitle = null;
+	}
 	function saveTitle(id: string, title: string) {
 		clearTimeout(titleTimer);
-		titleTimer = setTimeout(() => notes.update(id, { title }), 400);
+		pendingTitle = { id, title };
+		titleTimer = setTimeout(commitTitle, 400);
 	}
+	// Al salir de la pantalla no se pierde el título que aún esperaba para guardarse.
+	onDestroy(commitTitle);
 
 	function purgeLabel(n: Note) {
 		const days = daysUntilPurge(n.deletedAt ?? n.updatedAt, now, TRASH_RETENTION_DAYS);
@@ -607,6 +616,35 @@
 				{note.title}
 			</h1>
 			<MarkdownView source={note.content} class="text-muted-foreground" />
+		</div>
+	{:else if note && note.unreadable}
+		<!-- Nota que no se pudo descifrar: no se muestra ni se edita, para no pisar lo guardado -->
+		<div class="px-2 py-1 md:hidden">
+			<button
+				type="button"
+				aria-label="Volver a la lista"
+				onclick={() => (shell.editing = false)}
+				class="grid size-10 place-content-center rounded-full outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+			>
+				<AppIcon name="arrow-left" size={22} />
+			</button>
+		</div>
+		<div class="flex flex-1 flex-col gap-5 overflow-y-auto px-6 pt-3 pb-8 md:px-12 md:pt-8">
+			<div
+				class="flex flex-wrap items-center gap-3 rounded-xl bg-destructive-soft px-4 py-3.5"
+				role="alert"
+			>
+				<div class="flex min-w-48 flex-1 flex-col gap-1">
+					<p class="text-sm font-semibold text-destructive">No se pudo descifrar esta nota.</p>
+					<p class="text-sm">
+						Lo guardado no coincide con tu clave (puede estar dañado). No se muestra ni se puede
+						editar para no perderlo.
+					</p>
+				</div>
+				<Button variant="outline" onclick={() => notes.moveToTrash(note.id)}>
+					Mover a la papelera
+				</Button>
+			</div>
 		</div>
 	{:else if note}
 		{#snippet header()}

@@ -73,6 +73,8 @@ export class ShareState {
 		return this.run(async () => {
 			const note = this.getNote(noteId);
 			if (!note) throw fail.notFound('note');
+			// Una nota que no se pudo descifrar no tiene qué compartir.
+			if (note.unreadable) throw fail.decrypt();
 			const vault = this.vault.current;
 			await this.beforeCreate();
 			const stored = await this.repo.createLink(noteId, await createShare(vault, note));

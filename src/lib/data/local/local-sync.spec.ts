@@ -301,6 +301,27 @@ describe('simulador', () => {
 	});
 });
 
+describe('escrituras en cola', () => {
+	it('el contador de pendientes incluye lo que aún se está escribiendo', async () => {
+		const a = await device('a');
+		await a.repos.sync.syncNow();
+		expect((await a.repos.sync.snapshot()).pendingCount).toBe(0);
+		const note = await byTitle(a, 'Resumen: Bases de datos II');
+		// Se lanza la edición sin esperarla, como hace la pantalla al salir justo después de teclear.
+		const writing = a.repos.notes.update(note.id, { title: 'Cambiado a toda prisa' });
+		expect((await a.repos.sync.snapshot()).pendingCount).toBe(1);
+		await writing;
+	});
+
+	it('borrar la copia local deja terminar antes lo que se estaba escribiendo', async () => {
+		const a = await device('a');
+		await a.repos.sync.syncNow();
+		const writing = a.repos.notes.create({ title: 'En vuelo' });
+		await a.local.destroy();
+		await expect(writing).resolves.toMatchObject({ title: 'En vuelo' });
+	});
+});
+
 describe('cifrado', () => {
 	/** Todo lo que hay en IndexedDB y en el servidor, como texto, para buscar en él. */
 	async function everything(b: LocalBackend) {
@@ -390,6 +411,61 @@ describe('cifrado', () => {
 		const unreadable = notes.filter((n) => n.title === 'Nota ilegible');
 		expect(unreadable.map((n) => n.id).sort()).toEqual([one.id, two.id].sort());
 		expect(notes.filter((n) => n.title !== 'Nota ilegible')).toHaveLength(46);
+	});
+
+	describe('notas ilegibles', () => {
+		/** Un dispositivo que ya descargó una nota dañada en el servidor. */
+		async function withUnreadable() {
+			const a = await device('a');
+			await a.repos.sync.syncNow();
+			const target = a.db.account(DEMO_USER_ID).notes.find((n) => !n.deletedAt)!;
+			const garbage = 'a1.AAAAAAAAAAAAAAAA.AAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+			target.payload = garbage;
+			const account = a.db.account(DEMO_USER_ID);
+			account.entitySeq.set(`note:${target.id}`, ++account.seq);
+			const b = await device('b', a.db);
+			await b.repos.sync.syncNow();
+			return { a, b, id: target.id, garbage };
+		}
+
+		it('sale marcada como ilegible, sin contenido', async () => {
+			const { b, id } = await withUnreadable();
+			const note = await b.repos.notes.get(id);
+			expect(note).toMatchObject({ title: 'Nota ilegible', content: '', unreadable: true });
+		});
+
+		it('no se puede editar ni duplicar, para no pisar lo guardado', async () => {
+			const { b, id, garbage } = await withUnreadable();
+			await expect(b.repos.notes.update(id, { content: 'nuevo' })).rejects.toMatchObject({
+				error: { kind: 'decrypt' }
+			});
+			await expect(b.repos.notes.update(id, { title: 'otro' })).rejects.toMatchObject({
+				error: { kind: 'decrypt' }
+			});
+			await expect(b.repos.notes.duplicate(id)).rejects.toMatchObject({
+				error: { kind: 'decrypt' }
+			});
+			expect((await b.local.db.notes.get(id))?.payload).toBe(garbage);
+			expect((await b.repos.sync.snapshot()).pendingCount).toBe(0);
+		});
+
+		it('se puede mover de carpeta o a la papelera sin tocar su texto cifrado', async () => {
+			const { a, b, id, garbage } = await withUnreadable();
+			const before = await b.local.db.notes.get(id);
+			const folder = (await b.repos.folders.list())[0];
+			await b.repos.notes.update(id, { folderId: folder.id });
+			await b.repos.notes.moveToTrash(id);
+			const after = await b.local.db.notes.get(id);
+			expect(after?.payload).toBe(garbage);
+			expect(after?.wrappedKey).toBe(before?.wrappedKey);
+			expect(after?.deletedAt).not.toBeNull();
+			expect(after?.folderId).toBe(folder.id);
+
+			await b.repos.sync.syncNow();
+			const onServer = a.db.account(DEMO_USER_ID).notes.find((n) => n.id === id);
+			expect(onServer?.payload).toBe(garbage);
+			expect(onServer?.deletedAt).not.toBeNull();
+		});
 	});
 
 	it('cada nota tiene su propia clave, también la copia de un conflicto', async () => {

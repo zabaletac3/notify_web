@@ -152,11 +152,15 @@ export function createLocalBackend(options: LocalBackendOptions): LocalBackend {
 				holder = null;
 				codec.clear();
 			},
-			clear: () => {
+			clear: async () => {
+				// Antes de borrar, se deja terminar lo que se estaba escribiendo.
+				await lock.run(async () => {});
 				codec.clear();
-				return holder ? holder.db.clearAll() : Promise.resolve();
+				if (holder) await holder.db.clearAll();
 			},
 			async destroy() {
+				if (!holder) return;
+				await lock.run(async () => {});
 				if (!holder) return;
 				const { db } = holder;
 				holder = null;

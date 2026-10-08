@@ -24,6 +24,11 @@ export interface Note {
 	revision: number;
 	syncStatus: NoteSyncStatus;
 	lastEditedDeviceId: Id;
+	/**
+	 * `true` si el texto cifrado no se pudo descifrar (dañado o alterado): solo hay un marcador, sin
+	 * contenido, y no se puede editar para no pisar lo guardado.
+	 */
+	unreadable?: boolean;
 }
 
 /** Campos que el usuario puede editar. */

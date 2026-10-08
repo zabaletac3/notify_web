@@ -132,8 +132,11 @@ export class LocalFolderRepository implements FolderRepository {
 		});
 	}
 
-	private async write<T>(task: () => Promise<T>): Promise<T> {
-		await this.gate.write();
-		return this.d.lock.run(task);
+	/** Se pone en cola al momento (en el orden en que se pide); la espera simulada va dentro. */
+	private write<T>(task: () => Promise<T>): Promise<T> {
+		return this.d.lock.run(async () => {
+			await this.gate.write();
+			return task();
+		});
 	}
 }

@@ -123,6 +123,7 @@ export function unreadableNote(encrypted: EncryptedNote, syncStatus: NoteSyncSta
 		content: '',
 		tags: [],
 		pinned: false,
+		unreadable: true,
 		createdAt: encrypted.createdAt,
 		updatedAt: encrypted.updatedAt,
 		deletedAt: encrypted.deletedAt,

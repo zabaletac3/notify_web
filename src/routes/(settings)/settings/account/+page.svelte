@@ -34,7 +34,9 @@
 	let leaving = $state(false);
 	let syncingBeforeLeave = $state(false);
 	let leaveError = $state(false);
-	function requestLogout() {
+	async function requestLogout() {
+		// Lo último que se escribió puede estar todavía en cola: se cuenta antes de decidir.
+		await sync.refresh();
 		if (sync.pendingCount > 0) {
 			leaveError = false;
 			leaving = true;

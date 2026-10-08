@@ -42,7 +42,11 @@ export class LocalNoteRepository implements NoteRepository {
 	/** Cifra la nota, la guarda y apunta el cambio. */
 	private async save(note: Note, wrappedKey?: Sealed): Promise<Note> {
 		const { db, codec } = this.d;
-		const row = await codec.encryptNote(note, wrappedKey);
+		// Una nota ilegible no se vuelve a cifrar (sería pisar lo guardado con un marcador vacío):
+		// solo cambian sus metadatos (carpeta, papelera, fechas).
+		const row = note.unreadable
+			? { ...(await this.findRow(note.id)), ...this.metadata(note) }
+			: await codec.encryptNote(note, wrappedKey);
 		await db.transaction('rw', db.notes, db.outbox, async () => {
 			await db.notes.put(row);
 			await enqueue(
@@ -58,6 +62,16 @@ export class LocalNoteRepository implements NoteRepository {
 			);
 		});
 		return note;
+	}
+
+	private metadata(note: Note) {
+		return {
+			folderId: note.folderId,
+			updatedAt: note.updatedAt,
+			deletedAt: note.deletedAt,
+			syncStatus: note.syncStatus,
+			lastEditedDeviceId: note.lastEditedDeviceId
+		};
 	}
 
 	private async findRow(id: Id): Promise<NoteRow> {
@@ -136,6 +150,15 @@ export class LocalNoteRepository implements NoteRepository {
 			const { db } = this.d;
 			const { row, note } = await this.find(id);
 			if (note.deletedAt) throw fail.validation({ note: 'in-trash' });
+			// De una nota ilegible solo se puede cambiar la carpeta.
+			if (
+				note.unreadable &&
+				(patch.title !== undefined ||
+					patch.content !== undefined ||
+					patch.tags !== undefined ||
+					patch.pinned !== undefined)
+			)
+				throw fail.decrypt();
 			const next = { ...note };
 			if (patch.title !== undefined) next.title = patch.title;
 			if (patch.content !== undefined) next.content = patch.content;
@@ -154,6 +177,7 @@ export class LocalNoteRepository implements NoteRepository {
 	duplicate(id: Id): Promise<Note> {
 		return this.write(async () => {
 			const { note: src } = await this.find(id);
+			if (src.unreadable) throw fail.decrypt();
 			const now = this.iso();
 			// La copia es otra nota: sin `wrappedKey`, para que lleve su propia clave.
 			return this.save({
@@ -207,8 +231,11 @@ export class LocalNoteRepository implements NoteRepository {
 		});
 	}
 
-	private async write<T>(task: () => Promise<T>): Promise<T> {
-		await this.gate.write();
-		return this.d.lock.run(task);
+	/** Se pone en cola al momento (en el orden en que se pide); la espera simulada va dentro. */
+	private write<T>(task: () => Promise<T>): Promise<T> {
+		return this.d.lock.run(async () => {
+			await this.gate.write();
+			return task();
+		});
 	}
 }

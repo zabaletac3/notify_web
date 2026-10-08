@@ -63,6 +63,9 @@ export class LocalSyncRepository implements SyncRepository {
 				conflicts: []
 			};
 		}
+		// Si hay escrituras en cola (una edición que se está cifrando), se espera a que terminen para
+		// que el contador de pendientes no se quede corto.
+		await this.d.lock.run(async () => {});
 		const { db } = this.d;
 		const [pendingCount, rows, lastSyncedAt] = await Promise.all([
 			db.outbox.count(),

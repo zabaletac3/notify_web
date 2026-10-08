@@ -108,6 +108,14 @@ describe('ShareState', () => {
 		expect(beforeCreate).toHaveBeenCalledOnce();
 	});
 
+	it('una nota ilegible no se puede compartir', async () => {
+		const { app, edit, share, note } = await setup();
+		edit({ unreadable: true });
+		const r = await share.create(note.id);
+		expect(!r.ok && r.error.kind).toBe('decrypt');
+		expect(app.backend.db.shareLinks).toHaveLength(0);
+	});
+
 	it('una nota desconocida no se puede compartir', async () => {
 		const { share } = await setup();
 		const r = await share.create('no-existe');
