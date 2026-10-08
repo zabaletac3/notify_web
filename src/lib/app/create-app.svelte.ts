@@ -12,7 +12,9 @@ import {
 	HttpShareRepository,
 	HttpStorageRepository,
 	HttpSyncTransport,
+	LocalStorageSessionMarker,
 	LocalStorageTokenStore,
+	type SessionMode,
 	type TokenStore,
 	createMockBackend,
 	type Dataset,
@@ -53,7 +55,7 @@ export interface AppOptions {
 	 * API real. Con esto, la cuenta, los dispositivos, los enlaces, el espacio y la sincronización van al
 	 * servidor (las notas siguen en IndexedDB y se sincronizan). Requiere `persistence: 'indexeddb'`.
 	 */
-	api?: { baseUrl: string; tokens?: TokenStore; fetch?: typeof fetch };
+	api?: { baseUrl: string; tokens?: TokenStore; fetch?: typeof fetch; sessionMode?: SessionMode };
 	/** Backend simulado a usar (por defecto uno nuevo). */
 	backend?: MockBackend;
 	/** Reloj inyectable (pruebas). */
@@ -328,9 +330,15 @@ export function createApp(options: AppOptions = {}): App {
 
 /** Cliente HTTP y repositorios reales para la API. */
 function remoteServices(api: NonNullable<AppOptions['api']>) {
+	// La web real usa cookie `HttpOnly` (mode `cookie`); `body` queda para escritorio/móvil y pruebas.
+	const sessionMode: SessionMode =
+		api.sessionMode ?? (import.meta.env.PUBLIC_SESSION_MODE === 'body' ? 'body' : 'cookie');
 	const http = new HttpClient({
 		baseUrl: api.baseUrl.replace(/\/+$/, ''),
 		tokens: api.tokens ?? new LocalStorageTokenStore(),
+		sessionMode,
+		// Al construirse, el marcador borra los tokens de una instalación anterior (solo esa clave).
+		marker: sessionMode === 'cookie' ? new LocalStorageSessionMarker() : undefined,
 		fetch: api.fetch
 	});
 	return {

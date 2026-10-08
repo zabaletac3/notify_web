@@ -75,6 +75,7 @@ export class HttpAuthRepository implements AuthRepository {
 	async verifyEmail(email: string, code: string): Promise<User> {
 		const s = await this.http.request<WireSession>('POST', '/auth/verify-email', {
 			auth: false,
+			session: true,
 			body: { email, code }
 		});
 		this.http.saveTokens({
@@ -92,6 +93,7 @@ export class HttpAuthRepository implements AuthRepository {
 	async login(input: { email: string; authKey: string }): Promise<LoginResult> {
 		const s = await this.http.request<WireSession & { keys: KeyBundle }>('POST', '/auth/login', {
 			auth: false,
+			session: true,
 			body: { ...input, device: { name: this.deviceName(), platform: 'web' } }
 		});
 		this.http.saveTokens({
@@ -108,7 +110,12 @@ export class HttpAuthRepository implements AuthRepository {
 
 	async logout(): Promise<void> {
 		try {
-			if (this.http.hasSession) await this.http.request('POST', '/auth/logout');
+			if (this.http.hasSession)
+				await this.http.request('POST', '/auth/logout', {
+					// En modo cookie no hace falta un Bearer válido: la cookie cierra la sesión.
+					auth: this.http.sessionMode === 'cookie' ? 'optional' : true,
+					session: true
+				});
 		} catch {
 			// Sin red o sesión ya vencida: igualmente se cierra aquí (el servidor revoca el dispositivo al caducar).
 		} finally {

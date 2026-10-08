@@ -140,6 +140,15 @@ export class AuthState {
 		return (this.lastBootstrap = this.runBootstrap(run));
 	}
 
+	/**
+	 * Arranque de la sesión. La lógica no depende del modo de sesión:
+	 * - Hay marcador/cookie válidos (modo cookie) o tokens (modo cuerpo): el repositorio renueva si hace
+	 *   falta y `currentSession()` devuelve la sesión → `authenticated`.
+	 * - Hay marcador pero la cookie venció o el dispositivo fue revocado: `session-expired` → `expired`,
+	 *   conservando la copia local cifrada (no se borra nada).
+	 * - Sin red, `currentSession()` no lanza `session-expired` sino `network` → `anonymous` (igual que hoy).
+	 * - La migración desde la web antigua solo borra `apunte.tokens`; no toca IndexedDB ni esta ruta.
+	 */
 	private async runBootstrap(run: number): Promise<void> {
 		const result = await attempt(() => this.repo.currentSession());
 		if (run !== this.bootstrapRun) return this.lastBootstrap;
