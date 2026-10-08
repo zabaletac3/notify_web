@@ -76,12 +76,18 @@ test('registro, clave de recuperación y recuperación de la cuenta sin perder l
 	// 3. Una nota nueva, cifrada y guardada.
 	await navigate(page, '/notes');
 	await page.getByRole('button', { name: 'Nueva nota' }).first().click();
+	await expect(page.locator('.ProseMirror').first()).toBeVisible();
 	await page.getByLabel('Título').fill('Mi nota secreta');
 	await page.locator('.ProseMirror').first().click();
 	await page.keyboard.type('Contenido que solo yo puedo leer');
+	await expect(page.getByLabel('Título')).toHaveValue('Mi nota secreta');
 	await expect(page.getByText(/Guardado/)).toBeVisible();
 
-	// 4. Cerrar sesión (si hay cambios sin sincronizar, los sube antes).
+	// 4. Cerrar sesión. Se sincroniza antes a propósito: si el aviso "Sincronizar y salir" tardara en
+	// salir, la copia local se borraría con la nota sin subir.
+	await navigate(page, '/settings/sync');
+	await page.getByRole('button', { name: /Sincronizar ahora/ }).click();
+	await expect(page.getByText('Todo sincronizado').first()).toBeVisible();
 	await navigate(page, '/settings/account');
 	await page.getByText('Cerrar sesión').first().click();
 	const syncAndExit = page.getByRole('button', { name: 'Sincronizar y salir' });

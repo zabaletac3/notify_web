@@ -159,7 +159,7 @@ Revisión con `/security-review`, pruebas de abuso (fuzz de `/sync`, cuerpos gig
 
 ### Fase 11 · Cliente web `data/remote`
 
-`HttpAuthRepository`, `HttpSyncTransport`, `HttpShareRepository` tras las mismas interfaces; selector `PUBLIC_BACKEND=mock|http`; manejo de `device-revoked`; e2e Playwright contra el servidor real (dos dispositivos, conflicto, recuperación, enlace público).
+`HttpAuthRepository`, `HttpSyncTransport`, `HttpShareRepository` tras las mismas interfaces; selector `PUBLIC_BACKEND=mock|http`; manejo de `device-revoked`; e2e Playwright contra el servidor real .
 
 ## 8. Pruebas
 
