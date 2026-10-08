@@ -15,7 +15,7 @@ Sustituye a la versión con MongoDB: se elige **PostgreSQL** (D4) y se descarta 
 
 ## 2. Stack
 
-Go 1.24 · chi v5 · pgx v5 (+ pgxpool) · sqlc · goose · caarlos0/env v11 · validator v10 · `log/slog` JSON · golang-jwt v5 (HS256, secreto ≥ 32 bytes) · `crypto/subtle`, `crypto/sha256`, `crypto/hmac` · testcontainers-go (Postgres) · kin-openapi (contrato) · golangci-lint (+ gosec) · govulncheck · restic (backups). Sin Redis al inicio: limitador en Postgres (tabla `rate_limits`), válido para una sola réplica y también para varias.
+Go 1.25 · chi v5 · pgx v5 (+ pgxpool) · sqlc · goose · caarlos0/env v11 · validator v10 · `log/slog` JSON · golang-jwt v5 (HS256, secreto ≥ 32 bytes) · `crypto/subtle`, `crypto/sha256`, `crypto/hmac` · testcontainers-go (Postgres) · kin-openapi (contrato) · golangci-lint (+ gosec) · govulncheck · restic (backups). Sin Redis al inicio: limitador en Postgres (tabla `rate_limits`), válido para una sola réplica y también para varias.
 
 ## 3. Estructura (alineada con tu plantilla)
 
