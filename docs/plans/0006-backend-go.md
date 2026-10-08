@@ -128,7 +128,7 @@ Hash de `authKey` (Argon2id + pepper), comparaciones constantes, generador de to
 
 ### Fase 4 · Claves y recuperación
 
-`GET /keys`, `PUT /keys/recovery`, `/me/password` (nuevo `KeyBundle`; revoca otras sesiones), `forgot`, `reset/bundle`, `reset` en `keep` (exige `recoveryAuth`) y `wipe` (borra notas, carpetas, enlaces y lápidas, con `confirm`), `DELETE /me` (marca `deleted_at`; gracia de 30 días).
+`GET /keys`, `PUT /keys/recovery`, `/me/password` (nuevo `KeyBundle`; revoca otras sesiones), `forgot`, `reset/bundle`, `reset` en `keep` (exige `recoveryAuth`) y `wipe` (borra notas, carpetas, enlaces y lápidas, con `confirm`), `POST /me/delete` (exige la prueba de la contraseña `authKey`; marca `deleted_at`; gracia de 30 días; D14). `DELETE /me`, sin prueba, queda obsoleto (`Deprecation`/`Sunset`) y se retira 14 días después del despliegue.
 **Hecho cuando:** escenarios `keep`/`wipe` del cliente pasan contra el servidor real.
 
 ### Fase 5 · Sincronización
@@ -171,4 +171,4 @@ Unitarias por paquete; integración con Postgres real (testcontainers); contrato
 - RLS mal configurado da falsa seguridad → tests negativos por endpoint y por rol.
 - Un solo VPS es punto único de fallo → backups probados y plan de mudanza (<1 h) con `setup-server.sh`.
 - Pérdida de contraseña y clave de recuperación = pérdida de notas (asumido por diseño, ADR 0005): debe quedar claro en la UI y la política de privacidad.
-- Cumplimiento (Ley 1581): correo y metadatos son datos personales; política de privacidad, retención y derecho de supresión (cubierto por `DELETE /me` y purga).
+- Cumplimiento (Ley 1581): correo y metadatos son datos personales; política de privacidad, retención y derecho de supresión (cubierto por `POST /me/delete` y la purga).
