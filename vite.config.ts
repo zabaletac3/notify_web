@@ -5,8 +5,28 @@ import { playwright } from '@vitest/browser-playwright';
 import adapter from '@sveltejs/adapter-auto';
 import { sveltekit } from '@sveltejs/kit/vite';
 import path from 'node:path';
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
+
+// Versión de la app (package.json) y build (nº de CI, SHA corto de git o «dev»). Vite las inyecta
+// como constantes globales (`__APP_VERSION__`, `__APP_BUILD__`); ver src/app.d.ts y src/lib/legal/version.ts.
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as {
+	version: string;
+};
+const appBuild = (() => {
+	if (process.env.GITHUB_RUN_NUMBER) return process.env.GITHUB_RUN_NUMBER;
+	try {
+		return (
+			execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+				.toString()
+				.trim() || 'dev'
+		);
+	} catch {
+		return 'dev';
+	}
+})();
 
 /**
  * Política de seguridad de contenido (CSP). Las notas y sus claves viven en el navegador, así que
@@ -80,6 +100,11 @@ const backendBanner = (mode: string): Plugin => ({
 export default defineConfig(({ command, mode }) => ({
 	// PUBLIC_* llegan al navegador (import.meta.env.PUBLIC_API_URL, PUBLIC_BACKEND); el resto no.
 	envPrefix: ['VITE_', 'PUBLIC_'],
+	// Constantes de versión disponibles en el código (y en Vitest, que hereda esta configuración).
+	define: {
+		__APP_VERSION__: JSON.stringify(pkg.version),
+		__APP_BUILD__: JSON.stringify(appBuild)
+	},
 	plugins: [
 		backendBanner(mode),
 		tailwindcss(),
