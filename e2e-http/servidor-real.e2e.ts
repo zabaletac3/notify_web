@@ -293,3 +293,37 @@ test('recuperación: restablecer la contraseña con la clave de recuperación co
 	// El texto sigue cifrado en el servidor.
 	expect(sql(`select count(*) from notes where payload like '%sobrevive%'`)).toBe('0');
 });
+
+test('eliminar la cuenta pide la contraseña y cierra todo', async ({ browser }) => {
+	test.setTimeout(240_000);
+	const email = 'borra@correo.com';
+	const ctx = await browser.newContext();
+	const page = await ctx.newPage();
+	await register(page, email, 'Beto Borra');
+
+	await navigate(page, '/settings/delete-account');
+
+	// Contraseña incorrecta: error visible, sigue en la pantalla y la cuenta sigue viva.
+	await page.locator('#password').fill('mala');
+	await page.getByRole('button', { name: 'Eliminar mi cuenta' }).click();
+	await expect(page.getByText('La contraseña no es correcta.')).toBeVisible({ timeout: 60_000 });
+	await expect(page).toHaveURL(/\/settings\/delete-account$/);
+	expect(sql(`select count(*) from users where email = '${email}' and deleted_at is null`)).toBe(
+		'1'
+	);
+
+	// Contraseña correcta: vuelve a la raíz.
+	await page.locator('#password').fill(PASSWORD);
+	await page.getByRole('button', { name: 'Eliminar mi cuenta' }).click();
+	await expect(page).toHaveURL(/\/$/, { timeout: 60_000 });
+
+	// Las mismas credenciales ya no abren sesión y la cuenta queda marcada como borrada.
+	const ctx2 = await browser.newContext();
+	const page2 = await ctx2.newPage();
+	await page2.goto('/login');
+	await page2.locator('#email').fill(email);
+	await page2.locator('#password').fill(PASSWORD);
+	await page2.getByRole('button', { name: /Iniciar sesión/ }).click();
+	await expect(page2.getByText('Correo o contraseña incorrectos.')).toBeVisible();
+	expect(sql(`select deleted_at is not null from users where email = '${email}'`)).toBe('t');
+});
