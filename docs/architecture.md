@@ -83,7 +83,7 @@ Ver `docs/adr/` para las decisiones.
 
 ## Seguridad
 
-Las notas, las carpetas y los enlaces se cifran en el cliente (ver [ADR 0005](adr/0005-cifrado-extremo-a-extremo.md)); la clave maestra vive en memoria. Lo que podría leerla es código ajeno ejecutándose en la página (XSS), así que la web se sirve con una política de contenido estricta y cabeceras de seguridad.
+Las notas, las carpetas y los enlaces se cifran en el cliente (ver [ADR 0005](adr/0005-cifrado-extremo-a-extremo.md)); la clave maestra vive en memoria. Lo que podría leerla es código ajeno ejecutándose en la página (XSS), así que la web se sirve con una política de contenido estricta y cabeceras de seguridad. El formato que comparten la web y las apps nativas queda fijado en [`docs/api/vectors/`](api/vectors/README.md) (vectores de prueba compartidos).
 
 **Política de seguridad de contenido (CSP)** — se define en `vite.config.ts` (`cspDirectives`) y SvelteKit la añade como cabecera (páginas dinámicas, con _nonce_) o como `<meta>` (páginas prerenderizadas, con _hash_):
 

@@ -53,3 +53,11 @@
 - Las apps de escritorio y móvil deberían guardar la clave maestra en el llavero del sistema.
 - Cualquier dato nuevo que contenga texto de la persona (p. ej. imágenes) debe cifrarse igual.
 - Nunca registrar contraseñas, claves ni textos descifrados.
+
+## Vectores de prueba
+
+Las apps nativas (escritorio Tauri, móvil) tienen que leer y escribir **exactamente el mismo formato** que la web. Para garantizarlo hay un conjunto de vectores fijos en [`docs/api/vectors/`](../api/vectors/README.md): Argon2id + HKDF (salt, derivadas y `kekCheck`), texto cifrado `a1.<iv>.<ct>` con casos de fallo, envoltura de claves, clave de recuperación, relleno, `payload` de nota y carpeta, enlace público y ejemplos de `sync`.
+
+> **SOLO PRUEBAS:** todas las claves, contraseñas y sales de estos archivos son públicas; no usar jamás en una cuenta real.
+
+Se generan de forma determinista con `pnpm vectors:generate` (misma entrada → mismos bytes, sin fechas ni aleatorios) y los comprueba `pnpm test:unit --run`: cada vector se abre con el código actual y se regenera en memoria para compararlo byte a byte. Si el formato cambia, las pruebas fallan hasta regenerar los vectores y revisar el diff, y por tanto hasta actualizar también las apps nativas. El detalle del formato y de cómo verificarlo en otra plataforma está en el README de la carpeta.

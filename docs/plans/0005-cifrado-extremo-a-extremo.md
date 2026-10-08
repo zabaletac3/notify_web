@@ -782,3 +782,11 @@ La mayoría de las pantallas ya se construyeron en la fase 4 (`/unlock`, `/recov
 - **Trusted Types: probado y revertido** (rompe la carga de la app). Queda como pendiente anotado.
 - **Pruebas:** `e2e/seguridad.e2e.ts` (cabeceras y CSP de la respuesta, `<meta>` de la página prerenderizada, pantallas de acceso y enlace público sin bloqueos, tema aplicado sin JavaScript de la app) y el vigilante de violaciones de CSP en `e2e/cifrado.e2e.ts`; `src/hooks.server.spec.ts`.
 - **Sin `console.log` con datos de notas:** se revisó el código (no hay llamadas a `console.*` fuera de `dev/` y pruebas).
+
+**Etapa V — vectores de prueba compartidos**
+
+- `sealWithIv` (IV de 12 bytes dado) vive en `sealed.ts`; `seal` lo usa con `randomBytes(12)`. No es API pública: `core/crypto/index.ts` exporta `sealed.ts` con nombres explícitos (sin `export *`) y las pruebas y scripts lo importan de `core/crypto/testing.ts`.
+- Generador determinista: la lógica está en `src/lib/data/crypto/vectors.ts` y el ejecutable en `scripts/generate-vectors.ts`, que `scripts/generate-vectors.mjs` carga con el resolvedor de Vite (alias `#lib`, `.js`→`.ts`, `hash-wasm`) para no añadir `tsx` ni otro cargador. Se ejecuta con `pnpm vectors:generate`.
+- Para que un cambio de formato rompa las pruebas, los vectores usan el propio codificador de la app: `encodeNotePayload`/`encodeFolderPayload` (exportados de `note-codec.ts`, no del index) y `shareContentAad`/`shareKeyAad` (exportados de `share-codec.ts`). Claves, sales, IVs y slug del generador son fijos (`pattern(...)`), nunca aleatorios.
+- `docs/api/vectors/` (8 JSON + README) se escribe con 2 espacios y claves ordenadas; se añade a `.prettierignore` porque Prettier usa tabulaciones.
+- `src/lib/data/crypto/vectors.spec.ts` verifica cada archivo con el código actual, falla con el aviso de ejecutar «pnpm vectors:generate» si el diff no cuadra, y deriva el caso `DEFAULT_KDF` una sola vez (caché en `deriveForVector`).

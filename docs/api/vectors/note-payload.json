@@ -1,0 +1,70 @@
+{
+  "description": "Nota y carpeta cifradas tal y como las produce `note-codec`: `wrappedKey` (clave del elemento con la maestra) y `payload` (JSON rellenado y cifrado con la clave del elemento). El camino inverso (`decrypted`) lo calcula `decryptNote`/`decryptFolder`.",
+  "folder": {
+    "dataAad": "apunte/v1/data/018f6f9a-7b1c-7c3e-8c9d-000000000001/folder/018f6f9a-7b1c-7c3e-8c9d-000000000201",
+    "dataIv": "zDGW-2DFKo_0Wb4j",
+    "decrypted": {
+      "createdAt": "2026-01-02T03:04:05.000Z",
+      "id": "018f6f9a-7b1c-7c3e-8c9d-000000000201",
+      "name": "Recetas",
+      "updatedAt": "2026-02-03T04:05:06.000Z"
+    },
+    "encrypted": {
+      "createdAt": "2026-01-02T03:04:05.000Z",
+      "id": "018f6f9a-7b1c-7c3e-8c9d-000000000201",
+      "payload": "a1.zDGW-2DFKo_0Wb4j.djs3DjeuWHQYH0huTfsx_WXatRJ9hHaYbDErRV3Cggb4WlB56YZFIp3_UluipG-ChaAcgs6RYKUsM_E54TpxsnqJ3zWJ-sLWIpIAza5x-552r2owgKeUwOsyzE4OPxPbv72qxYAs3fipZg3jNjuRmMNQJZMS6wBjLRaRw2xt6yMb-ePdzVcuv-0SOB3D3pCQO9oYIU9_TlQbXzdh0X7Mpc9Gk3YRiFtTlM63nmsVcIEFhJoCehYenc_9KKs2sRemNaS7rSFKoGhTAAc2U6iOc61gtE80OgQ54yMzRet7AC11rZxsjE36rx95f1r0NWY4njp73NVwIkHAHdAdwzH9gucBXaoJxHt5VCOfWdts3EQ",
+      "revision": 2,
+      "updatedAt": "2026-02-03T04:05:06.000Z",
+      "wrappedKey": "a1.pwxx1jugBWrPNJn-.8BqVOnLxo3DDQspq-6STel2Zx7EgU9yE3XE8lPMavgK7MWAhic6pTCkO-2p_ONaR"
+    },
+    "id": "018f6f9a-7b1c-7c3e-8c9d-000000000201",
+    "itemKey": "Wr8kie5TuB2C50yxFnvgRaoPdNk-owht0jecAWbLMJU",
+    "keyAad": "apunte/v1/key/018f6f9a-7b1c-7c3e-8c9d-000000000001/folder/018f6f9a-7b1c-7c3e-8c9d-000000000201",
+    "keyIv": "pwxx1jugBWrPNJn-",
+    "payload": "a1.zDGW-2DFKo_0Wb4j.djs3DjeuWHQYH0huTfsx_WXatRJ9hHaYbDErRV3Cggb4WlB56YZFIp3_UluipG-ChaAcgs6RYKUsM_E54TpxsnqJ3zWJ-sLWIpIAza5x-552r2owgKeUwOsyzE4OPxPbv72qxYAs3fipZg3jNjuRmMNQJZMS6wBjLRaRw2xt6yMb-ePdzVcuv-0SOB3D3pCQO9oYIU9_TlQbXzdh0X7Mpc9Gk3YRiFtTlM63nmsVcIEFhJoCehYenc_9KKs2sRemNaS7rSFKoGhTAAc2U6iOc61gtE80OgQ54yMzRet7AC11rZxsjE36rx95f1r0NWY4njp73NVwIkHAHdAdwzH9gucBXaoJxHt5VCOfWdts3EQ",
+    "plaintextJson": "{\"name\":\"Recetas\"}",
+    "wrappedKey": "a1.pwxx1jugBWrPNJn-.8BqVOnLxo3DDQspq-6STel2Zx7EgU9yE3XE8lPMavgK7MWAhic6pTCkO-2p_ONaR"
+  },
+  "masterKey": "Mpf8YcYrkPVavySJ7lO4HYLnTLEWe-BFqg902T6jCG0",
+  "note": {
+    "dataAad": "apunte/v1/data/018f6f9a-7b1c-7c3e-8c9d-000000000001/note/018f6f9a-7b1c-7c3e-8c9d-000000000101",
+    "dataIv": "gudMsRZ74EWqD3TZ",
+    "decrypted": {
+      "content": "# Ingredientes\n\n- 2 huevos\n- 100 g de azúcar",
+      "createdAt": "2026-01-02T03:04:05.000Z",
+      "deletedAt": null,
+      "folderId": "018f6f9a-7b1c-7c3e-8c9d-000000000201",
+      "id": "018f6f9a-7b1c-7c3e-8c9d-000000000101",
+      "lastEditedDeviceId": "018f6f9a-7b1c-7c3e-8c9d-0000000000aa",
+      "pinned": true,
+      "revision": 3,
+      "syncStatus": "synced",
+      "tags": [
+        "cocina",
+        "dulce"
+      ],
+      "title": "Receta secreta",
+      "updatedAt": "2026-02-03T04:05:06.000Z"
+    },
+    "encrypted": {
+      "createdAt": "2026-01-02T03:04:05.000Z",
+      "deletedAt": null,
+      "folderId": "018f6f9a-7b1c-7c3e-8c9d-000000000201",
+      "id": "018f6f9a-7b1c-7c3e-8c9d-000000000101",
+      "lastEditedDeviceId": "018f6f9a-7b1c-7c3e-8c9d-0000000000aa",
+      "payload": "a1.gudMsRZ74EWqD3TZ.-Ab7zg57w1u3FkZqOZwtB9p017j2Q0-WTdsZDoBAlW3oTgMg5dMDcgU_gGRjpoSqzc8hfWewoNepPyML7RK7y-x9rxPei1oA1t-XPPhMj08W0XPeYJYzyXWtDJprfl1c0GODvLNGYyg23dtxggZgEcAuJxGkmb_XuTCiNmnWq9yXlCbJj7lSFzWIj7xt63acVllYSTDwsV-FnBT1PUlaspJ_Lp3kU0cv8E1Qy4YUfJPU8Q56ldQgND4_F5x-cJBzafRnPVjvHivcOSyCXeFCkNYBfp2x21k-1XwQ3SD-Wprkkw99-4iZhnbVdLBwg8C4WXUCt6Wnd-59tllizfDb1iZdfTnAoW4s2bmY61nDKgU",
+      "revision": 3,
+      "updatedAt": "2026-02-03T04:05:06.000Z",
+      "wrappedKey": "a1.XcInjPFWuyCF6k-0.pea_hPpWplh9RTvPS2jRhDmxEKECcOQqh5xEeNSnlGdmIflnW_KsCWCD62zO06nO"
+    },
+    "id": "018f6f9a-7b1c-7c3e-8c9d-000000000101",
+    "itemKey": "V7whhutQtRp_5EmuE3jdQqcMcdY7oAVqzzSZ_mPILZI",
+    "keyAad": "apunte/v1/key/018f6f9a-7b1c-7c3e-8c9d-000000000001/note/018f6f9a-7b1c-7c3e-8c9d-000000000101",
+    "keyIv": "XcInjPFWuyCF6k-0",
+    "payload": "a1.gudMsRZ74EWqD3TZ.-Ab7zg57w1u3FkZqOZwtB9p017j2Q0-WTdsZDoBAlW3oTgMg5dMDcgU_gGRjpoSqzc8hfWewoNepPyML7RK7y-x9rxPei1oA1t-XPPhMj08W0XPeYJYzyXWtDJprfl1c0GODvLNGYyg23dtxggZgEcAuJxGkmb_XuTCiNmnWq9yXlCbJj7lSFzWIj7xt63acVllYSTDwsV-FnBT1PUlaspJ_Lp3kU0cv8E1Qy4YUfJPU8Q56ldQgND4_F5x-cJBzafRnPVjvHivcOSyCXeFCkNYBfp2x21k-1XwQ3SD-Wprkkw99-4iZhnbVdLBwg8C4WXUCt6Wnd-59tllizfDb1iZdfTnAoW4s2bmY61nDKgU",
+    "plaintextJson": "{\"title\":\"Receta secreta\",\"content\":\"# Ingredientes\\n\\n- 2 huevos\\n- 100 g de azúcar\",\"tags\":[\"cocina\",\"dulce\"],\"pinned\":true}",
+    "wrappedKey": "a1.XcInjPFWuyCF6k-0.pea_hPpWplh9RTvPS2jRhDmxEKECcOQqh5xEeNSnlGdmIflnW_KsCWCD62zO06nO"
+  },
+  "userId": "018f6f9a-7b1c-7c3e-8c9d-000000000001",
+  "version": 1
+}

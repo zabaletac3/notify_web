@@ -20,6 +20,7 @@
 		"build-storybook": "storybook build",
 		"licenses:generate": "node scripts/generate-licenses.mjs",
 		"api:lint": "pnpm --package=@redocly/cli dlx redocly lint docs/api/openapi.yaml",
+		"vectors:generate": "node scripts/generate-vectors.mjs",
 		"e2e:http": "playwright test -c playwright.http.config.ts",
 		"dev:http": "bash scripts/dev-http.sh"
 	},

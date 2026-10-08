@@ -1,0 +1,48 @@
+{
+  "cases": [
+    {
+      "bytes": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "name": "ceros",
+      "text": "0000-0000-0000-0000-0000-0000-0000-0000-0000-0000-0000-0000-0000-0"
+    },
+    {
+      "bytes": "xiuQ9Vq_JInuU7gdgudMsRZ74EWqD3TZPqMIbdI3nAE",
+      "name": "patron",
+      "text": "RRNS-1XAT-QWJ8-KVJK-Q0ER-5STC-P4B7-QR25-N87Q-9P9Y-MC46-VMHQ-KG0G-E"
+    }
+  ],
+  "description": "Clave de recuperación: 32 bytes ↔ 52 caracteres Crockford base32 + 1 de control, en grupos de 4. `tolerant` debe producir los mismos bytes que `cases`; `invalid` debe lanzar CryptoFormatError.",
+  "invalid": [
+    {
+      "error": "CryptoFormatError",
+      "message": "longitud inválida",
+      "name": "longitud",
+      "text": "RNS1XATQWJ8KVJKQ0ER5STCP4B7QR25N87Q9P9YMC46VMHQKG0GE"
+    },
+    {
+      "error": "CryptoFormatError",
+      "message": "dígito de control incorrecto",
+      "name": "digito-de-control",
+      "text": "RRNS1XATQWJ8KVJKQ0ER5STCP4B7QR25N87Q9P9YMC46VMHQKG0G0"
+    },
+    {
+      "error": "CryptoFormatError",
+      "message": "carácter inválido",
+      "name": "caracter",
+      "text": "RRNS1!ATQWJ8KVJKQ0ER5STCP4B7QR25N87Q9P9YMC46VMHQKG0GE"
+    }
+  ],
+  "tolerant": [
+    {
+      "bytes": "xiuQ9Vq_JInuU7gdgudMsRZ74EWqD3TZPqMIbdI3nAE",
+      "name": "minusculas-y-espacios",
+      "text": "rrns 1xat qwj8 kvjk q0er 5stc p4b7 qr25 n87q 9p9y mc46 vmhq kg0g e"
+    },
+    {
+      "bytes": "xiuQ9Vq_JInuU7gdgudMsRZ74EWqD3TZPqMIbdI3nAE",
+      "name": "confusiones-o-0-i-l-1",
+      "text": "RRNS-IXAT-QWJ8-KVJK-QOER-5STC-P4B7-QR25-N87Q-9P9Y-MC46-VMHQ-KGOG-E"
+    }
+  ],
+  "version": 1
+}

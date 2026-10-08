@@ -1,0 +1,44 @@
+{
+  "cases": [
+    {
+      "authKey": "ZzV50VSPXi7bN6Qpw_t7CARb4qOJQNaErGav-zEpdaY",
+      "kdf": {
+        "alg": "argon2id",
+        "iterations": 1,
+        "memoryKiB": 1024,
+        "parallelism": 1,
+        "salt": "61C1Gn_kSa4TeN1Cpwxx1g"
+      },
+      "kekCheck": {
+        "aad": "apunte/v1/mk/018f6f9a-7b1c-7c3e-8c9d-000000000001/password",
+        "description": "Envolvió la clave maestra fija con la kek derivada y este IV. Otra plataforma debe obtener el mismo `sealed` (o abrirlo y comparar con `masterKey`).",
+        "iv": "pAlu0zidAmfMMZb7",
+        "masterKey": "Mpf8YcYrkPVavySJ7lO4HYLnTLEWe-BFqg902T6jCG0",
+        "sealed": "a1.pAlu0zidAmfMMZb7.dhpI1MipUlpRyLx8Yfq_ZKULg1fXhbLaVVE5iOYylIoa9MZiWMNgRN8r7Afbq5LU"
+      },
+      "name": "light",
+      "password": "contraseña"
+    },
+    {
+      "authKey": "kknx6-GCrCT54inBb5Nndg2Id_EoJWv-qeqtlQTI8qY",
+      "kdf": {
+        "alg": "argon2id",
+        "iterations": 3,
+        "memoryKiB": 65536,
+        "parallelism": 1,
+        "salt": "EHXaP6QJbtM4nQJnzDGW-w"
+      },
+      "kekCheck": {
+        "aad": "apunte/v1/mk/018f6f9a-7b1c-7c3e-8c9d-000000000001/password",
+        "description": "Envolvió la clave maestra fija con la kek derivada y este IV. Otra plataforma debe obtener el mismo `sealed` (o abrirlo y comparar con `masterKey`).",
+        "iv": "pAlu0zidAmfMMZb7",
+        "masterKey": "Mpf8YcYrkPVavySJ7lO4HYLnTLEWe-BFqg902T6jCG0",
+        "sealed": "a1.pAlu0zidAmfMMZb7.UXKiyRGJJV_LtNMCPnzd7gIuibT_eDgiZIhkGu_ROyMca8miYjP9aL1w9GdVDpKN"
+      },
+      "name": "default",
+      "password": "correct horse battery staple"
+    }
+  ],
+  "description": "Argon2id + HKDF-SHA-256: contraseña → authKey (base64url) y kek (AES-256-GCM). El caso «default» usa 64 MiB y 3 iteraciones.",
+  "version": 1
+}
