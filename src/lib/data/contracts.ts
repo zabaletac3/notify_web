@@ -19,8 +19,8 @@ import type {
 	Session,
 	ShareLink,
 	StorageUsage,
-	SyncRequest,
-	SyncResponse,
+	EncryptedSyncRequest,
+	EncryptedSyncResponse,
 	SyncSnapshot,
 	User
 } from '#lib/domain/index.js';
@@ -112,7 +112,7 @@ export interface SyncRepository {
 /** Canal con el servidor para sincronizar. Lo implementa `mock/MockSyncServer` y, después, el cliente HTTP. */
 export interface SyncTransport {
 	/** Envía los cambios locales y recibe los remotos. Lanza `AppFailure` (`network`, `server`, `session-expired`…). */
-	sync(request: SyncRequest): Promise<SyncResponse>;
+	sync(request: EncryptedSyncRequest): Promise<EncryptedSyncResponse>;
 }
 
 export interface ShareRepository {

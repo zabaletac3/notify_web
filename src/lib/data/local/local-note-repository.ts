@@ -1,3 +1,4 @@
+import type { Sealed } from '#lib/domain/index.js';
 import {
 	fail,
 	newId,
@@ -10,10 +11,15 @@ import {
 	type NoteQuery
 } from '#lib/domain/index.js';
 import type { NoteRepository } from '../contracts.js';
+import type { NoteRow } from './apunte-db.js';
 import { enqueue, noteFields } from './outbox.js';
 import { noGate, type LocalDeps } from './gate.js';
 
-/** Notas guardadas en IndexedDB. Cada escritura queda en la cola para subirla cuando haya red. */
+/**
+ * Notas guardadas en IndexedDB, siempre cifradas. Cada escritura queda en la cola para subirla cuando
+ * haya red. Cifrar es asíncrono, así que cada operación lee, cifra y escribe dentro de `lock` y la
+ * transacción de IndexedDB solo cubre la escritura.
+ */
 export class LocalNoteRepository implements NoteRepository {
 	constructor(private d: LocalDeps) {}
 
@@ -33,45 +39,60 @@ export class LocalNoteRepository implements NoteRepository {
 		};
 	}
 
-	/** Guarda la nota y apunta el cambio. Debe ir dentro de una transacción con `notes` y `outbox`. */
-	private async save(note: Note) {
-		await this.d.db.notes.put(note);
-		await enqueue(
-			this.d.db,
-			{
-				entity: 'note',
-				entityId: note.id,
-				op: 'upsert',
-				baseRevision: note.revision,
-				data: noteFields(note)
-			},
-			this.iso()
-		);
-	}
-
-	private async find(id: Id): Promise<Note> {
-		const note = await this.d.db.notes.get(id);
-		if (!note) throw fail.notFound('note');
+	/** Cifra la nota, la guarda y apunta el cambio. */
+	private async save(note: Note, wrappedKey?: Sealed): Promise<Note> {
+		const { db, codec } = this.d;
+		const row = await codec.encryptNote(note, wrappedKey);
+		await db.transaction('rw', db.notes, db.outbox, async () => {
+			await db.notes.put(row);
+			await enqueue(
+				db,
+				{
+					entity: 'note',
+					entityId: row.id,
+					op: 'upsert',
+					baseRevision: row.revision,
+					data: noteFields(row)
+				},
+				this.iso()
+			);
+		});
 		return note;
 	}
 
-	/** La papelera se vacía sola a los 30 días. */
-	private async purgeExpired() {
-		const { db } = this.d;
-		const limit = this.d.now().getTime() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-		await db.transaction('rw', db.notes, db.outbox, async () => {
-			const expired = await db.notes
-				.filter((n) => n.deletedAt !== null && new Date(n.deletedAt).getTime() <= limit)
-				.toArray();
-			for (const note of expired) await this.remove(note);
-		});
+	private async findRow(id: Id): Promise<NoteRow> {
+		const row = await this.d.db.notes.get(id);
+		if (!row) throw fail.notFound('note');
+		return row;
 	}
 
-	private async remove(note: Note) {
-		await this.d.db.notes.delete(note.id);
+	private async find(id: Id): Promise<{ row: NoteRow; note: Note }> {
+		const row = await this.findRow(id);
+		return { row, note: await this.d.codec.note(row) };
+	}
+
+	/** La papelera se vacía sola a los 30 días. (Solo mira la fecha de borrado, que no está cifrada.) */
+	private purgeExpired() {
+		const { db } = this.d;
+		const limit = this.d.now().getTime() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+		return this.d.lock.run(() =>
+			db.transaction('rw', db.notes, db.outbox, db.conflicts, async () => {
+				const expired = await db.notes
+					.filter((n) => n.deletedAt !== null && new Date(n.deletedAt).getTime() <= limit)
+					.toArray();
+				for (const row of expired) await this.remove(row);
+			})
+		);
+	}
+
+	/** Borra la fila y avisa al servidor. Debe ir en una transacción con `notes`, `outbox` y `conflicts`. */
+	private async remove(row: NoteRow) {
+		const { db } = this.d;
+		await db.notes.delete(row.id);
+		await db.conflicts.delete(row.id);
 		await enqueue(
-			this.d.db,
-			{ entity: 'note', entityId: note.id, op: 'delete', baseRevision: note.revision },
+			db,
+			{ entity: 'note', entityId: row.id, op: 'delete', baseRevision: row.revision },
 			this.iso()
 		);
 	}
@@ -79,41 +100,41 @@ export class LocalNoteRepository implements NoteRepository {
 	async list(query: NoteQuery = {}): Promise<Note[]> {
 		await this.gate.read();
 		await this.purgeExpired();
-		return queryNotes(await this.d.db.notes.toArray(), query);
+		const rows = await this.d.db.notes.toArray();
+		const notes: Note[] = [];
+		for (const row of rows) notes.push(await this.d.codec.note(row));
+		return queryNotes(notes, query);
 	}
 
 	async get(id: Id): Promise<Note> {
 		await this.gate.read();
-		return this.find(id);
+		return (await this.find(id)).note;
 	}
 
-	async create(draft: NoteDraft = {}): Promise<Note> {
-		await this.gate.write();
-		const { db } = this.d;
-		const now = this.iso();
-		const note: Note = {
-			id: newId(this.d.now().getTime()),
-			folderId: draft.folderId ?? null,
-			title: draft.title ?? '',
-			content: draft.content ?? '',
-			tags: [...new Set((draft.tags ?? []).map(normalizeTag))].filter(Boolean),
-			pinned: draft.pinned ?? false,
-			createdAt: now,
-			updatedAt: now,
-			deletedAt: null,
-			revision: 0,
-			syncStatus: 'pending',
-			lastEditedDeviceId: this.d.deviceId
-		};
-		await db.transaction('rw', db.notes, db.outbox, () => this.save(note));
-		return note;
+	create(draft: NoteDraft = {}): Promise<Note> {
+		return this.write(async () => {
+			const now = this.iso();
+			return this.save({
+				id: newId(this.d.now().getTime()),
+				folderId: draft.folderId ?? null,
+				title: draft.title ?? '',
+				content: draft.content ?? '',
+				tags: [...new Set((draft.tags ?? []).map(normalizeTag))].filter(Boolean),
+				pinned: draft.pinned ?? false,
+				createdAt: now,
+				updatedAt: now,
+				deletedAt: null,
+				revision: 0,
+				syncStatus: 'pending',
+				lastEditedDeviceId: this.d.deviceId
+			});
+		});
 	}
 
-	async update(id: Id, patch: NoteDraft): Promise<Note> {
-		await this.gate.write();
-		const { db } = this.d;
-		return db.transaction('rw', db.notes, db.folders, db.outbox, async () => {
-			const note = await this.find(id);
+	update(id: Id, patch: NoteDraft): Promise<Note> {
+		return this.write(async () => {
+			const { db } = this.d;
+			const { row, note } = await this.find(id);
 			if (note.deletedAt) throw fail.validation({ note: 'in-trash' });
 			const next = { ...note };
 			if (patch.title !== undefined) next.title = patch.title;
@@ -126,19 +147,16 @@ export class LocalNoteRepository implements NoteRepository {
 			if (patch.tags !== undefined)
 				next.tags = [...new Set(patch.tags.map(normalizeTag))].filter(Boolean);
 			if (patch.pinned !== undefined) next.pinned = patch.pinned;
-			const saved = this.touch(next);
-			await this.save(saved);
-			return saved;
+			return this.save(this.touch(next), row.wrappedKey);
 		});
 	}
 
-	async duplicate(id: Id): Promise<Note> {
-		await this.gate.write();
-		const { db } = this.d;
-		return db.transaction('rw', db.notes, db.outbox, async () => {
-			const src = await this.find(id);
+	duplicate(id: Id): Promise<Note> {
+		return this.write(async () => {
+			const { note: src } = await this.find(id);
 			const now = this.iso();
-			const copy: Note = {
+			// La copia es otra nota: sin `wrappedKey`, para que lleve su propia clave.
+			return this.save({
 				...src,
 				tags: [...src.tags],
 				id: newId(this.d.now().getTime()),
@@ -149,54 +167,48 @@ export class LocalNoteRepository implements NoteRepository {
 				revision: 0,
 				syncStatus: 'pending',
 				lastEditedDeviceId: this.d.deviceId
-			};
-			await this.save(copy);
-			return copy;
+			});
 		});
 	}
 
-	async moveToTrash(id: Id): Promise<Note> {
-		await this.gate.write();
-		const { db } = this.d;
-		return db.transaction('rw', db.notes, db.outbox, async () => {
-			const note = await this.find(id);
-			const saved = this.touch({ ...note, deletedAt: this.iso(), pinned: false });
-			await this.save(saved);
-			return saved;
+	moveToTrash(id: Id): Promise<Note> {
+		return this.write(async () => {
+			const { row, note } = await this.find(id);
+			return this.save(
+				this.touch({ ...note, deletedAt: this.iso(), pinned: false }),
+				row.wrappedKey
+			);
 		});
 	}
 
-	async restore(id: Id): Promise<Note> {
-		await this.gate.write();
-		const { db } = this.d;
-		return db.transaction('rw', db.notes, db.outbox, async () => {
-			const note = await this.find(id);
-			const saved = this.touch({ ...note, deletedAt: null });
-			await this.save(saved);
-			return saved;
+	restore(id: Id): Promise<Note> {
+		return this.write(async () => {
+			const { row, note } = await this.find(id);
+			return this.save(this.touch({ ...note, deletedAt: null }), row.wrappedKey);
 		});
 	}
 
-	async deleteForever(id: Id): Promise<void> {
-		await this.gate.write();
-		const { db } = this.d;
-		await db.transaction('rw', db.notes, db.outbox, db.conflicts, async () => {
-			const note = await this.find(id);
-			await this.remove(note);
-			await db.conflicts.delete(id);
+	deleteForever(id: Id): Promise<void> {
+		return this.write(async () => {
+			const { db } = this.d;
+			const row = await this.findRow(id);
+			await db.transaction('rw', db.notes, db.outbox, db.conflicts, () => this.remove(row));
 		});
 	}
 
-	async emptyTrash(): Promise<number> {
-		await this.gate.write();
-		const { db } = this.d;
-		return db.transaction('rw', db.notes, db.outbox, db.conflicts, async () => {
-			const trashed = await db.notes.filter((n) => n.deletedAt !== null).toArray();
-			for (const note of trashed) {
-				await this.remove(note);
-				await db.conflicts.delete(note.id);
-			}
-			return trashed.length;
+	emptyTrash(): Promise<number> {
+		return this.write(async () => {
+			const { db } = this.d;
+			return db.transaction('rw', db.notes, db.outbox, db.conflicts, async () => {
+				const trashed = await db.notes.filter((n) => n.deletedAt !== null).toArray();
+				for (const row of trashed) await this.remove(row);
+				return trashed.length;
+			});
 		});
+	}
+
+	private async write<T>(task: () => Promise<T>): Promise<T> {
+		await this.gate.write();
+		return this.d.lock.run(task);
 	}
 }

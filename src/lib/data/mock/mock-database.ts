@@ -4,6 +4,8 @@ import {
 	type AppSettings,
 	type Conflict,
 	type Device,
+	type EncryptedFolder,
+	type EncryptedNote,
 	type Folder,
 	type KeyBundle,
 	type Note,
@@ -27,6 +29,31 @@ export interface StoredUser {
 	/** Claves cifradas de la cuenta: sin la contraseña o la clave de recuperación no sirven de nada. */
 	keys: KeyBundle;
 }
+
+/** Lo que el servidor de sincronización guarda de una cuenta: solo metadatos y textos cifrados. */
+export interface ServerAccount {
+	notes: EncryptedNote[];
+	folders: EncryptedFolder[];
+	/** Número del último cambio asignado. El cursor del cliente es el último que vio. */
+	seq: number;
+	/** Número del último cambio de cada entidad (`note:ID`, `folder:ID`). */
+	entitySeq: Map<string, number>;
+	/** Borrados definitivos, para avisar a los demás dispositivos. */
+	tombstones: { entity: 'note' | 'folder'; id: string; seq: number; revision: number }[];
+	/** `false` hasta que se cifran los datos de ejemplo (solo la cuenta de ejemplo los tiene). */
+	seeded: boolean;
+	/** Cifrado de los datos de ejemplo en curso (para que dos dispositivos a la vez no lo hagan dos veces). */
+	seeding?: Promise<void>;
+}
+
+const emptyAccount = (seeded: boolean): ServerAccount => ({
+	notes: [],
+	folders: [],
+	seq: 0,
+	entitySeq: new Map(),
+	tombstones: [],
+	seeded
+});
 
 export interface MockDatabaseOptions {
 	scenario?: Scenario;
@@ -71,15 +98,10 @@ export class MockDatabase {
 	pendingEmailChange: { userId: string; email: string } | null = null;
 
 	// ── Estado del "servidor de sincronización" (lo usa MockSyncServer) ──
-	/** Último número de cambio asignado. El cursor del cliente es el último que vio. */
-	serverSeq = 0;
-	/** Número del último cambio de cada entidad (`note:ID`, `folder:ID`). */
-	entitySeq = new Map<string, number>();
-	folderRevisions = new Map<string, number>();
+	/** Datos cifrados de cada cuenta. La cuenta de ejemplo se rellena sola a partir de los datos de ejemplo. */
+	accounts = new Map<string, ServerAccount>();
 	/** Nombres de los dispositivos que han sincronizado (id → nombre). */
 	deviceNames = new Map<string, string>();
-	/** Borrados definitivos, para avisar a los demás dispositivos. */
-	tombstones: { entity: 'note' | 'folder'; id: string; seq: number; revision: number }[] = [];
 
 	constructor(options: MockDatabaseOptions = {}) {
 		this.scenario = options.scenario ?? new Scenario();
@@ -141,29 +163,38 @@ export class MockDatabase {
 		this.failedLogins.clear();
 		this.pendingEmailChange = null;
 		this.lastSyncedAt = iso(2);
-		this.seedSequences();
+		this.normalizeFixtures();
+		this.accounts.clear();
+		this.deviceNames.clear();
 		this.session = this.startAuthenticated
 			? { user: demo, expiresAt: new Date(now.getTime() + 60 * 60000).toISOString() }
 			: null;
 	}
 
-	/** Numera los datos de ejemplo como si el servidor ya los tuviera (primer arranque = descarga completa). */
-	private seedSequences() {
-		this.entitySeq.clear();
-		this.folderRevisions.clear();
-		this.deviceNames.clear();
-		this.tombstones = [];
-		let seq = 0;
-		for (const f of this.folders) {
-			this.entitySeq.set(`folder:${f.id}`, ++seq);
-			this.folderRevisions.set(f.id, 1);
-		}
+	/** Los datos de ejemplo se consideran ya sincronizados con el servidor. */
+	private normalizeFixtures() {
 		for (const n of this.notes) {
 			n.revision = Math.max(1, n.revision);
 			n.syncStatus = 'synced';
-			this.entitySeq.set(`note:${n.id}`, ++seq);
 		}
-		this.serverSeq = seq;
+	}
+
+	/** Datos del servidor de una cuenta. Las cuentas nuevas empiezan vacías. */
+	account(userId: string): ServerAccount {
+		let account = this.accounts.get(userId);
+		if (!account) {
+			account = emptyAccount(userId !== DEMO_USER_ID);
+			this.accounts.set(userId, account);
+		}
+		return account;
+	}
+
+	/** Borra todos los datos de una cuenta (al restablecer la contraseña sin la clave de recuperación). */
+	wipeAccount(userId: string) {
+		this.accounts.set(userId, emptyAccount(true));
+		this.notes = [];
+		this.folders = [];
+		this.shareLinks = [];
 	}
 
 	nextId(prefix: string): string {

@@ -211,9 +211,7 @@ export class MockAuthRepository implements AuthRepository {
 				throw fail.validation({ recoveryKey: 'invalid-recovery-key' });
 		} else {
 			// Empezar de cero: las notas cifradas con la clave anterior ya no se podrían leer.
-			this.db.notes = [];
-			this.db.folders = [];
-			this.db.shareLinks = [];
+			this.db.wipeAccount(stored.user.id);
 			stored.recoveryAuthHash = await hashOf(input.recoveryAuth);
 		}
 		stored.authKeyHash = await hashOf(input.newAuthKey);

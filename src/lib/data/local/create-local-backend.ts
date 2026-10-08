@@ -1,16 +1,21 @@
 import { fail } from '#lib/domain/index.js';
+import type { Vault } from '../crypto/vault.js';
 import { createMockBackend, type MockBackend } from '../mock/create-mock-repositories.js';
 import { MockSyncServer } from '../mock/mock-sync-server.js';
 import { DEMO_DEVICE_ID } from '../mock/fixtures/index.js';
 import type { MockDatabase, MockDatabaseOptions } from '../mock/mock-database.js';
 import { ApunteDb } from './apunte-db.js';
 import type { DataGate } from './gate.js';
+import { Mutex } from './gate.js';
+import { LocalCodec } from './local-codec.js';
 import { LocalFolderRepository } from './local-folder-repository.js';
 import { LocalNoteRepository } from './local-note-repository.js';
 import { LocalSettingsRepository } from './local-settings-repository.js';
 import { LocalSyncRepository } from './local-sync-repository.js';
 
 export interface LocalBackendOptions extends MockDatabaseOptions {
+	/** Cofre de claves de la sesión: cifra y descifra las notas y carpetas. Lanza `locked` si está bloqueado. */
+	vault: () => Vault;
 	/** Prefijo de la base IndexedDB; la de cada cuenta se llama `<prefijo>-<userId>` (distinto por dispositivo en las pruebas). */
 	dbName?: string;
 	/** Abre ya la base de esta cuenta (si no, se abre con `local.open` tras conocer la sesión). */
@@ -44,7 +49,7 @@ export interface LocalBackend extends MockBackend {
  * Backend "offline-first": notas, carpetas y ajustes viven en IndexedDB y se sincronizan con un
  * servidor simulado. Cuenta, dispositivos, enlaces y almacenamiento siguen siendo del simulador.
  */
-export function createLocalBackend(options: LocalBackendOptions = {}): LocalBackend {
+export function createLocalBackend(options: LocalBackendOptions): LocalBackend {
 	const mock = createMockBackend({ ...options, database: options.server });
 	const serverDb = mock.db;
 	const scenario = serverDb.scenario;
@@ -73,10 +78,14 @@ export function createLocalBackend(options: LocalBackendOptions = {}): LocalBack
 		read: () => serverDb.local('read'),
 		write: () => serverDb.local('write')
 	};
+	const codec = new LocalCodec(options.vault);
+	const lock = new Mutex();
 	const deps = {
 		get db() {
 			return openDb();
 		},
+		codec,
+		lock,
 		now: serverDb.now,
 		deviceId: device.id,
 		gate
@@ -88,6 +97,8 @@ export function createLocalBackend(options: LocalBackendOptions = {}): LocalBack
 		get db() {
 			return openDb();
 		},
+		codec,
+		lock,
 		isOpen: () => holder !== null,
 		transport: server,
 		now: serverDb.now,
@@ -99,7 +110,7 @@ export function createLocalBackend(options: LocalBackendOptions = {}): LocalBack
 			if (!scenario.injectConflict) return;
 			scenario.injectConflict = false;
 			const target = (await notes.list()).find((n) => n.revision > 0 && !n.deletedAt);
-			if (!target || !server.simulateRemoteEdit(target.id)) return;
+			if (!target || !(await server.simulateRemoteEdit(target.id))) return;
 			await notes.update(target.id, { content: `${target.content}\n\nEditado aquí sin conexión.` });
 		}
 	});
@@ -139,12 +150,17 @@ export function createLocalBackend(options: LocalBackendOptions = {}): LocalBack
 			close() {
 				holder?.db.close();
 				holder = null;
+				codec.clear();
 			},
-			clear: () => (holder ? holder.db.clearAll() : Promise.resolve()),
+			clear: () => {
+				codec.clear();
+				return holder ? holder.db.clearAll() : Promise.resolve();
+			},
 			async destroy() {
 				if (!holder) return;
 				const { db } = holder;
 				holder = null;
+				codec.clear();
 				await db.delete();
 			}
 		}

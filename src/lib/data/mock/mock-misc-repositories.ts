@@ -186,10 +186,22 @@ export class MockStorageRepository implements StorageRepository {
 
 	async usage(): Promise<StorageUsage> {
 		await this.db.remote();
+		// Con datos cifrados en el servidor, el espacio es el de los textos cifrados; si no, el del texto.
+		const account = this.db.session && this.db.accounts.get(this.db.session.user.id);
 		const encoder = new TextEncoder();
-		const size = (n: Note) => encoder.encode(n.title + n.content).length;
-		const notesBytes = this.db.notes.filter((n) => !n.deletedAt).reduce((t, n) => t + size(n), 0);
-		const trashBytes = this.db.notes.filter((n) => n.deletedAt).reduce((t, n) => t + size(n), 0);
+		const sizes: { deleted: boolean; bytes: number }[] = account?.seeded
+			? account.notes.map((n) => ({
+					deleted: n.deletedAt !== null,
+					bytes: n.payload.length + n.wrappedKey.length
+				}))
+			: this.db.notes.map((n: Note) => ({
+					deleted: n.deletedAt !== null,
+					bytes: encoder.encode(n.title + n.content).length
+				}));
+		const total = (deleted: boolean) =>
+			sizes.filter((s) => s.deleted === deleted).reduce((t, s) => t + s.bytes, 0);
+		const notesBytes = total(false);
+		const trashBytes = total(true);
 		// Aún no se pueden adjuntar imágenes: 0 bytes.
 		const imagesBytes = 0;
 		return {

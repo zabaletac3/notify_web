@@ -9,4 +9,5 @@ export {
 	type MockDatabaseOptions
 } from './mock-database.js';
 export { DEMO_KEYS, DEMO_MASTER_KEY_RAW, DEMO_RECOVERY_KEY } from './fixtures/demo-keys.js';
+export { createDemoVault } from './demo-vault.js';
 export { Scenario, DEV_LATENCY_MS, type Dataset } from './scenario.svelte.js';

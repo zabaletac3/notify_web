@@ -1,29 +1,29 @@
 import type {
-	Folder,
-	FolderFields,
+	EncryptedFolder,
+	EncryptedFolderFields,
+	EncryptedNote,
+	EncryptedNoteFields,
 	Id,
 	IsoDate,
-	Note,
-	NoteFields,
 	SyncEntity
 } from '#lib/domain/index.js';
 import type { ApunteDb, OutboxEntry } from './apunte-db.js';
 
-export const noteFields = (n: Note): NoteFields => ({
+/** Lo que se sube de una nota: sus metadatos y los dos textos cifrados. */
+export const noteFields = (n: EncryptedNote): EncryptedNoteFields => ({
 	folderId: n.folderId,
-	title: n.title,
-	content: n.content,
-	tags: [...n.tags],
-	pinned: n.pinned,
 	createdAt: n.createdAt,
 	updatedAt: n.updatedAt,
-	deletedAt: n.deletedAt
+	deletedAt: n.deletedAt,
+	wrappedKey: n.wrappedKey,
+	payload: n.payload
 });
 
-export const folderFields = (f: Folder): FolderFields => ({
-	name: f.name,
+export const folderFields = (f: EncryptedFolder): EncryptedFolderFields => ({
 	createdAt: f.createdAt,
-	updatedAt: f.updatedAt
+	updatedAt: f.updatedAt,
+	wrappedKey: f.wrappedKey,
+	payload: f.payload
 });
 
 export interface PendingChange {
@@ -31,7 +31,7 @@ export interface PendingChange {
 	entityId: Id;
 	op: 'upsert' | 'delete';
 	baseRevision: number;
-	data?: NoteFields | FolderFields;
+	data?: EncryptedNoteFields | EncryptedFolderFields;
 }
 
 /**

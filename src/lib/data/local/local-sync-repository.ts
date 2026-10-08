@@ -1,21 +1,24 @@
 import {
+	AppFailure,
 	fail,
 	newId,
 	type Conflict,
 	type ConflictResolution,
+	type EncryptedSyncRequest,
+	type EncryptedSyncResponse,
 	type Id,
-	type Note,
-	type SyncRequest,
-	type SyncResponse,
 	type SyncSnapshot
 } from '#lib/domain/index.js';
 import type { SyncRepository, SyncTransport } from '../contracts.js';
-import type { ApunteDb, OutboxEntry } from './apunte-db.js';
-import { noGate, type DataGate } from './gate.js';
+import type { ApunteDb, ConflictRow, NoteRow, OutboxEntry } from './apunte-db.js';
+import { noGate, type DataGate, type Mutex } from './gate.js';
+import type { LocalCodec } from './local-codec.js';
 import { enqueue, noteFields } from './outbox.js';
 
 export interface LocalSyncDeps {
 	db: ApunteDb;
+	codec: LocalCodec;
+	lock: Mutex;
 	transport: SyncTransport;
 	now: () => Date;
 	device: { id: Id; name: string };
@@ -66,26 +69,7 @@ export class LocalSyncRepository implements SyncRepository {
 			db.conflicts.toArray(),
 			db.getMeta<string>('lastSyncedAt')
 		]);
-		const conflicts: Conflict[] = [];
-		for (const row of rows) {
-			const local = await db.notes.get(row.noteId);
-			if (!local) continue;
-			conflicts.push({
-				noteId: row.noteId,
-				local: {
-					title: local.title,
-					content: local.content,
-					editedAt: local.updatedAt,
-					deviceName: this.d.device.name
-				},
-				remote: {
-					title: row.remote.title,
-					content: row.remote.content,
-					editedAt: row.remote.updatedAt,
-					deviceName: row.remoteDeviceName
-				}
-			});
-		}
+		const conflicts = await this.describeConflicts(rows);
 		const link = this.d.connectivity?.() ?? 'online';
 		return {
 			phase: link === 'online' ? 'idle' : link,
@@ -93,6 +77,39 @@ export class LocalSyncRepository implements SyncRepository {
 			pendingCount,
 			conflicts
 		};
+	}
+
+	/** Las dos versiones de cada conflicto, descifradas. Con la app bloqueada no se pueden mostrar. */
+	private async describeConflicts(rows: ConflictRow[]): Promise<Conflict[]> {
+		const { db, codec } = this.d;
+		const conflicts: Conflict[] = [];
+		try {
+			for (const row of rows) {
+				const localRow = await db.notes.get(row.noteId);
+				if (!localRow) continue;
+				const local = await codec.note(localRow);
+				const remote = await codec.note({ ...row.remote, syncStatus: 'synced' });
+				conflicts.push({
+					noteId: row.noteId,
+					local: {
+						title: local.title,
+						content: local.content,
+						editedAt: local.updatedAt,
+						deviceName: this.d.device.name
+					},
+					remote: {
+						title: remote.title,
+						content: remote.content,
+						editedAt: remote.updatedAt,
+						deviceName: row.remoteDeviceName
+					}
+				});
+			}
+		} catch (e) {
+			if (e instanceof AppFailure && e.error.kind === 'locked') return [];
+			throw e;
+		}
+		return conflicts;
 	}
 
 	syncNow(): Promise<SyncSnapshot> {
@@ -109,7 +126,7 @@ export class LocalSyncRepository implements SyncRepository {
 		const sent = (await db.outbox.orderBy('seq').toArray()).filter(
 			(e) => !(e.entity === 'note' && inConflict.has(e.entityId))
 		);
-		const request: SyncRequest = {
+		const request: EncryptedSyncRequest = {
 			deviceId: this.d.device.id,
 			deviceName: this.d.device.name,
 			cursor,
@@ -122,11 +139,11 @@ export class LocalSyncRepository implements SyncRepository {
 			}))
 		};
 		const response = await this.d.transport.sync(request);
-		await this.apply(response, sent);
+		await this.d.lock.run(() => this.apply(response, sent));
 		return this.snapshot();
 	}
 
-	private async apply(response: SyncResponse, sent: OutboxEntry[]) {
+	private async apply(response: EncryptedSyncResponse, sent: OutboxEntry[]) {
 		const { db } = this.d;
 		const sentVersion = new Map(sent.map((e) => [entryKey(e), e.version]));
 		const now = this.iso();
@@ -187,7 +204,7 @@ export class LocalSyncRepository implements SyncRepository {
 				} else {
 					if (pending && !ch.deleted) continue;
 					if (ch.deleted) await db.folders.delete(ch.id);
-					else if (ch.folder) await db.folders.put({ ...ch.folder, revision: ch.revision });
+					else if (ch.folder) await db.folders.put(ch.folder);
 				}
 			}
 
@@ -198,59 +215,69 @@ export class LocalSyncRepository implements SyncRepository {
 
 	async resolveConflict(noteId: Id, resolution: ConflictResolution): Promise<SyncSnapshot> {
 		await this.gate.write();
-		const { db } = this.d;
-		await db.transaction('rw', db.notes, db.outbox, db.conflicts, async () => {
-			const conflict = await db.conflicts.get(noteId);
-			const local = await db.notes.get(noteId);
-			if (!conflict || !local) throw fail.notFound('conflict');
-			const pending = await db.outbox.where('[entity+entityId]').equals(['note', noteId]).first();
-			const now = this.iso();
+		await this.d.lock.run(() => this.resolve(noteId, resolution));
+		return this.snapshot();
+	}
 
+	private async resolve(noteId: Id, resolution: ConflictResolution) {
+		const { db, codec } = this.d;
+		const conflict = await db.conflicts.get(noteId);
+		const local = await db.notes.get(noteId);
+		if (!conflict || !local) throw fail.notFound('conflict');
+		const now = this.iso();
+		const remote: NoteRow = { ...conflict.remote, syncStatus: 'synced' };
+
+		// Para "ambas" hay que descifrar la versión de este dispositivo y cifrar la copia con una clave
+		// nueva; eso es asíncrono y va antes de abrir la transacción.
+		let copy: NoteRow | null = null;
+		if (resolution === 'both') {
+			const mine = await codec.note(local);
+			copy = await codec.encryptNote({
+				...mine,
+				tags: [...mine.tags],
+				id: newId(this.d.now().getTime()),
+				title: `${mine.title} (conflicto)`,
+				pinned: false,
+				createdAt: now,
+				updatedAt: now,
+				revision: 0,
+				syncStatus: 'pending',
+				lastEditedDeviceId: this.d.device.id
+			});
+		}
+
+		await db.transaction('rw', db.notes, db.outbox, db.conflicts, async () => {
+			const pending = await db.outbox.where('[entity+entityId]').equals(['note', noteId]).first();
 			if (resolution === 'remote') {
 				// Se queda la versión del servidor y se descarta lo hecho aquí.
-				await db.notes.put({ ...conflict.remote, syncStatus: 'synced' });
+				await db.notes.put(remote);
+				if (pending) await db.outbox.delete(pending.seq!);
+			} else if (resolution === 'both' && copy) {
+				// La versión del servidor ocupa el lugar de la original; lo de este dispositivo pasa a una copia.
+				await db.notes.put(copy);
+				await enqueue(
+					db,
+					{
+						entity: 'note',
+						entityId: copy.id,
+						op: 'upsert',
+						baseRevision: 0,
+						data: noteFields(copy)
+					},
+					now
+				);
+				await db.notes.put(remote);
 				if (pending) await db.outbox.delete(pending.seq!);
 			} else {
-				if (resolution === 'both') {
-					// La versión del servidor ocupa el lugar de la original; lo de este dispositivo pasa a una copia.
-					const copy: Note = {
-						...local,
-						tags: [...local.tags],
-						id: newId(this.d.now().getTime()),
-						title: `${local.title} (conflicto)`,
-						pinned: false,
-						createdAt: now,
-						updatedAt: now,
-						revision: 0,
-						syncStatus: 'pending',
-						lastEditedDeviceId: this.d.device.id
-					};
-					await db.notes.put(copy);
-					await enqueue(
-						db,
-						{
-							entity: 'note',
-							entityId: copy.id,
-							op: 'upsert',
-							baseRevision: 0,
-							data: noteFields(copy)
-						},
-						now
-					);
-					await db.notes.put({ ...conflict.remote, syncStatus: 'synced' });
-					if (pending) await db.outbox.delete(pending.seq!);
-				} else {
-					// 'local': se conserva lo de este dispositivo, ya sobre la revisión del servidor.
-					await db.notes.put({
-						...local,
-						revision: conflict.remote.revision,
-						syncStatus: 'pending'
-					});
-					if (pending) await db.outbox.put({ ...pending, baseRevision: conflict.remote.revision });
-				}
+				// 'local': se conserva lo de este dispositivo, ya sobre la revisión del servidor.
+				await db.notes.put({
+					...local,
+					revision: conflict.remote.revision,
+					syncStatus: 'pending'
+				});
+				if (pending) await db.outbox.put({ ...pending, baseRevision: conflict.remote.revision });
 			}
 			await db.conflicts.delete(noteId);
 		});
-		return this.snapshot();
 	}
 }

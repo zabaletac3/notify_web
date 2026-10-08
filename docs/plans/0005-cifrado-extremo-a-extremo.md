@@ -733,3 +733,14 @@ _(Quien ejecute: anotar aquí cualquier cambio respecto al plan y por qué.)_
 - **Ajuste `encryptLocal` eliminado** de `AppSettings` y de OpenAPI; en Privacidad queda una fila informativa y la de «Clave de recuperación».
 - **Pendientes de Figma:** `/unlock`, `/recovery-key`, `RecoveryKeyPanel` (usa `font-mono` de Tailwind porque no hay token de fuente monoespaciada), la sección de clave de recuperación en `/reset-password` y las filas nuevas de Privacidad.
 - **Prueba de bloqueo en navegador:** los `$effect` solo corren en las pruebas `*.svelte.spec.ts`; ahí está la de «bloquear vacía la memoria y desbloquear recarga».
+
+**Fase 5**
+
+- **Servidor simulado por cuenta.** En vez de `db.server.notes`, el servidor guarda `db.accounts: Map<userId, ServerAccount>` con notas y carpetas cifradas, números de cambio y lápidas. Solo la cuenta de ejemplo se rellena (cifrando los datos de ejemplo la primera vez que sincroniza, con la clave maestra de ejemplo); las cuentas nuevas empiezan vacías. Se quitaron `serverSeq`, `entitySeq`, `folderRevisions` y `tombstones` de `MockDatabase`.
+- **Revisión de carpetas:** ahora va en la propia carpeta cifrada (`EncryptedFolder.revision`), no en un mapa aparte.
+- **Cola de escrituras (`Mutex`).** El plan no lo preveía: Dexie no admite promesas nativas (cifrado) dentro de una transacción, así que cada operación lee, cifra y escribe dentro de la cola y la transacción solo cubre la escritura. Aplicar lo que llega del servidor y resolver conflictos usan la misma cola.
+- **`createLocalBackend` exige `vault`** (`() => Vault`). `createApp` le pasa `() => vault.current`; las pruebas usan `createDemoVault()`.
+- **`SyncTransport` usa `EncryptedSyncRequest`/`EncryptedSyncResponse`.** Los tipos en claro (`SyncChange`, `NoteFields`…) quedan como base de los cifrados.
+- **Base local versión 2:** al abrir una base de la versión anterior (en claro) se vacían notas, carpetas, cola y conflictos y se borra el cursor, para volver a descargar; los ajustes se conservan.
+- **Almacenamiento:** el uso del servidor se calcula con el tamaño de los textos cifrados cuando la cuenta ya tiene datos cifrados.
+- **Pendiente:** compartir (`MockShareRepository`) sigue comprobando las notas en claro del simulador; se rehace en la fase 6.

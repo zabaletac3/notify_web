@@ -84,10 +84,19 @@ export function createApp(options: AppOptions = {}): App {
 	const now = options.now ?? (() => new Date());
 	const persistence = options.persistence ?? 'memory';
 	const startAuthenticated = options.startAuthenticated ?? true;
+	const vault = new VaultState(
+		new DeviceKeyStore(options.dbName ? `${options.dbName}-keys` : 'apunte-keys')
+	);
 	const backend: MockBackend | LocalBackend =
 		options.backend ??
 		(persistence === 'indexeddb'
-			? createLocalBackend({ now, startAuthenticated, dbName: options.dbName })
+			? createLocalBackend({
+					now,
+					startAuthenticated,
+					dbName: options.dbName,
+					// Las notas se cifran con la clave de la sesión: bloqueada, no se puede leer ni escribir.
+					vault: () => vault.current
+				})
 			: createMockBackend({ now, startAuthenticated }));
 	const local = (backend as Partial<LocalBackend>).local ?? null;
 	if (options.latencyMs !== undefined) backend.scenario.latencyMs = options.latencyMs;
@@ -108,10 +117,6 @@ export function createApp(options: AppOptions = {}): App {
 				void auth.endSession('signed-out-elsewhere').finally(() => (applyingRemote = false));
 			})
 		: null;
-
-	const vault = new VaultState(
-		new DeviceKeyStore(options.dbName ? `${options.dbName}-keys` : 'apunte-keys')
-	);
 
 	const auth = new AuthState(repos.auth, now, {
 		vault,

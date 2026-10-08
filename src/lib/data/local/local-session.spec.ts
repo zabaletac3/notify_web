@@ -1,11 +1,18 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApp, type App } from '#lib/app/index.js';
+import { createDemoVault } from '../mock/demo-vault.js';
 import { createLocalBackend } from './create-local-backend.js';
 
 const NOW = new Date('2026-10-07T12:00:00.000Z');
 let seq = 0;
 const dbName = () => `sess-${++seq}`;
+
+/** Un dispositivo de la cuenta de ejemplo con la app desbloqueada. */
+async function localBackend(name = dbName()) {
+	const vault = await createDemoVault();
+	return createLocalBackend({ dbName: name, now: () => NOW, vault: () => vault });
+}
 
 async function dbNames() {
 	return (await indexedDB.databases()).map((d) => d.name);
@@ -13,7 +20,7 @@ async function dbNames() {
 
 describe('base local por cuenta', () => {
 	it('sin sesión no hay base: leer o escribir falla como sesión vencida', async () => {
-		const b = createLocalBackend({ dbName: dbName(), now: () => NOW });
+		const b = await localBackend();
 		await expect(b.repos.notes.list()).rejects.toMatchObject({
 			error: { kind: 'session-expired' }
 		});
@@ -25,7 +32,7 @@ describe('base local por cuenta', () => {
 	});
 
 	it('otra cuenta no ve las notas de la anterior ni sube sus cambios pendientes', async () => {
-		const b = createLocalBackend({ dbName: dbName(), now: () => NOW });
+		const b = await localBackend();
 		await b.local.open('u_a');
 		await b.repos.sync.syncNow();
 		await b.repos.notes.create({ title: 'Secreta de A', content: 'solo A' });
@@ -45,17 +52,17 @@ describe('base local por cuenta', () => {
 
 	it('una base que pertenece a otra cuenta se borra y se recrea', async () => {
 		const name = dbName();
-		const first = createLocalBackend({ dbName: name, now: () => NOW });
+		const first = await localBackend(name);
 		await first.local.open('u_a');
 		await first.repos.notes.create({ title: 'De A' });
 		// Se simula una base corrupta: la de B contiene datos marcados como de A.
-		const evil = createLocalBackend({ dbName: name, now: () => NOW });
+		const evil = await localBackend(name);
 		await evil.local.open('u_b');
 		await evil.local.db.setMeta('userId', 'u_a');
 		await evil.repos.notes.create({ title: 'Ajena' });
 		evil.local.close();
 
-		const again = createLocalBackend({ dbName: name, now: () => NOW });
+		const again = await localBackend(name);
 		await again.local.open('u_b');
 		expect(await again.repos.notes.list()).toHaveLength(0);
 		expect(await again.local.db.getMeta('userId')).toBe('u_b');
@@ -63,7 +70,7 @@ describe('base local por cuenta', () => {
 
 	it('destroy borra la base por completo y deja el repositorio sin sesión', async () => {
 		const name = dbName();
-		const b = createLocalBackend({ dbName: name, now: () => NOW });
+		const b = await localBackend(name);
 		await b.local.open('u_a');
 		await b.repos.notes.create({ title: 'x' });
 		expect(await dbNames()).toContain(`${name}-u_a`);
