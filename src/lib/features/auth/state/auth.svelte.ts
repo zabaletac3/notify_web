@@ -337,9 +337,13 @@ export class AuthState {
 		});
 	}
 
-	async deleteAccount(): Promise<ActionResult> {
-		return this.act({ valid: true }, async () => {
-			await this.repo.deleteAccount();
+	async deleteAccount(password: string): Promise<ActionResult> {
+		const validation: Validation = password
+			? { valid: true }
+			: { valid: false, errors: { password: 'required' } };
+		return this.act(validation, async () => {
+			const authKey = await deriveAuthKey(password, (await this.bundle()).kdf);
+			await this.repo.deleteAccount(authKey);
 			this.forgetSession();
 			this.notice = null;
 			await this.vault.signOut();
