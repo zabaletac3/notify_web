@@ -18,13 +18,13 @@
 
 {#if viewport.split.current}
 	<Dialog.Root {open} {onOpenChange}>
-		<Dialog.Content class={cn('gap-4 p-7', width)} showCloseButton={false}>
+		<Dialog.Content class={cn('gap-4 p-7 *:min-w-0', width)} showCloseButton={false}>
 			{@render children()}
 		</Dialog.Content>
 	</Dialog.Root>
 {:else}
 	<Sheet.Root {open} {onOpenChange}>
-		<Sheet.Content side="bottom" showCloseButton={false} class="gap-4 px-5 pt-3 pb-9">
+		<Sheet.Content side="bottom" showCloseButton={false} class="gap-4 px-5 pt-3 pb-9 *:min-w-0">
 			<span class="mx-auto h-1 w-9 rounded-full bg-border" aria-hidden="true"></span>
 			{@render children()}
 		</Sheet.Content>

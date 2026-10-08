@@ -229,13 +229,15 @@
 		El enlace incluye la clave para leer la nota. Quien lo tenga podrá leerla; solo se guarda
 		cifrada.
 	</p>
-	<div class="flex items-center gap-2">
+	<div class="flex min-w-0 items-center gap-2">
+		<!-- La URL es larga (lleva la clave): se recorta en vez de ensanchar el diálogo. -->
 		<output
-			class="flex h-12 flex-1 items-center truncate rounded-lg bg-input-fill px-3.5 text-sm text-muted-foreground"
+			class="block h-12 min-w-0 flex-1 truncate rounded-lg bg-input-fill px-3.5 text-sm leading-12 text-muted-foreground"
+			title={link?.url}
 		>
 			{link?.url ?? 'Activa el enlace para compartir'}
 		</output>
-		<Button onclick={copyLink} disabled={!link}>Copiar</Button>
+		<Button class="shrink-0" onclick={copyLink} disabled={!link}>Copiar</Button>
 	</div>
 	<div class="divide-y divide-border overflow-hidden rounded-[14px] border bg-card">
 		<div class="flex items-center gap-3 px-4 py-3.5">
