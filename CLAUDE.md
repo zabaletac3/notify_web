@@ -35,3 +35,7 @@ Ver `docs/data-and-state.md`. La UI obtiene todo con `getApp()` (`#lib/app/index
 ## API del backend
 
 Borrador del contrato HTTP en `docs/api/openapi.yaml` (`pnpm api:lint` lo valida) y decisiones abiertas en `docs/api/decisions.md`. Si cambias un contrato de `src/lib/data/contracts.ts`, actualiza la especificación.
+
+## Cifrado
+
+Las notas, carpetas y enlaces se cifran en el cliente (ADR 0005, `core/crypto` y `data/crypto`); el servidor solo ve metadatos y textos cifrados. Nunca registrar contraseñas, claves ni textos descifrados; todo dato nuevo con texto de la persona debe cifrarse. El modo `memory` (pruebas) no cifra.

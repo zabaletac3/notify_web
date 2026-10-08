@@ -6,13 +6,17 @@ Estas decisiones condicionan el servidor; cada una trae mi recomendación. Marca
 ## Las que bloquean el diseño de la API
 
 - [x] **D1 · Identificadores generados por el cliente. (Decidido: UUID v7, `newId()`)** Para crear notas y carpetas sin conexión el cliente necesita su propio `id`.
-      _Recomendación:_ UUID v7 (ordenable por fecha). El servidor los acepta en `PUT /notes/{id}` y `PUT /folders/{id}` (idempotentes) y rechaza duplicados de otra cuenta. Hoy el simulador los genera en el "servidor"; hay que cambiarlo.
-- [ ] **D2 · Sesión y tokens.** Token de acceso corto + token de renovación con rotación, o sesión por cookie.
+      _Recomendación:_ UUID v7 (ordenable por fecha). El servidor los acepta dentro de `POST /sync` (idempotente: repetir un `upsert` no duplica) y rechaza ids que ya pertenezcan a otra cuenta. Con cifrado de extremo a extremo (D13) el `userId` del registro también lo elige el cliente.
+- [ ] **D2 · Sesión y tokens.** (_Ajustes por D13:_ el servidor guarda solo un hash de `authKey`, nunca la contraseña; cerrar sesión desde el cliente puede no llegar al servidor si no hay red, así que la revocación se hace al caducar el token o desde la lista de dispositivos; un dispositivo eliminado recibe `401` con `kind: device-revoked` y borra su copia local.) Token de acceso corto + token de renovación con rotación, o sesión por cookie.
       _Recomendación:_ acceso JWT de 15 min + renovación opaca con rotación y lista de dispositivos (`/devices` ya la espera). Cookie `HttpOnly` para la web, cabecera `Authorization` para escritorio y móvil.
 - [x] **D3 · Protocolo de sincronización. (Decidido: ver ADR 0004; implementado en `data/local` y `MockSyncServer`)** El contrato `POST /sync` es un borrador. Se fija tras la capa local (paso 2): cola de cambios, cursor, resolución de conflictos y borrados (lápidas).
       _Recomendación:_ revisión por nota (`revision`, ya existe), cursor por cuenta, el servidor nunca pisa: ante `baseRevision` distinto devuelve `409` con la versión remota y el cliente decide (`local`, `remote`, `both`).
 - [ ] **D4 · Modelo en MongoDB y multiempresa.** Tu plantilla (`multitenant-template`) es multiempresa; Apunte es de un solo usuario por cuenta.
-      _Recomendación:_ quitar el tenant: colecciones `users`, `notes`, `folders`, `devices`, `share_links`, `refresh_tokens`, `verification_codes`. Índices: `notes(userId, updatedAt)`, `notes(userId, deletedAt)`, `folders(userId, nameFolded)` único, `share_links(slug)` único.
+      _Recomendación:_ quitar el tenant: colecciones `users` (con `authKeyHash`, `recoveryAuthHash` y `keys: KeyBundle`), `notes` y `folders` (solo metadatos y textos cifrados), `tombstones`, `devices`, `share_links`, `refresh_tokens`, `verification_codes`. Índices: `notes(userId, seq)` (cursor de `/sync`), `notes(userId, deletedAt)` (purga a 30 días), `share_links(slug)` único y `share_links(noteId)` único. **Sin** índice por nombre de carpeta ni por título: el servidor no puede leerlos (la unicidad de nombres de carpeta la comprueba el cliente).
+
+- [x] **D13 · Cifrado de extremo a extremo. (Decidido: ver ADR 0005; implementado en el cliente y en el servidor simulado)** El servidor nunca recibe la contraseña ni el texto de las notas.
+      _Qué cambia en el servidor:_ guarda un hash de la prueba de la contraseña (`authKey`), los parámetros de derivación (`KdfParams`), las claves cifradas de la cuenta (`KeyBundle`) y, de cada nota y carpeta, metadatos más dos textos cifrados (`wrappedKey`, `payload`). Responde a `prelogin` aunque el correo no exista. La escritura de notas y carpetas va solo por `POST /sync`. Los conflictos se resuelven en el cliente. Compartir guarda una copia cifrada con clave propia; la clave va en el fragmento de la URL.
+      _Qué asume el producto:_ si se pierden la contraseña **y** la clave de recuperación, las notas no se pueden recuperar; restablecer sin la clave de recuperación borra las notas (a propósito).
 
 ## Las que se pueden decidir durante la construcción
 
@@ -21,11 +25,11 @@ Estas decisiones condicionan el servidor; cada una trae mi recomendación. Marca
 - [ ] **D7 · Limpieza de la papelera.** Tarea programada diaria que borra lo que lleva 30 días (`TRASH_RETENTION_DAYS`) y las cuentas eliminadas tras 30 días.
 - [ ] **D8 · Acceso con Google.** El botón existe sin flujo. Definir OAuth y cómo se vincula con cuentas de correo.
 - [ ] **D9 · Límites de uso.** Intentos de login (hoy 5 y bloqueo), reenvío de código (60 s), tamaño máximo de nota, notas por cuenta, cuota de 1 GB.
-- [ ] **D10 · Enlaces públicos.** Formato del `slug` (aleatorio, no secuencial), si el enlace caduca y si la página pública es del backend o de la web.
-- [ ] **D11 · Búsqueda.** Hoy es local (MiniSearch). El servidor no necesita buscar mientras el cliente tenga todas las notas.
+- [ ] **D10 · Enlaces públicos.** _Decidido por D13:_ el `slug` lo genera el cliente (16 bytes aleatorios, 22 caracteres), la copia va cifrada y la clave va en el fragmento de la URL. _Falta decidir:_ si el enlace caduca, y si la página pública es de la web (hoy, `/n/[slug]`) o del backend.
+- [x] **D11 · Búsqueda. (Decidido: solo en el cliente)** Con cifrado de extremo a extremo el servidor no puede buscar; MiniSearch indexa en el cliente todas las notas descifradas. Es obligatorio que cada dispositivo descargue todo.
 - [ ] **D12 · Verificación en dos pasos.** El ajuste existe como booleano; faltan los endpoints de alta (TOTP) y recuperación.
 
 ## Fuera del contrato (solo cliente)
 
 - Exportar e importar notas en Markdown se hace en el navegador.
-- Cifrado local (`encryptLocal`) y bloqueo biométrico dependen del cliente.
+- El bloqueo biométrico depende del cliente. El cifrado de las notas ya no es un ajuste: es siempre obligatorio (D13).

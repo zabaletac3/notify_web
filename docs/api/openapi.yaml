@@ -7,14 +7,46 @@ info:
     Derivado de los contratos de repositorio de la web (`src/lib/data/contracts.ts`) y de los tipos de
     `src/lib/domain`. Cada operación indica a qué método del contrato corresponde (`x-contract`).
 
-    **Estado:** borrador. Lo marcado `x-status: draft` depende de decisiones abiertas
-    (ver `docs/api/decisions.md`): sesiones y renovación de token, identificadores generados por el
-    cliente, protocolo de sincronización.
+    **Estado:** borrador, ya con el diseño de seguridad cerrado (ADR 0005). Lo marcado `x-status: draft`
+    depende de decisiones abiertas (ver `docs/api/decisions.md`): sesiones y renovación de token.
 
     Convenciones:
     - JSON en UTF-8. Fechas en ISO 8601 UTC.
     - Los errores usan el esquema `Error` (mismo `kind` que `AppError` del cliente).
     - Escrituras sobre notas: concurrencia optimista con `baseRevision`.
+
+    ## Cifrado de extremo a extremo
+
+    **El servidor nunca recibe la contraseña ni el texto de las notas.** Todo se cifra en el cliente
+    (AES-256-GCM; ver `docs/adr/0005-cifrado-extremo-a-extremo.md`):
+
+    - La contraseña se convierte en el cliente (Argon2id + HKDF) en una prueba, `authKey`, y en una clave
+      que no sale del cliente. El servidor guarda **solo un hash de `authKey`** (Argon2id) y los parámetros
+      de derivación (`KdfParams`), con los que `POST /auth/prelogin` responde.
+    - Cada cuenta tiene una clave maestra que el servidor guarda **cifrada dos veces**: con la contraseña
+      y con una clave de recuperación (`KeyBundle`). Sin la contraseña o la clave de recuperación no sirve.
+    - Cada nota y carpeta tiene su propia clave (`wrappedKey`, cifrada con la maestra) y un contenido
+      cifrado (`payload`). Los textos cifrados (`Sealed`) tienen la forma `a1.<iv>.<ct>` (base64url).
+    - El servidor ve solo metadatos: `id`, `folderId`, fechas, papelera (`deletedAt`), `revision`, y los
+      tamaños aproximados (el contenido se rellena a múltiplos de 256 bytes).
+    - **Todo lo que escribe el servidor sobre notas y carpetas pasa por `POST /sync`.** Las operaciones de
+      la interfaz (editar, mover a la papelera, restaurar, duplicar, borrar, vaciar la papelera) son locales;
+      al servidor llegan como cambios `upsert`/`delete`. Por eso no hay endpoints REST de escritura de notas.
+    - Los enlaces públicos llevan la clave en el fragmento de la URL (`#k=…`), que el navegador no envía.
+
+    ### Notas para quien implemente el servidor
+
+    - Valida la forma de `Sealed` (`^a1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]+$`) en todo campo cifrado; no
+      intentes descifrar nada.
+    - `POST /auth/prelogin` debe responder **siempre** (parámetros falsos y estables para correos que no
+      existen, derivados de un secreto del servidor) y con límite de intentos.
+    - Limita intentos en `login`, `prelogin`, restablecimiento y cambio de contraseña; tras 5 fallos, `429`.
+    - Al cambiar la contraseña o restablecerla, cierra las demás sesiones. Si un dispositivo se elimina,
+      sus siguientes peticiones deben recibir `401` con `kind: device-revoked`.
+    - Respuestas de `/public/notes/{slug}`: `Cache-Control: no-store` y `Referrer-Policy: no-referrer`.
+    - Sube `keysVersion` en cada cambio de contraseña o de clave de recuperación (lo fija el servidor).
+    - Restablecer sin la clave de recuperación (`mode: wipe`) borra todas las notas, carpetas, enlaces y
+      lápidas de la cuenta y deja las claves nuevas.
 servers:
   - url: https://api.apunte.app/v1
     description: Producción (provisional)
@@ -25,26 +57,62 @@ security:
 tags:
   - { name: auth, description: 'Cuenta, sesión y recuperación de contraseña' }
   - { name: account, description: Perfil y credenciales de la cuenta actual }
-  - { name: notes, description: Notas y papelera }
-  - { name: folders, description: Carpetas }
-  - { name: sync, description: Sincronización y conflictos }
-  - { name: share, description: Enlaces públicos de solo lectura }
+  - { name: keys, description: Claves cifradas de la cuenta y clave de recuperación }
+  - { name: notes, description: Lectura de notas cifradas }
+  - { name: folders, description: Lectura de carpetas cifradas }
+  - { name: sync, description: Sincronización (única vía de escritura de notas y carpetas) }
+  - { name: share, description: 'Enlaces públicos de solo lectura, cifrados de extremo a extremo' }
   - { name: devices, description: Dispositivos y sesiones activas }
   - { name: settings, description: Preferencias }
   - { name: storage, description: Cuota y uso }
 paths:
+  /auth/prelogin:
+    post:
+      operationId: postAuthPrelogin
+      tags: [auth]
+      summary: Parámetros de derivación de la contraseña de una cuenta
+      description: |
+        El cliente los necesita para derivar `authKey` antes de iniciar sesión. Para un correo que no
+        existe responde con parámetros falsos y estables (misma forma, misma sal cada vez), de modo que
+        no se pueda saber qué cuentas existen.
+      x-contract: AuthRepository.prelogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Parámetros de Argon2id y sal
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [kdf]
+                properties:
+                  kdf: { $ref: '#/components/schemas/KdfParams' }
+        '429': { $ref: '#/components/responses/RateLimited' }
   /auth/register:
     post:
       operationId: postAuthRegister
       tags: [auth]
       summary: Crea la cuenta (sin verificar) y envía el código al correo
+      description: |
+        La contraseña no viaja. El cliente genera el `userId` (UUID v7), deriva `authKey` y
+        `recoveryAuth`, y envía las claves ya cifradas (`keys`). El servidor guarda hashes de las dos
+        pruebas y el paquete de claves tal cual.
       x-contract: AuthRepository.register
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/RegisterInput' }
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
       responses:
         '201':
           description: Cuenta creada; falta verificar el correo
@@ -105,8 +173,10 @@ paths:
     post:
       operationId: postAuthLogin
       tags: [auth]
-      summary: Inicia sesión
+      summary: Inicia sesión con la prueba de la contraseña
       description: |
+        Se envía `authKey` (derivada de la contraseña con los parámetros de `prelogin`), nunca la
+        contraseña. La respuesta incluye las claves cifradas de la cuenta (`keys`).
         Mismo error (`unauthorized`) para correo inexistente y contraseña incorrecta.
         `403 forbidden/email-not-verified` si falta verificar el correo.
         Bloqueo temporal tras 5 intentos fallidos (`429`).
@@ -119,10 +189,10 @@ paths:
             schema: { $ref: '#/components/schemas/LoginInput' }
       responses:
         '200':
-          description: Sesión iniciada
+          description: Sesión iniciada, con las claves cifradas de la cuenta
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Session' }
+              schema: { $ref: '#/components/schemas/LoginResult' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '429': { $ref: '#/components/responses/RateLimited' }
@@ -191,12 +261,15 @@ paths:
       responses:
         '202': { description: 'Si la cuenta existe, se envió el enlace' }
         '429': { $ref: '#/components/responses/RateLimited' }
-  /auth/password/reset:
+  /auth/password/reset/bundle:
     post:
-      operationId: postAuthPasswordReset
+      operationId: postAuthPasswordResetBundle
       tags: [auth]
-      summary: Crea una contraseña nueva con el token del enlace
-      x-contract: AuthRepository.resetPassword
+      summary: Con el token del correo, lo necesario para restablecer conservando las notas
+      description: |
+        Devuelve la clave maestra cifrada con la clave de recuperación y los parámetros de derivación.
+        El token va en el cuerpo (no en la URL) para que no quede en registros de acceso.
+      x-contract: AuthRepository.passwordResetBundle
       security: []
       requestBody:
         required: true
@@ -204,13 +277,38 @@ paths:
           application/json:
             schema:
               type: object
-              required: [token, newPassword]
+              required: [token]
               properties:
                 token: { type: string }
-                newPassword: { type: string, minLength: 8, maxLength: 128 }
+      responses:
+        '200':
+          description: Paquete para restablecer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PasswordResetBundle' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /auth/password/reset:
+    post:
+      operationId: postAuthPasswordReset
+      tags: [auth]
+      summary: Crea una contraseña nueva con el token del enlace
+      description: |
+        `mode: keep` conserva las notas: exige `recoveryAuth` (prueba de la clave de recuperación vigente;
+        si no coincide, `422` con `recoveryKey: invalid-recovery-key`) y deja la misma clave maestra
+        cifrada con la contraseña nueva. `mode: wipe` empieza de cero: borra todas las notas, carpetas,
+        enlaces y lápidas de la cuenta y guarda las claves nuevas. En ambos casos se cierran las demás sesiones.
+      x-contract: AuthRepository.resetPassword
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasswordResetRequest' }
       responses:
         '204': { description: Contraseña actualizada }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
   /me:
     get:
       operationId: getMe
@@ -255,7 +353,7 @@ paths:
     post:
       operationId: postMeEmailChange
       tags: [account]
-      summary: Pide cambiar el correo (exige la contraseña actual)
+      summary: Pide cambiar el correo (exige la prueba de la contraseña actual)
       description: Envía un código al correo nuevo. El cambio no se aplica hasta confirmarlo.
       x-contract: AuthRepository.requestEmailChange
       requestBody:
@@ -264,10 +362,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [newEmail, password]
+              required: [newEmail, authKey]
               properties:
                 newEmail: { type: string, format: email }
-                password: { type: string }
+                authKey:
+                  { type: string, description: Prueba de la contraseña actual (no la contraseña) }
       responses:
         '202':
           description: Código enviado al correo nuevo
@@ -308,44 +407,65 @@ paths:
     post:
       operationId: postMePassword
       tags: [account]
-      summary: Cambia la contraseña (exige la actual)
+      summary: Cambia la contraseña (exige la prueba de la actual)
+      description: |
+        La clave maestra no cambia: solo se cifra con la clave derivada de la contraseña nueva, así que
+        las notas no se vuelven a cifrar. Cierra las demás sesiones.
       x-contract: AuthRepository.changePassword
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [currentPassword, newPassword]
-              properties:
-                currentPassword: { type: string }
-                newPassword: { type: string, minLength: 8, maxLength: 128 }
+            schema: { $ref: '#/components/schemas/PasswordChangeRequest' }
       responses:
         '204': { description: Contraseña actualizada }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /keys:
+    get:
+      operationId: getKeys
+      tags: [keys]
+      summary: Claves cifradas de la cuenta
+      description: Para desbloquear la app sin volver a iniciar sesión (el paquete no sirve sin la contraseña).
+      x-contract: AuthRepository.keys
+      responses:
+        '200':
+          description: Paquete de claves
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KeyBundle' }
+  /keys/recovery:
+    put:
+      operationId: putKeysRecovery
+      tags: [keys]
+      summary: Cambia la clave de recuperación (la anterior deja de servir)
+      description: Exige la prueba de la contraseña (`authKey`). Sube `keysVersion`.
+      x-contract: AuthRepository.rotateRecoveryKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecoveryKeyRotation' }
+      responses:
+        '204': { description: Clave de recuperación actualizada }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
   /notes:
     get:
       operationId: getNotes
       tags: [notes]
-      summary: Lista notas
+      summary: Lista las notas cifradas
       description: |
-        Sin `filter`, devuelve las activas. La papelera solo sale con `filter=trash`.
-        Paginación por cursor; `updatedSince` permite bajar solo lo cambiado.
-      x-contract: NoteRepository.list
+        Devuelve las filas tal como las guarda el servidor (metadatos y textos cifrados). El filtrado,
+        el orden y la búsqueda se hacen en el cliente, que es el único que puede leer el contenido.
+        La escritura va solo por `POST /sync`. Paginación por cursor; `updatedSince` baja solo lo cambiado.
+      x-status: optional
+      x-contract: ninguno (el cliente descarga todo con POST /sync)
       parameters:
-        - name: filter
+        - name: trashed
           in: query
-          schema: { type: string, enum: [all, pinned, trash] }
-        - name: folderId
-          in: query
-          description: Notas de una carpeta (`none` = sin carpeta)
-          schema: { type: string }
-        - name: tag
-          in: query
-          schema: { type: string }
-        - name: sort
-          in: query
-          schema: { type: string, enum: [updated, created, title], default: updated }
+          description: '`true` solo la papelera, `false` solo las activas; sin valor, todas'
+          schema: { type: boolean }
         - name: updatedSince
           in: query
           schema: { type: string, format: date-time }
@@ -353,7 +473,7 @@ paths:
         - { $ref: '#/components/parameters/Limit' }
       responses:
         '200':
-          description: Página de notas
+          description: Página de notas cifradas
           content:
             application/json:
               schema:
@@ -362,7 +482,7 @@ paths:
                 properties:
                   items:
                     type: array
-                    items: { $ref: '#/components/schemas/Note' }
+                    items: { $ref: '#/components/schemas/EncryptedNote' }
                   nextCursor: { type: [string, 'null'] }
   /notes/{noteId}:
     parameters:
@@ -370,159 +490,32 @@ paths:
     get:
       operationId: getNotesNoteId
       tags: [notes]
-      summary: Obtiene una nota
-      x-contract: NoteRepository.get
+      summary: Obtiene una nota cifrada
+      x-status: optional
+      x-contract: ninguno (el cliente descarga todo con POST /sync)
       responses:
         '200':
-          description: Nota
+          description: Nota cifrada
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Note' }
+              schema: { $ref: '#/components/schemas/EncryptedNote' }
         '404': { $ref: '#/components/responses/NotFound' }
-    put:
-      operationId: putNotesNoteId
-      tags: [notes]
-      summary: Crea o edita una nota (idempotente)
-      description: |
-        El cliente genera el `noteId` (permite crear sin conexión). Si la nota existe, `baseRevision`
-        debe coincidir con la revisión del servidor; si no, `409 conflict` con la versión remota.
-      x-status: draft
-      x-contract: NoteRepository.create / NoteRepository.update
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/NoteWrite' }
-      responses:
-        '200':
-          description: Nota guardada
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Note' }
-        '201':
-          description: Nota creada
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Note' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-    delete:
-      operationId: deleteNotesNoteId
-      tags: [notes]
-      summary: Elimina definitivamente una nota de la papelera
-      x-contract: NoteRepository.deleteForever
-      responses:
-        '204': { description: Eliminada }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /notes/{noteId}/duplicate:
-    post:
-      operationId: postNotesNoteIdDuplicate
-      tags: [notes]
-      summary: Duplica una nota
-      x-contract: NoteRepository.duplicate
-      parameters:
-        - { $ref: '#/components/parameters/NoteId' }
-      responses:
-        '201':
-          description: Copia creada
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Note' }
-  /notes/{noteId}/trash:
-    post:
-      operationId: postNotesNoteIdTrash
-      tags: [notes]
-      summary: Mueve una nota a la papelera
-      x-contract: NoteRepository.moveToTrash
-      parameters:
-        - { $ref: '#/components/parameters/NoteId' }
-      responses:
-        '200':
-          description: Nota en la papelera
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Note' }
-  /notes/{noteId}/restore:
-    post:
-      operationId: postNotesNoteIdRestore
-      tags: [notes]
-      summary: Restaura una nota de la papelera
-      x-contract: NoteRepository.restore
-      parameters:
-        - { $ref: '#/components/parameters/NoteId' }
-      responses:
-        '200':
-          description: Nota restaurada
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Note' }
-  /trash:
-    delete:
-      operationId: deleteTrash
-      tags: [notes]
-      summary: Vacía la papelera
-      x-contract: NoteRepository.emptyTrash
-      responses:
-        '200':
-          description: Cuántas notas se eliminaron
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [removed]
-                properties:
-                  removed: { type: integer, minimum: 0 }
   /folders:
     get:
       operationId: getFolders
       tags: [folders]
-      summary: Lista carpetas
-      x-contract: FolderRepository.list
+      summary: Lista las carpetas cifradas
+      description: El nombre va cifrado. La escritura va solo por `POST /sync`.
+      x-status: optional
+      x-contract: ninguno (el cliente descarga todo con POST /sync)
       responses:
         '200':
-          description: Carpetas
+          description: Carpetas cifradas
           content:
             application/json:
               schema:
                 type: array
-                items: { $ref: '#/components/schemas/Folder' }
-  /folders/{folderId}:
-    parameters:
-      - name: folderId
-        in: path
-        required: true
-        schema: { type: string }
-    put:
-      operationId: putFoldersFolderId
-      tags: [folders]
-      summary: Crea o renombra una carpeta (idempotente, id del cliente)
-      description: Nombre de 1 a 30 caracteres, único sin distinguir mayúsculas ni tildes.
-      x-status: draft
-      x-contract: FolderRepository.create / FolderRepository.rename
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name]
-              properties:
-                name: { type: string, minLength: 1, maxLength: 30 }
-      responses:
-        '200':
-          description: Carpeta guardada
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Folder' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-    delete:
-      operationId: deleteFoldersFolderId
-      tags: [folders]
-      summary: Elimina la carpeta (sus notas pasan a "sin carpeta")
-      x-contract: FolderRepository.delete
-      responses:
-        '204': { description: Eliminada }
-        '404': { $ref: '#/components/responses/NotFound' }
+                items: { $ref: '#/components/schemas/EncryptedFolder' }
   /sync:
     post:
       operationId: postSync
@@ -532,7 +525,10 @@ paths:
         El cliente envía su cola de cambios y el último `cursor`; el servidor responde con lo aplicado,
         los cambios remotos desde ese cursor y los conflictos. Ver `docs/adr/0004-sincronizacion.md`.
         Un `baseRevision` distinto en una nota es conflicto (no se aplica, no es un error HTTP);
-        las carpetas son «gana el último».
+        las carpetas son «gana el último». **Los conflictos se resuelven en el cliente**, que es el único
+        que puede leer ambas versiones: elige `local`, `remote` o `both` y vuelve a subir lo que decida.
+        El servidor valida que `payload` y `wrappedKey` tengan la forma de un texto cifrado
+        (`422` con `payload: invalid-payload`) y nada más; nunca descifra.
       x-contract: SyncRepository.syncNow
       requestBody:
         required: true
@@ -545,29 +541,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SyncResponse' }
-  /sync/conflicts/{noteId}/resolve:
-    post:
-      operationId: postSyncConflictsNoteIdResolve
-      tags: [sync]
-      summary: Resuelve un conflicto de edición
-      x-contract: SyncRepository.resolveConflict
-      parameters:
-        - { $ref: '#/components/parameters/NoteId' }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [resolution]
-              properties:
-                resolution: { $ref: '#/components/schemas/ConflictResolution' }
-      responses:
-        '200':
-          description: Estado de sincronización tras resolver
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/SyncSnapshot' }
   /notes/{noteId}/share:
     parameters:
       - { $ref: '#/components/parameters/NoteId' }
@@ -575,6 +548,7 @@ paths:
       operationId: getNotesNoteIdShare
       tags: [share]
       summary: Enlace público actual (si existe)
+      description: Incluye la clave del enlace cifrada con la clave maestra, para reconstruir la URL en otro dispositivo.
       x-contract: ShareRepository.getLink
       responses:
         '200':
@@ -583,51 +557,88 @@ paths:
             application/json:
               schema:
                 oneOf:
-                  - { $ref: '#/components/schemas/ShareLink' }
+                  - { $ref: '#/components/schemas/SharedNote' }
                   - { type: 'null' }
     put:
       operationId: putNotesNoteIdShare
       tags: [share]
       summary: Crea el enlace público de solo lectura (o devuelve el existente)
+      description: |
+        El cliente cifra una copia de la nota (título y texto) con una clave propia del enlace y elige el
+        `slug`. La clave del enlace va en el fragmento de la URL (`#k=…`) y nunca llega al servidor.
+        Si la nota ya tiene enlace se devuelve el existente y se ignora lo enviado. La nota debe estar en
+        el servidor (sincronizada) y no estar en la papelera (`404` si no). `422` si el `slug` está mal
+        formado o repetido, o los textos no tienen forma de texto cifrado.
       x-contract: ShareRepository.createLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ShareInput' }
       responses:
         '200':
           description: Enlace
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/ShareLink' }
+              schema: { $ref: '#/components/schemas/SharedNote' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       operationId: deleteNotesNoteIdShare
       tags: [share]
       summary: Revoca el enlace
+      description: Borra el enlace y su copia cifrada. Volver a compartir crea clave y `slug` nuevos.
       x-contract: ShareRepository.revokeLink
       responses:
         '204': { description: Revocado }
+  /notes/{noteId}/share/payload:
+    parameters:
+      - { $ref: '#/components/parameters/NoteId' }
+    put:
+      operationId: putNotesNoteIdSharePayload
+      tags: [share]
+      summary: Actualiza la copia cifrada del enlace (al editar la nota)
+      x-contract: ShareRepository.updateLinkPayload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payload]
+              properties:
+                payload: { $ref: '#/components/schemas/Sealed' }
+      responses:
+        '204': { description: Copia actualizada }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /public/notes/{slug}:
     get:
       operationId: getPublicNotesSlug
       tags: [share]
-      summary: Vista pública de una nota compartida
-      description: Sin sesión. Solo lectura. Devuelve `404` si el enlace fue revocado.
-      x-status: draft
+      summary: Copia cifrada de una nota compartida
+      description: |
+        Sin sesión. Solo lectura. El servidor devuelve texto cifrado; quien abre el enlace lo descifra
+        con la clave del fragmento de la URL. `404` si el enlace no existe o fue revocado (mismo
+        resultado en ambos casos). Debe responder con `Cache-Control: no-store` y `Referrer-Policy: no-referrer`.
+      x-contract: ShareRepository.readPublic
       security: []
       parameters:
         - name: slug
           in: path
           required: true
-          schema: { type: string }
+          schema: { type: string, pattern: '^[A-Za-z0-9_-]{22}$' }
       responses:
         '200':
-          description: Contenido de la nota
+          description: Copia cifrada
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+            Referrer-Policy:
+              schema: { type: string, const: no-referrer }
           content:
             application/json:
-              schema:
-                type: object
-                required: [title, content, updatedAt]
-                properties:
-                  title: { type: string }
-                  content: { type: string, description: Markdown }
-                  updatedAt: { type: string, format: date-time }
+              schema: { $ref: '#/components/schemas/PublicNote' }
         '404': { $ref: '#/components/responses/NotFound' }
   /devices:
     get:
@@ -746,11 +757,6 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
-    Conflict:
-      description: La nota cambió en otro dispositivo; incluye la versión remota.
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
     RateLimited:
       description: Demasiados intentos
       headers:
@@ -772,6 +778,7 @@ components:
             - unauthorized
             - forbidden
             - session-expired
+            - device-revoked
             - not-found
             - validation
             - conflict
@@ -785,9 +792,9 @@ components:
         noteId: { type: string }
         retryAfterSec: { type: integer }
         remote:
-          description: En un `conflict`, la versión actual del servidor
+          description: En un `conflict`, la versión actual del servidor (cifrada)
           allOf:
-            - { $ref: '#/components/schemas/Note' }
+            - { $ref: '#/components/schemas/EncryptedNote' }
     ValidationCode:
       type: string
       enum:
@@ -804,6 +811,10 @@ components:
         - email-taken
         - wrong-password
         - same-password
+        - invalid-recovery-key
+        - invalid-slug
+        - slug-taken
+        - invalid-payload
     User:
       type: object
       required: [id, email, fullName, emailVerified, createdAt]
@@ -821,74 +832,175 @@ components:
         expiresAt: { type: string, format: date-time }
         accessToken: { type: string }
         refreshToken: { type: string }
-    RegisterInput:
+    Sealed:
+      type: string
+      description: |
+        Texto cifrado con AES-256-GCM: `a1.<iv>.<ct>` (base64url sin relleno; `ct` incluye la etiqueta
+        de 16 bytes). Cada uno se cifra con datos asociados que lo ligan a su cuenta, tipo e id: si el
+        servidor lo mueve a otro sitio, no se puede descifrar. El servidor solo comprueba su forma.
+      pattern: '^a1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]+$'
+    KdfParams:
       type: object
-      required: [fullName, email, password, acceptedTerms]
+      description: Parámetros de derivación de la contraseña (Argon2id). Se guardan para poder subirlos en el futuro.
+      required: [alg, memoryKiB, iterations, parallelism, salt]
       properties:
+        alg: { type: string, const: argon2id }
+        memoryKiB: { type: integer, minimum: 1024 }
+        iterations: { type: integer, minimum: 1 }
+        parallelism: { type: integer, minimum: 1 }
+        salt:
+          { type: string, description: '16 bytes aleatorios en base64url (no dependen del correo)' }
+    KeyBundle:
+      type: object
+      description: |
+        Lo que el servidor guarda de las claves de una cuenta. Sin la contraseña o la clave de recuperación
+        no permite descifrar nada.
+      required: [kdf, wrappedMasterKey, recoveryWrappedMasterKey, keysVersion]
+      properties:
+        kdf: { $ref: '#/components/schemas/KdfParams' }
+        wrappedMasterKey:
+          allOf: [{ $ref: '#/components/schemas/Sealed' }]
+          description: Clave maestra cifrada con la clave derivada de la contraseña
+        recoveryWrappedMasterKey:
+          allOf: [{ $ref: '#/components/schemas/Sealed' }]
+          description: La misma clave maestra, cifrada con la clave de recuperación
+        keysVersion:
+          {
+            type: integer,
+            minimum: 0,
+            description: Lo fija el servidor; sube en cada cambio de claves
+          }
+    RegisterRequest:
+      type: object
+      required: [userId, fullName, email, acceptedTerms, authKey, recoveryAuth, keys]
+      properties:
+        userId:
+          {
+            type: string,
+            description: UUID v7 generado por el cliente (los datos asociados lo necesitan antes de que exista la cuenta)
+          }
         fullName: { type: string, minLength: 2 }
         email: { type: string, format: email }
-        password: { type: string, minLength: 8, maxLength: 128 }
         acceptedTerms: { type: boolean, const: true }
+        authKey: { type: string, description: Prueba derivada de la contraseña (base64url) }
+        recoveryAuth:
+          { type: string, description: Prueba derivada de la clave de recuperación (base64url) }
+        keys: { $ref: '#/components/schemas/KeyBundle' }
     LoginInput:
       type: object
-      required: [email, password]
+      required: [email, authKey]
       properties:
         email: { type: string, format: email }
-        password: { type: string }
+        authKey: { type: string, description: Prueba derivada de la contraseña (no la contraseña) }
         device:
           type: object
           description: Datos del dispositivo que inicia sesión (para la lista de dispositivos)
           properties:
             name: { type: string }
             platform: { $ref: '#/components/schemas/DevicePlatform' }
-    Note:
+    LoginResult:
+      allOf:
+        - { $ref: '#/components/schemas/Session' }
+        - type: object
+          required: [keys]
+          properties:
+            keys: { $ref: '#/components/schemas/KeyBundle' }
+    PasswordChangeRequest:
       type: object
+      required: [currentAuthKey, newAuthKey, keys]
+      properties:
+        currentAuthKey: { type: string, description: Prueba de la contraseña actual }
+        newAuthKey: { type: string }
+        keys:
+          allOf: [{ $ref: '#/components/schemas/KeyBundle' }]
+          description: La misma clave maestra, cifrada con la contraseña nueva
+    PasswordResetBundle:
+      type: object
+      required: [userId, recoveryWrappedMasterKey, kdf]
+      properties:
+        userId: { type: string }
+        recoveryWrappedMasterKey: { $ref: '#/components/schemas/Sealed' }
+        kdf: { $ref: '#/components/schemas/KdfParams' }
+    PasswordResetRequest:
+      type: object
+      required: [token, mode, newAuthKey, recoveryAuth, keys]
+      properties:
+        token: { type: string }
+        mode: { type: string, enum: [keep, wipe] }
+        newAuthKey: { type: string }
+        recoveryAuth:
+          type: string
+          description: '`keep`: prueba de la clave de recuperación vigente. `wipe`: prueba de la clave nueva.'
+        keys: { $ref: '#/components/schemas/KeyBundle' }
+    RecoveryKeyRotation:
+      type: object
+      required: [authKey, recoveryAuth, recoveryWrappedMasterKey]
+      properties:
+        authKey: { type: string, description: Prueba de la contraseña }
+        recoveryAuth: { type: string, description: Prueba de la clave de recuperación nueva }
+        recoveryWrappedMasterKey: { $ref: '#/components/schemas/Sealed' }
+    EncryptedNote:
+      type: object
+      description: |
+        Una nota tal como la guarda el servidor: metadatos que necesita (carpeta, fechas, papelera,
+        revisión) y dos textos cifrados. El título, el texto y las etiquetas solo existen cifrados.
       required:
         [
           id,
           folderId,
-          title,
-          content,
-          tags,
-          pinned,
           createdAt,
           updatedAt,
           deletedAt,
           revision,
-          syncStatus
+          lastEditedDeviceId,
+          wrappedKey,
+          payload
         ]
       properties:
         id: { type: string }
         folderId: { type: [string, 'null'] }
-        title: { type: string }
-        content: { type: string, description: Markdown (CommonMark + GFM) }
-        tags: { type: array, items: { type: string }, description: "Sin '#', en minúsculas" }
-        pinned: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         deletedAt: { type: [string, 'null'], format: date-time }
         revision: { type: integer, minimum: 0 }
-        syncStatus: { type: string, enum: [synced, pending, conflict] }
         lastEditedDeviceId: { type: string }
-    NoteWrite:
+        wrappedKey:
+          allOf: [{ $ref: '#/components/schemas/Sealed' }]
+          description: Clave de la nota, cifrada con la clave maestra
+        payload:
+          allOf: [{ $ref: '#/components/schemas/Sealed' }]
+          description: JSON `{ title, content, tags, pinned }` rellenado a múltiplos de 256 bytes y cifrado con la clave de la nota
+    EncryptedNoteFields:
       type: object
-      description: Campos editables. `baseRevision` es la revisión que el cliente conocía.
-      required: [baseRevision]
+      description: Lo que el cliente sube de una nota en un `upsert` (el resto lo pone el servidor).
+      required: [folderId, createdAt, updatedAt, deletedAt, wrappedKey, payload]
       properties:
-        baseRevision: { type: integer, minimum: 0 }
         folderId: { type: [string, 'null'] }
-        title: { type: string }
-        content: { type: string }
-        tags: { type: array, items: { type: string } }
-        pinned: { type: boolean }
-    Folder:
-      type: object
-      required: [id, name, createdAt, updatedAt]
-      properties:
-        id: { type: string }
-        name: { type: string, minLength: 1, maxLength: 30 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+        deletedAt: { type: [string, 'null'], format: date-time }
+        wrappedKey: { $ref: '#/components/schemas/Sealed' }
+        payload: { $ref: '#/components/schemas/Sealed' }
+    EncryptedFolder:
+      type: object
+      required: [id, createdAt, updatedAt, revision, wrappedKey, payload]
+      properties:
+        id: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        revision: { type: integer, minimum: 0 }
+        wrappedKey: { $ref: '#/components/schemas/Sealed' }
+        payload:
+          allOf: [{ $ref: '#/components/schemas/Sealed' }]
+          description: JSON `{ name }` rellenado y cifrado (nombre de 1 a 30 caracteres, único; lo comprueba el cliente)
+    EncryptedFolderFields:
+      type: object
+      required: [createdAt, updatedAt, wrappedKey, payload]
+      properties:
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        wrappedKey: { $ref: '#/components/schemas/Sealed' }
+        payload: { $ref: '#/components/schemas/Sealed' }
     DevicePlatform:
       type: string
       enum: [linux, windows, android, web]
@@ -901,15 +1013,38 @@ components:
         platform: { $ref: '#/components/schemas/DevicePlatform' }
         lastActiveAt: { type: string, format: date-time }
         current: { type: boolean }
-    ShareLink:
+    SharedNote:
       type: object
-      required: [id, noteId, url, readOnly, createdAt]
+      description: Lo que guarda el servidor de un enlace público.
+      required: [id, noteId, slug, wrappedShareKey, payload, createdAt, updatedAt]
       properties:
         id: { type: string }
         noteId: { type: string }
-        url: { type: string, format: uri }
-        readOnly: { type: boolean, const: true }
+        slug:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{22}$'
+          description: Parte pública de la URL. La elige el cliente (16 bytes aleatorios en base64url) y es única.
+        wrappedShareKey:
+          allOf: [{ $ref: '#/components/schemas/Sealed' }]
+          description: Clave del enlace, cifrada con la clave maestra del dueño
+        payload:
+          allOf: [{ $ref: '#/components/schemas/Sealed' }]
+          description: JSON `{ title, content }` rellenado y cifrado con la clave del enlace; sus datos asociados incluyen el `slug`
         createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ShareInput:
+      type: object
+      required: [slug, wrappedShareKey, payload]
+      properties:
+        slug: { type: string, pattern: '^[A-Za-z0-9_-]{22}$' }
+        wrappedShareKey: { $ref: '#/components/schemas/Sealed' }
+        payload: { $ref: '#/components/schemas/Sealed' }
+    PublicNote:
+      type: object
+      required: [payload, updatedAt]
+      properties:
+        payload: { $ref: '#/components/schemas/Sealed' }
+        updatedAt: { type: string, format: date-time }
     AppSettings:
       type: object
       required:
@@ -965,35 +1100,6 @@ components:
         notesBytes: { type: integer, minimum: 0 }
         imagesBytes: { type: integer, minimum: 0 }
         trashBytes: { type: integer, minimum: 0 }
-    ConflictResolution:
-      type: string
-      enum: [local, remote, both]
-      description: '`local` conserva la versión de este dispositivo, `remote` la de la nube, `both` crea una copia.'
-    NoteVersion:
-      type: object
-      required: [title, content, editedAt, deviceName]
-      properties:
-        title: { type: string }
-        content: { type: string }
-        editedAt: { type: string, format: date-time }
-        deviceName: { type: string }
-    Conflict:
-      type: object
-      required: [noteId, local, remote]
-      properties:
-        noteId: { type: string }
-        local: { $ref: '#/components/schemas/NoteVersion' }
-        remote: { $ref: '#/components/schemas/NoteVersion' }
-    SyncSnapshot:
-      type: object
-      required: [phase, lastSyncedAt, pendingCount, conflicts]
-      properties:
-        phase: { type: string, enum: [idle, syncing, offline, error] }
-        lastSyncedAt: { type: [string, 'null'], format: date-time }
-        pendingCount: { type: integer, minimum: 0 }
-        conflicts:
-          type: array
-          items: { $ref: '#/components/schemas/Conflict' }
     SyncChange:
       type: object
       description: |
@@ -1011,11 +1117,10 @@ components:
             description: 'Revisión que el cliente conocía (0 si la creó sin conexión)'
           }
         data:
-          {
-            type: object,
-            additionalProperties: true,
-            description: Campos de la nota o carpeta (en upsert)
-          }
+          description: 'Campos cifrados de la nota o carpeta, según `entity` (solo en `upsert`)'
+          anyOf:
+            - { $ref: '#/components/schemas/EncryptedNoteFields' }
+            - { $ref: '#/components/schemas/EncryptedFolderFields' }
     SyncRequest:
       type: object
       required: [deviceId, deviceName, cursor, changes]
@@ -1043,15 +1148,15 @@ components:
         id: { type: string }
         deleted: { type: boolean }
         revision: { type: integer }
-        note: { $ref: '#/components/schemas/Note' }
-        folder: { $ref: '#/components/schemas/Folder' }
+        note: { $ref: '#/components/schemas/EncryptedNote' }
+        folder: { $ref: '#/components/schemas/EncryptedFolder' }
     SyncConflictReport:
       type: object
       description: Una nota cuyo `baseRevision` no coincide. El servidor no la modifica.
       required: [noteId, remote, remoteDeviceName]
       properties:
         noteId: { type: string }
-        remote: { $ref: '#/components/schemas/Note' }
+        remote: { $ref: '#/components/schemas/EncryptedNote' }
         remoteDeviceName: { type: string }
     SyncResponse:
       type: object

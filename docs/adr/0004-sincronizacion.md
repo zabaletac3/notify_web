@@ -14,3 +14,5 @@
 - Al cerrar sesión se borra la copia local; el primer arranque de un dispositivo descarga todo.
 
 **Consecuencias:** el backend real implementa `POST /sync` tal como lo hace `MockSyncServer`, que sirve de referencia ejecutable. Pendiente: gestionar el caso de otra cuenta en un navegador con datos locales y sincronizar los ajustes entre dispositivos.
+
+**Nota (ADR 0005):** desde el cifrado de extremo a extremo las filas que viajan y se guardan son cifradas; el protocolo (revisiones, cursor, cola, conflictos, lápidas) no cambia.

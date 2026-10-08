@@ -754,3 +754,11 @@ _(Quien ejecute: anotar aquí cualquier cambio respecto al plan y por qué.)_
 - La URL base `https://apunte.app` es una constante en `share-codec.ts` (`SHARE_ORIGIN`); pasará a configuración.
 - Una nota que va a la papelera conserva su enlace; el servidor simulado solo impide crear enlaces nuevos de notas borradas.
 - La nota del diálogo de compartir avisa: «El enlace incluye la clave para leer la nota. Quien lo tenga podrá leerla; solo se guarda cifrada.»
+
+**Fase 7**
+
+- **`POST /auth/password/reset/bundle` (con el token en el cuerpo)** en lugar de `GET /auth/password-reset/{token}` del plan: un token en la URL queda en registros de acceso.
+- **Se quitan del contrato los endpoints REST de escritura de notas y carpetas** (`PUT /notes/{id}`, `duplicate`, `trash`, `restore`, `DELETE /trash`, `PUT/DELETE /folders/{id}`) y `POST /sync/conflicts/{noteId}/resolve`: con cifrado de extremo a extremo el servidor no puede duplicar ni resolver nada, y todo llega como `upsert`/`delete` por `POST /sync`. `GET /notes`, `GET /notes/{id}` y `GET /folders` quedan como lectura opcional de filas cifradas (`x-status: optional`).
+- **Se quitan los esquemas en claro** (`Note`, `NoteWrite`, `Folder`, `ShareLink`, `SyncSnapshot`, `Conflict`, `NoteVersion`, `ConflictResolution`, `RegisterInput`): el servidor ya no recibe ni devuelve texto en claro. Los tipos de interfaz siguen en `src/lib/domain`.
+- Nuevos códigos de validación del servidor: `invalid-recovery-key`, `invalid-slug`, `slug-taken`, `invalid-payload`; nuevo `kind: device-revoked`.
+- `docs/api/decisions.md`: D13 decidida, D11 decidida, ajustes en D1, D2, D4 y D10. ADR 0005 creado y nota en el ADR 0004.
