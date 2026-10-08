@@ -486,7 +486,7 @@ los tipos con `authKey` son internos de `data` (definirlos en `domain/crypto.ts`
     un `ResponsiveDialog`) → `rotateRecoveryKey` → muestra la nueva RK con el mismo componente de la
     pantalla `/recovery-key` (extraer `RecoveryKeyPanel` a `components/app`). La anterior deja de servir.
     Fila informativa «Cifrado de extremo a extremo · Activo · Solo tú puedes leer tus notas» en lugar del interruptor `encryptLocal`.
-11. **Eliminar cuenta:** pide contraseña (ya lo hace la pantalla) → `authKey`; tras borrar: `local.destroy()`.
+11. **Eliminar cuenta:** pide contraseña → `authKey` → `POST /me/delete`; tras borrar: `local.destroy()`.
 
 ### 8.3 Simulador (`mock-auth-repository.ts`, `mock-database.ts`)
 
@@ -725,7 +725,7 @@ _(Quien ejecute: anotar aquí cualquier cambio respecto al plan y por qué.)_
 - **Los flujos de claves viven en `AuthState`**, no en `VaultState`: el estado del cofre (`VaultState`) solo guarda la clave maestra, la recuerda en el dispositivo si se elige y la olvida; `AuthState` deriva, desbloquea y cambia contraseñas. Las funciones puras están en `data/crypto/account-keys.ts`.
 - **KDF por defecto:** `DEFAULT_KDF` en producción (`import.meta.env.PROD`) y `LIGHT_KDF` en desarrollo y pruebas; se puede forzar con `createApp({ kdf })`.
 - **`userId` lo elige el cliente** al registrarse (UUID v7), como decía el plan.
-- **Eliminar cuenta no pide contraseña:** la pantalla actual solo pide escribir «ELIMINAR», no una contraseña; el plan suponía lo contrario. Se deja así (la sesión basta); se puede añadir `authKey` más adelante.
+- **Eliminar cuenta pide la contraseña (actualizado 2026-10-08, D14):** al implementar la fase 5 la pantalla solo pedía escribir «ELIMINAR» y `DELETE /me` no exigía prueba; el plan suponía lo contrario. Ahora la pantalla pide la contraseña, la web deriva el `authKey` y llama a `POST /me/delete` con `{authKey}` (mismo `422 fields.password = wrong-password` y mismo límite de intentos que `/me/password`). `DELETE /me` queda obsoleto (cabeceras `Deprecation`/`Sunset`) y se retira 14 días después del despliegue.
 - **Reiniciar sin clave de recuperación (`wipe`):** el servidor borra notas, carpetas y enlaces; la clave de recuperación nueva se enseña **al iniciar sesión** justo después (no hay sesión tras restablecer).
 - **El bloqueo no se avisa a otras pestañas** (solo el cierre de sesión): cada pestaña bloquea por su cuenta según su propia inactividad. Pendiente si se quiere.
 - **Redirección a `/unlock`** en el layout raíz (no en `(app)`), para cubrir también `/settings`. La sesión se da por iniciada **después** de intentar restaurar la clave, para que no parpadee la pantalla de bloqueo.

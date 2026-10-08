@@ -2,19 +2,23 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { getApp } from '#lib/app/index.js';
+	import { AuthField } from '#lib/components/app/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
-	import { Input } from '#lib/components/ui/input/index.js';
+	import { errorMessage, validationMessage } from '#lib/core/index.js';
 
 	const { auth } = getApp();
 
-	const CONFIRM_WORD = 'ELIMINAR';
-	let typed = $state('');
-	const confirmed = $derived(typed.trim() === CONFIRM_WORD);
+	let password = $state('');
 
 	async function remove() {
-		const result = await auth.deleteAccount();
+		const result = await auth.deleteAccount(password);
 		if (result.ok) await goto('/');
-		else toast.error('No se pudo eliminar la cuenta');
+		else if (auth.error && auth.error.kind !== 'validation')
+			toast.error(
+				auth.error.kind === 'rate-limited'
+					? errorMessage(auth.error)
+					: 'No se pudo eliminar la cuenta'
+			);
 	}
 </script>
 
@@ -34,14 +38,18 @@
 	</ul>
 </section>
 
-<div class="flex flex-col gap-1.5">
-	<label for="confirm" class="text-label font-medium">Escribe {CONFIRM_WORD} para confirmar</label>
-	<Input id="confirm" bind:value={typed} placeholder={CONFIRM_WORD} autocomplete="off" />
-</div>
+<AuthField
+	id="password"
+	label="Escribe tu contraseña para confirmar"
+	type="password"
+	autocomplete="current-password"
+	bind:value={password}
+	error={validationMessage(auth.fieldErrors.password)}
+/>
 
 <div class="flex flex-col gap-3">
-	<Button variant="destructive" size="lg" disabled={!confirmed || auth.busy} onclick={remove}>
-		Eliminar mi cuenta
+	<Button variant="destructive" size="lg" disabled={!password || auth.busy} onclick={remove}>
+		{auth.busy ? 'Eliminando…' : 'Eliminar mi cuenta'}
 	</Button>
 	<Button variant="outline" size="lg" onclick={() => goto('/settings')}>Cancelar</Button>
 </div>

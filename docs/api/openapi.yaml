@@ -345,10 +345,31 @@ paths:
       operationId: deleteMe
       tags: [account]
       summary: Elimina la cuenta
-      description: Los datos se conservan 30 días antes del borrado definitivo y se cierran todas las sesiones.
-      x-contract: AuthRepository.deleteAccount
+      deprecated: true
+      description: 'OBSOLETO: se retira 14 días después del despliegue que introduce POST /me/delete (cabeceras Deprecation y Sunset). Usar POST /me/delete.'
       responses:
         '202': { description: Eliminación programada }
+  /me/delete:
+    post:
+      operationId: postMeDelete
+      tags: [account]
+      summary: Elimina la cuenta (exige la prueba de la contraseña actual)
+      description: Los datos se conservan 30 días antes del borrado definitivo y se cierran todas las sesiones. Se usa POST y no DELETE porque algunos clientes y proxies descartan el cuerpo de DELETE.
+      x-contract: AuthRepository.deleteAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [authKey]
+              properties:
+                authKey:
+                  { type: string, description: Prueba de la contraseña actual (no la contraseña) }
+      responses:
+        '202': { description: Eliminación programada }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
   /me/email-change:
     post:
       operationId: postMeEmailChange

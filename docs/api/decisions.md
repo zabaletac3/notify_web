@@ -17,6 +17,7 @@ Estas decisiones condicionan el servidor; cada una trae mi recomendación. Marca
 - [x] **D13 · Cifrado de extremo a extremo. (Decidido: ver ADR 0005; implementado en el cliente y en el servidor simulado)** El servidor nunca recibe la contraseña ni el texto de las notas.
       _Qué cambia en el servidor:_ guarda un hash de la prueba de la contraseña (`authKey`), los parámetros de derivación (`KdfParams`), las claves cifradas de la cuenta (`KeyBundle`) y, de cada nota y carpeta, metadatos más dos textos cifrados (`wrappedKey`, `payload`). Responde a `prelogin` aunque el correo no exista. La escritura de notas y carpetas va solo por `POST /sync`. Los conflictos se resuelven en el cliente. Compartir guarda una copia cifrada con clave propia; la clave va en el fragmento de la URL.
       _Qué asume el producto:_ si se pierden la contraseña **y** la clave de recuperación, las notas no se pueden recuperar; restablecer sin la clave de recuperación borra las notas (a propósito).
+- [x] **D14 · Borrado de cuenta exige prueba de contraseña.** `POST /me/delete` con `{authKey}`, mismo error `422 fields.password=wrong-password` y mismo límite de intentos que `/me/password`. Se usa POST porque algunos clientes/proxies descartan el cuerpo de DELETE. `DELETE /me` queda obsoleto 14 días y luego responde `410`.
 
 ## Las que se pueden decidir durante la construcción
 

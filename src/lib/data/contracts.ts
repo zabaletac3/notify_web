@@ -81,8 +81,11 @@ export interface AuthRepository {
 	requestEmailChange(newEmail: string, authKey: string): Promise<{ email: string }>;
 	confirmEmailChange(email: string, code: string): Promise<User>;
 	changePassword(input: PasswordChangeRequest): Promise<void>;
-	/** Elimina la cuenta y todos sus datos (se conservan 30 días antes del borrado definitivo). */
-	deleteAccount(): Promise<void>;
+	/**
+	 * Elimina la cuenta y todos sus datos (se conservan 30 días antes del borrado definitivo).
+	 * Exige la prueba de la contraseña actual (`authKey`).
+	 */
+	deleteAccount(authKey: string): Promise<void>;
 	/** Sesión vigente, o `null` si no hay sesión. Lanza `session-expired` si venció. */
 	currentSession(): Promise<Session | null>;
 	/** Siempre resuelve, exista o no la cuenta (no revela qué correos están registrados). */

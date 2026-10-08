@@ -103,13 +103,30 @@ describe('AuthState · inicio de sesión', () => {
 		expect(auth.user).toBeNull();
 	});
 
-	it('elimina la cuenta y deja la sesión cerrada', async () => {
+	it('elimina la cuenta con la contraseña y deja la sesión cerrada', async () => {
 		const { auth } = await testApp();
 		expect(auth.isAuthenticated).toBe(true);
-		const r = await auth.deleteAccount();
+		const r = await auth.deleteAccount(DEMO_USER_PASSWORD);
 		expect(r.ok).toBe(true);
 		expect(auth.status).toBe('anonymous');
 		expect(auth.user).toBeNull();
+	});
+
+	it('con la contraseña incorrecta no elimina ni cierra la sesión', async () => {
+		const { auth } = await testApp();
+		const r = await auth.deleteAccount('mala');
+		expect(r.ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ password: 'wrong-password' });
+		expect(auth.isAuthenticated).toBe(true);
+		expect(auth.user?.email).toBe(DEMO_USER_EMAIL);
+	});
+
+	it('con la contraseña vacía pide la contraseña y sigue autenticado', async () => {
+		const { auth } = await testApp();
+		const r = await auth.deleteAccount('');
+		expect(r.ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ password: 'required' });
+		expect(auth.isAuthenticated).toBe(true);
 	});
 
 	it('credenciales incorrectas: error general, sin errores por campo', async () => {
