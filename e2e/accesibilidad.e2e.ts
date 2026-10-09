@@ -56,6 +56,14 @@ for (const mode of ['light', 'dark'] as const) {
 			await audit(page, 'Notas');
 		});
 
+		test('lista de notas con la barra lateral recogida', async ({ page }) => {
+			await page.addInitScript(() => localStorage.setItem('axonote-sidebar-collapsed', '1'));
+			await page.goto('/notes');
+			await expect(page.locator('#app-sidebar')).toHaveCSS('width', '64px');
+			await page.waitForTimeout(500);
+			await audit(page, 'Notas (barra recogida)');
+		});
+
 		for (const section of ['general', 'privacy', 'sync', 'storage', 'account'])
 			test(`ajustes / ${section}`, async ({ page }) => {
 				await page.goto(`/settings/${section}`);
