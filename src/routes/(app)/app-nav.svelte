@@ -84,10 +84,7 @@
 	</button>
 {/snippet}
 
-<nav
-	class="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto *:shrink-0"
-	aria-label="Navegación"
->
+<nav class="flex min-h-0 flex-1 flex-col gap-0.5 *:shrink-0" aria-label="Navegación">
 	{#if collapsed}
 		<div class="flex flex-col items-center gap-2.5 pt-0.5 pb-3.5">
 			<span
@@ -115,94 +112,105 @@
 		</div>
 	{/if}
 
-	{@render sectionLabel('Biblioteca')}
-	<SidebarItem
-		icon="notes"
-		label="Todas las notas"
-		count={notes.counts.all}
-		selected={is('all')}
-		{collapsed}
-		onclick={() => show({ kind: 'all' })}
-	/>
-	<SidebarItem
-		icon="pin"
-		label="Fijadas"
-		count={notes.counts.pinned}
-		selected={is('pinned')}
-		{collapsed}
-		onclick={() => show({ kind: 'pinned' })}
-	/>
-
-	{@render sectionLabel('Carpetas')}
-	{#each folders.list as folder (folder.id)}
+	<!-- Solo esta zona se desplaza: la cabecera y el pie (Papelera, Nueva carpeta, Ajustes y tema) quedan
+	     siempre a la vista y ningún botón del pie puede quedar tapado por la barra de desplazamiento. -->
+	<div
+		class={cn(
+			'flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto *:shrink-0',
+			collapsed && '[scrollbar-width:none]'
+		)}
+	>
+		{@render sectionLabel('Biblioteca')}
 		<SidebarItem
-			icon="folder"
-			label={folder.name}
-			count={notes.counts.byFolder[folder.id] ?? 0}
-			selected={onNotes && notes.filter.kind === 'folder' && notes.filter.folderId === folder.id}
+			icon="notes"
+			label="Todas las notas"
+			count={notes.counts.all}
+			selected={is('all')}
 			{collapsed}
-			onclick={() => show({ kind: 'folder', folderId: folder.id })}
+			onclick={() => show({ kind: 'all' })}
 		/>
-	{/each}
+		<SidebarItem
+			icon="pin"
+			label="Fijadas"
+			count={notes.counts.pinned}
+			selected={is('pinned')}
+			{collapsed}
+			onclick={() => show({ kind: 'pinned' })}
+		/>
 
-	{#if notes.tags.length}
-		{@render sectionLabel('Etiquetas')}
-		{#each notes.tags as tag (tag.name)}
+		{@render sectionLabel('Carpetas')}
+		{#each folders.list as folder (folder.id)}
 			<SidebarItem
-				icon="hash"
-				label={tag.name}
-				count={tag.count}
-				selected={onNotes && notes.filter.kind === 'tag' && notes.filter.tag === tag.name}
+				icon="folder"
+				label={folder.name}
+				count={notes.counts.byFolder[folder.id] ?? 0}
+				selected={onNotes && notes.filter.kind === 'folder' && notes.filter.folderId === folder.id}
 				{collapsed}
-				onclick={() => show({ kind: 'tag', tag: tag.name })}
+				onclick={() => show({ kind: 'folder', folderId: folder.id })}
 			/>
 		{/each}
-	{/if}
 
-	<div class="min-h-4 flex-1"></div>
-	<SidebarItem
-		icon="trash"
-		label="Papelera"
-		count={notes.counts.trash}
-		selected={is('trash')}
-		{collapsed}
-		onclick={() => show({ kind: 'trash' })}
-	/>
-	{#if collapsed}
-		<Tooltip.Provider delayDuration={150}>
-			<Tooltip.Root>
-				<Tooltip.Trigger>
-					{#snippet child({ props })}{@render folderButton(props)}{/snippet}
-				</Tooltip.Trigger>
-				<Tooltip.Content role="tooltip" side="right" sideOffset={8}>Nueva carpeta</Tooltip.Content>
-			</Tooltip.Root>
-		</Tooltip.Provider>
-	{:else}
-		{@render folderButton({})}
-	{/if}
+		{#if notes.tags.length}
+			{@render sectionLabel('Etiquetas')}
+			{#each notes.tags as tag (tag.name)}
+				<SidebarItem
+					icon="hash"
+					label={tag.name}
+					count={tag.count}
+					selected={onNotes && notes.filter.kind === 'tag' && notes.filter.tag === tag.name}
+					{collapsed}
+					onclick={() => show({ kind: 'tag', tag: tag.name })}
+				/>
+			{/each}
+		{/if}
+	</div>
 
-	{#if onToggle}
-		<!-- Barra de escritorio: Ajustes y el tema van al pie (la cabecera queda como en el diseño). -->
-		<div
-			class={cn(
-				'mt-1 flex border-t pt-2',
-				collapsed ? 'flex-col items-center gap-1' : 'items-center gap-1'
-			)}
-		>
-			{#if collapsed}
-				<a href="/settings" aria-label="Ajustes" title="Ajustes" class={iconButton}>
-					<AppIcon name="settings" size={18} />
-				</a>
-			{:else}
-				<a
-					href="/settings"
-					class="flex h-8.5 min-w-0 flex-1 items-center gap-2.5 rounded-sm px-2.5 text-sm font-medium text-foreground outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
-				>
-					<AppIcon name="settings" size={18} class="text-muted-foreground" />
-					<span class="truncate">Ajustes</span>
-				</a>
-			{/if}
-			<ThemeToggle />
-		</div>
-	{/if}
+	<div class="flex flex-col gap-0.5 pt-1">
+		<SidebarItem
+			icon="trash"
+			label="Papelera"
+			count={notes.counts.trash}
+			selected={is('trash')}
+			{collapsed}
+			onclick={() => show({ kind: 'trash' })}
+		/>
+		{#if collapsed}
+			<Tooltip.Provider delayDuration={150}>
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						{#snippet child({ props })}{@render folderButton(props)}{/snippet}
+					</Tooltip.Trigger>
+					<Tooltip.Content role="tooltip" side="right" sideOffset={8}>Nueva carpeta</Tooltip.Content
+					>
+				</Tooltip.Root>
+			</Tooltip.Provider>
+		{:else}
+			{@render folderButton({})}
+		{/if}
+
+		{#if onToggle}
+			<!-- Barra de escritorio: Ajustes y el tema van al pie (la cabecera queda como en el diseño). -->
+			<div
+				class={cn(
+					'mt-1 flex border-t pt-2',
+					collapsed ? 'flex-col items-center gap-1' : 'items-center gap-1'
+				)}
+			>
+				{#if collapsed}
+					<a href="/settings" aria-label="Ajustes" title="Ajustes" class={iconButton}>
+						<AppIcon name="settings" size={18} />
+					</a>
+				{:else}
+					<a
+						href="/settings"
+						class="flex h-8.5 min-w-0 flex-1 items-center gap-2.5 rounded-sm px-2.5 text-sm font-medium text-foreground outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+					>
+						<AppIcon name="settings" size={18} class="text-muted-foreground" />
+						<span class="truncate">Ajustes</span>
+					</a>
+				{/if}
+				<ThemeToggle />
+			</div>
+		{/if}
+	</div>
 </nav>
