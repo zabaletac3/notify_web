@@ -12,6 +12,10 @@
 #
 # Con MAIL_PROVIDER=log los correos no se envían: el código de verificación y los enlaces salen en el registro
 # de la API (.dev-api.log, se muestra aquí con el prefijo [api]).
+#
+# La API arranca con GOOGLE_PROVIDER=fake (identidad simulada, solo dev): el botón de Google funciona de
+# punta a punta sin hablar con Google ni configurar credenciales. Para usar Google de verdad, arranca la API
+# a mano con GOOGLE_PROVIDER=google y las tres variables GOOGLE_* (ver .env.example del backend).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 WEB_DIR="$PWD"
@@ -53,6 +57,7 @@ APP_ENV=dev PORT="$API_PORT" LOG_LEVEL=info TRUST_PROXY=false \
 	JWT_SECRET='dev-jwt-secret-0123456789abcdef0123456789abcdef' \
 	PEPPER='dev-pepper-0123456789abcdef0123456789abcdef-xyz' \
 	MAIL_PROVIDER=log MAIL_FROM='AxoNote <no-reply@localhost>' \
+	GOOGLE_PROVIDER=fake GOOGLE_REDIRECT_URL="http://localhost:$API_PORT/v1/auth/google/callback" \
 	"$WEB_DIR/.dev-api" >> "$LOG" 2>&1 &
 API_PID=$!
 tail -n +1 -F "$LOG" 2>/dev/null | sed -u 's/^/[api] /' &
