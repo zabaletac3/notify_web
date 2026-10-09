@@ -10,11 +10,27 @@ interface DeviceKeyRow {
 	wrappedMasterKey: Sealed;
 }
 
-class KeysDb extends Dexie {
+/** Fila del almacén de confianza (ver `trusted-device-keys.ts`). **No** guarda la clave maestra. */
+export interface TrustedDeviceRow {
+	userId: Id;
+	/** Identificador del dispositivo en el servidor (`trusted_devices.id`). */
+	trustId: Id;
+	/** Clave AES-GCM **no exportable** con la que el servidor envuelve la clave maestra. */
+	deviceKey: CryptoKey;
+}
+
+/**
+ * Base IndexedDB compartida por el recordatorio de la clave (`deviceKeys`) y los dispositivos de
+ * confianza (`trustedDevices`). La tabla nueva llega en la versión 2; las instalaciones antiguas se
+ * actualizan solas.
+ */
+export class KeysDb extends Dexie {
 	deviceKeys!: Table<DeviceKeyRow, Id>;
+	trustedDevices!: Table<TrustedDeviceRow, Id>;
 	constructor(name: string) {
 		super(name);
 		this.version(1).stores({ deviceKeys: 'userId' });
+		this.version(2).stores({ deviceKeys: 'userId', trustedDevices: 'userId' });
 	}
 }
 

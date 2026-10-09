@@ -1,33 +1,41 @@
 import { untrack } from 'svelte';
 import { DEFAULT_KDF, LIGHT_KDF, importMasterKeyRaw } from '#lib/core/crypto/index.js';
-import { LOCK_TIMEOUT_MS, lockTimeoutExceeded } from '#lib/domain/index.js';
+import { DEFAULT_SETTINGS, LOCK_TIMEOUT_MS, lockTimeoutExceeded } from '#lib/domain/index.js';
 import {
 	DEMO_MASTER_KEY_RAW,
 	DEMO_USER_ID,
 	DeviceKeyStore,
 	DevicePrefs,
+	TrustedDeviceStore,
 	createLocalBackend,
 	createSessionChannel,
+	describeDevice,
 	HttpAuthRepository,
 	HttpClient,
 	HttpDeviceRepository,
 	HttpShareRepository,
 	HttpStorageRepository,
 	HttpSyncTransport,
+	HttpTrustedDeviceRepository,
 	LocalStorageSessionMarker,
 	LocalStorageTokenStore,
-	type SessionMode,
-	type TokenStore,
 	createMockBackend,
 	type Dataset,
 	type LocalBackend,
-	type MockBackend
+	type MockBackend,
+	type SessionMode,
+	type TokenStore
 } from '#lib/data/index.js';
 import { AuthState } from '#lib/features/auth/index.js';
 import { FoldersState } from '#lib/features/folders/index.js';
 import { NotesState } from '#lib/features/notes/index.js';
 import { SearchState } from '#lib/features/search/index.js';
-import { DevicesState, SettingsState } from '#lib/features/settings/index.js';
+import {
+	DevicesState,
+	MfaState,
+	SettingsState,
+	TrustedDevicesState
+} from '#lib/features/settings/index.js';
 import { ShareState } from '#lib/features/share/index.js';
 import { StorageState } from '#lib/features/storage/index.js';
 import { SyncState } from '#lib/features/sync/index.js';
@@ -76,6 +84,8 @@ export interface App {
 	search: SearchState;
 	settings: SettingsState;
 	devices: DevicesState;
+	trustedDevices: TrustedDevicesState;
+	mfa: MfaState;
 	share: ShareState;
 	storage: StorageState;
 	sync: SyncState;
@@ -102,9 +112,14 @@ export function createApp(options: AppOptions = {}): App {
 	const persistence = options.persistence ?? 'memory';
 	// Con la API real no hay sesión de ejemplo: se empieza sin iniciar sesión.
 	const startAuthenticated = options.startAuthenticated ?? !options.api;
-	const vault = new VaultState(
-		new DeviceKeyStore(options.dbName ? `${options.dbName}-keys` : 'apunte-keys')
-	);
+	const keysName = options.dbName ? `${options.dbName}-keys` : 'apunte-keys';
+	// La mitad local de los dispositivos de confianza vive en la misma base `apunte-keys`.
+	const trustedStore = new TrustedDeviceStore(keysName);
+	// Se asigna tras crear los repositorios: el cofre lo usa para revocar en el servidor.
+	let revokeTrustOnServer: (userId: string, trustId: string) => Promise<void> = async () => {};
+	const vault = new VaultState(new DeviceKeyStore(keysName), trustedStore, {
+		forgetTrustOnServer: (userId, trustId) => revokeTrustOnServer(userId, trustId)
+	});
 	// Preferencias que viven en este dispositivo y no se sincronizan (bloqueo). Fuera de la base local:
 	// cerrar sesión no las borra; borrar la cuenta sí.
 	const devicePrefs = new DevicePrefs();
@@ -124,6 +139,14 @@ export function createApp(options: AppOptions = {}): App {
 	const local = (backend as Partial<LocalBackend>).local ?? null;
 	if (options.latencyMs !== undefined) backend.scenario.latencyMs = options.latencyMs;
 	const { repos, scenario } = backend;
+	// Mejor esfuerzo: al bloquear u olvidar el dispositivo se intenta revocar la mitad del servidor.
+	revokeTrustOnServer = async (_userId, trustId) => {
+		try {
+			await repos.trustedDevices.remove(trustId);
+		} catch {
+			// Sin red o ya revocado: el servidor lo purgará solo.
+		}
+	};
 
 	// Estados que se actualizan al cerrar sesión: se declaran antes para poder referirlos en los ganchos.
 	// eslint-disable-next-line prefer-const -- se asigna más abajo, tras crear los estados
@@ -170,6 +193,19 @@ export function createApp(options: AppOptions = {}): App {
 			await vault.unlock(userId, await importMasterKeyRaw(DEMO_MASTER_KEY_RAW), false);
 			return true;
 		},
+		// S2: al entrar con Google por primera vez en este dispositivo, el bloqueo arranca desactivado;
+		// si no, la app se bloquearía casi siempre y el acceso con Google no serviría de nada.
+		applyGooglePrefs: async (userId) => {
+			if (devicePrefs.read(userId)) return;
+			devicePrefs.write(userId, { ...DEFAULT_SETTINGS, lockOnExit: false, lockTimeout: 'never' });
+			await settings.load(userId);
+		},
+		// Dispositivos de confianza: el servidor (repositorio) más la marca local por cuenta.
+		trustedDevices: repos.trustedDevices,
+		deviceName: describeDevice,
+		readTrustedDevice: (userId) => devicePrefs.readTrust(userId),
+		markTrustedDevice: (userId) => devicePrefs.writeTrust(userId),
+		clearTrustedDevice: (userId) => devicePrefs.removeTrust(userId),
 		// Al salir, la copia local se borra (los datos siguen en el servidor). Las preferencias del
 		// dispositivo (bloqueo) no: solo se borran al eliminar la cuenta. La marca de actividad sí se
 		// borra (es por sesión) y los ajustes en memoria vuelven a los valores por defecto.
@@ -191,6 +227,8 @@ export function createApp(options: AppOptions = {}): App {
 	const search = new SearchState(notes);
 	const settings = new SettingsState(repos.settings);
 	const devices = new DevicesState(repos.devices, () => auth.markExpired());
+	const trustedDevices = new TrustedDevicesState(repos.trustedDevices, () => auth.markExpired());
+	const mfa = new MfaState(repos.auth, auth, () => auth.markExpired());
 	const share = new ShareState(repos.share, vault, {
 		getNote: (id) => notes.all.find((n) => n.id === id),
 		// La nota tiene que estar en el servidor para poder compartirla.
@@ -379,6 +417,8 @@ export function createApp(options: AppOptions = {}): App {
 		search,
 		settings,
 		devices,
+		trustedDevices,
+		mfa,
 		share,
 		storage,
 		sync,
@@ -420,6 +460,7 @@ function remoteServices(api: NonNullable<AppOptions['api']>) {
 	return {
 		auth: new HttpAuthRepository(http),
 		devices: new HttpDeviceRepository(http),
+		trustedDevices: new HttpTrustedDeviceRepository(http),
 		share: new HttpShareRepository(http),
 		storage: new HttpStorageRepository(http),
 		transport: new HttpSyncTransport(http)

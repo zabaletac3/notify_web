@@ -90,3 +90,6 @@ cliente ya tiene alternativa sin `navigator.locks`), coste/tiempo de la firma en
   vectores). La interfaz y la lógica viven en `notify_web`.
 - Nunca registrar contraseñas, claves, tokens ni textos de notas (tampoco en logs de Rust).
 - Todo dato nuevo con texto de la persona va cifrado. UI en español.
+- La verificación en dos pasos, el acceso con Google y los dispositivos de confianza ya están en la web y
+  en la API; la app de escritorio reutiliza esa lógica. Si guarda la mitad local de la confianza en el
+  llavero, debe leer el vector compartido `docs/api/vectors/trusted-device.json` (mismo formato `a1.…`).

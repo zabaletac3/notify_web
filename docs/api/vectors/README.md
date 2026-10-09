@@ -36,6 +36,9 @@ móvil) y la web comprueben que leen y escriben **exactamente los mismos bytes**
 - **wrap.json.** Deriva/importa la clave de envoltura (contraseña, clave de recuperación o maestra),
   abre `sealed` con `aad` y compara con `plaintextKey`. `keyBundle` + `password` debe abrir la
   maestra (`unlockWithPassword`).
+- **trusted-device.json.** Dispositivo de confianza (D16): abre `case.sealed` con `case.deviceKey`,
+  `case.aad` y el IV y compara con `case.plaintextKey`. El AAD es
+  `apunte/v1/mk/<userId>/trusted/<trustId>`.
 - **recovery-key.json.** `format` de bytes → texto; `tolerant` → los mismos bytes; `invalid` → error.
 - **padding.json.** Comprueba `lengths` y `unpad`.
 - **note-payload.json.** Descifra `wrappedKey` con la maestra y `payload` con la clave del elemento

@@ -1,4 +1,9 @@
-import { DEFAULT_SETTINGS, normalizeSettings, type AppSettings } from '#lib/domain/index.js';
+import {
+	DEFAULT_SETTINGS,
+	normalizeSettings,
+	type AppSettings,
+	type AppSettingsPatch
+} from '#lib/domain/index.js';
 import type { SettingsRepository } from '../contracts.js';
 import { noGate, type LocalDeps } from './gate.js';
 import { DevicePrefs } from './device-prefs.js';
@@ -34,7 +39,7 @@ export class LocalSettingsRepository implements SettingsRepository {
 		return { ...DEFAULT_SETTINGS };
 	}
 
-	async update(patch: Partial<AppSettings>, userId?: string): Promise<AppSettings> {
+	async update(patch: AppSettingsPatch, userId?: string): Promise<AppSettings> {
 		await this.gate.write();
 		if (!userId) return normalizeSettings({ ...DEFAULT_SETTINGS, ...patch });
 		const next = normalizeSettings({ ...(await this.get(userId)), ...patch });

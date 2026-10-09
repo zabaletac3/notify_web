@@ -70,6 +70,8 @@ export interface PasswordResetBundle {
 	userId: Id;
 	recoveryWrappedMasterKey: Sealed;
 	kdf: KdfParams;
+	/** Si la cuenta tiene activada la verificación en dos pasos. */
+	mfaEnabled: boolean;
 }
 
 /**
@@ -83,6 +85,10 @@ export interface PasswordResetRequest {
 	/** `keep`: prueba de la clave de recuperación vigente. `wipe`: la de la clave nueva. */
 	recoveryAuth: string;
 	keys: KeyBundle;
+	/** `wipe` con MFA activo: código TOTP o de respaldo (obligatorio y verificado antes de borrar). */
+	mfaCode?: string;
+	/** `keep` con MFA activo: desactiva además la verificación en dos pasos. */
+	disableMfa?: boolean;
 }
 
 export interface RecoveryKeyRotation {

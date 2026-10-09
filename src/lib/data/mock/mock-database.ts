@@ -28,6 +28,42 @@ export interface StoredUser {
 	recoveryAuthHash: string;
 	/** Claves cifradas de la cuenta: sin la contraseña o la clave de recuperación no sirven de nada. */
 	keys: KeyBundle;
+	/**
+	 * Verificación en dos pasos del simulado. `undefined` = nunca se tocó (el escenario puede activarla);
+	 * `null` = desactivada explícitamente.
+	 */
+	mfa?: StoredMfa | null;
+}
+
+/** Estado de MFA del simulado. Los códigos se guardan en claro: es un servidor de mentira. */
+export interface StoredMfa {
+	/** Secreto en base32 (no se verifica de verdad: el código válido es `123456`). */
+	secret: string;
+	/** `null` = configuración pendiente de confirmar con un código. */
+	enabledAt: string | null;
+	/** Códigos de respaldo sin usar. */
+	recoveryCodes: string[];
+}
+
+/** Reto del segundo paso pendiente de completar. */
+export interface MfaTicket {
+	userId: string;
+	expiresAt: string;
+	attempts: number;
+	consumed: boolean;
+}
+
+/** Dispositivo de confianza guardado en el servidor de mentira: la MK cifrada con la clave del navegador. */
+export interface StoredTrustedDevice {
+	id: string;
+	userId: string;
+	name: string;
+	platform: Device['platform'];
+	/** Clave maestra cifrada con la clave no exportable del navegador (`a1.…`). */
+	wrappedMasterKey: string;
+	createdAt: string;
+	lastUsedAt: string;
+	revokedAt: string | null;
 }
 
 /** Lo que el servidor de sincronización guarda de una cuenta: solo metadatos y textos cifrados. */
@@ -94,8 +130,16 @@ export class MockDatabase {
 	lastSyncedAt: string | null = null;
 	resetTokens = new Map<string, string>();
 	failedLogins = new Map<string, number>();
+	/** Retos de segundo paso pendientes (login con MFA), por token. */
+	mfaTickets = new Map<string, MfaTicket>();
+	/** Tickets del flujo de Google pendientes de completar (vincular una cuenta existente). */
+	googleLinks = new Map<string, { userId: string }>();
+	/** Tickets del flujo de Google pendientes de completar (crear la cuenta). */
+	googleSignups = new Map<string, { email: string; fullName: string }>();
 	/** Cambio de correo pendiente de confirmar con el código. */
 	pendingEmailChange: { userId: string; email: string } | null = null;
+	/** Dispositivos de confianza: la clave maestra cifrada con la clave propia del navegador. */
+	trustedDevices: StoredTrustedDevice[] = [];
 
 	// ── Estado del "servidor de sincronización" (lo usa MockSyncServer) ──
 	/** Datos cifrados de cada cuenta. La cuenta de ejemplo se rellena sola a partir de los datos de ejemplo. */
@@ -146,6 +190,7 @@ export class MockDatabase {
 			email: DEMO_USER_EMAIL,
 			fullName: 'Ana Pérez',
 			emailVerified: true,
+			hasGoogle: false,
 			createdAt: iso(60 * 24 * 90)
 		};
 		this.users = [
@@ -161,7 +206,11 @@ export class MockDatabase {
 		this.shareLinks = [];
 		this.resetTokens.clear();
 		this.failedLogins.clear();
+		this.mfaTickets.clear();
+		this.googleLinks.clear();
+		this.googleSignups.clear();
 		this.pendingEmailChange = null;
+		this.trustedDevices = [];
 		this.lastSyncedAt = iso(2);
 		this.normalizeFixtures();
 		this.accounts.clear();
@@ -195,6 +244,14 @@ export class MockDatabase {
 		this.notes = [];
 		this.folders = [];
 		this.shareLinks = [];
+		this.trustedDevices = this.trustedDevices.filter((d) => d.userId !== userId);
+	}
+
+	/** Marca como revocados todos los dispositivos de confianza de una cuenta (cambio de contraseña, etc.). */
+	revokeTrustedDevices(userId: string, at: string) {
+		for (const device of this.trustedDevices) {
+			if (device.userId === userId && !device.revokedAt) device.revokedAt = at;
+		}
 	}
 
 	nextId(prefix: string): string {

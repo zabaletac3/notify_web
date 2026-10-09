@@ -1,0 +1,15 @@
+{
+  "case": {
+    "aad": "apunte/v1/mk/018f6f9a-7b1c-7c3e-8c9d-000000000001/trusted/018f6f9a-7b1c-7c3e-8c9d-000000000401",
+    "deviceKey": "hepPtBl-40itEnfcQaYLcNU6nwRpzjOY_WLHLJH2W8A",
+    "iv": "qg902T6jCG3SN5wB",
+    "name": "dispositivo-de-confianza",
+    "plaintextKey": "Mpf8YcYrkPVavySJ7lO4HYLnTLEWe-BFqg902T6jCG0",
+    "sealed": "a1.qg902T6jCG3SN5wB.9w-P_FIlFE5fAov44O2XohEnguceaKdnH7Ey4ODLw8Z4lSqblX36tpXF36hT92Vp",
+    "wrapping": "clave del dispositivo"
+  },
+  "description": "Clave maestra envuelta con la clave de un dispositivo de confianza. El AAD liga la envoltura a la cuenta y al dispositivo; sin la clave local (no exportable en el navegador) no se puede abrir.",
+  "trustId": "018f6f9a-7b1c-7c3e-8c9d-000000000401",
+  "userId": "018f6f9a-7b1c-7c3e-8c9d-000000000001",
+  "version": 1
+}

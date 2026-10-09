@@ -2,6 +2,7 @@ import { isSealed } from '#lib/core/crypto/index.js';
 import {
 	fail,
 	type AppSettings,
+	type AppSettingsPatch,
 	type Conflict,
 	type ConflictResolution,
 	type Device,
@@ -50,7 +51,7 @@ export class MockSettingsRepository implements SettingsRepository {
 		return { ...this.db.settings };
 	}
 
-	async update(patch: Partial<AppSettings>): Promise<AppSettings> {
+	async update(patch: AppSettingsPatch): Promise<AppSettings> {
 		await this.db.local('write');
 		this.db.settings = { ...this.db.settings, ...patch };
 		return { ...this.db.settings };

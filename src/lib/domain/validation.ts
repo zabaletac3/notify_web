@@ -1,5 +1,10 @@
 import { FOLDER_NAME_MAX_LENGTH } from './folder.js';
-import { VERIFICATION_CODE_LENGTH, type LoginInput, type RegisterInput } from './auth.js';
+import {
+	VERIFICATION_CODE_LENGTH,
+	isMfaCode,
+	type LoginInput,
+	type RegisterInput
+} from './auth.js';
 
 /** Códigos de validación. El texto en español está en `core/messages.ts`. */
 export type ValidationCode =
@@ -17,6 +22,7 @@ export type ValidationCode =
 	| 'wrong-password'
 	| 'same-password'
 	| 'invalid-recovery-key'
+	| 'invalid-payload'
 	| 'wipe-not-confirmed';
 
 export type FieldErrors = Record<string, ValidationCode>;
@@ -104,6 +110,11 @@ export function validateVerificationCode(code: string): Validation {
 	return done(
 		new RegExp(`^\\d{${VERIFICATION_CODE_LENGTH}}$`).test(code) ? {} : { code: 'invalid-code' }
 	);
+}
+
+/** Código del segundo paso: 6 dígitos (TOTP) o código de respaldo (`XXXXX-XXXXX`). */
+export function validateMfaCode(code: string): Validation {
+	return done(isMfaCode(code) ? {} : { code: 'invalid-code' });
 }
 
 /** Nombre de carpeta: 1–30 caracteres y único (sin distinguir mayúsculas ni tildes). */

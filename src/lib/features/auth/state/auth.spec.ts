@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fromUtf8, open, seal, utf8 } from '#lib/core/crypto/index.js';
 import {
 	DEMO_RECOVERY_KEY,
@@ -218,6 +218,65 @@ describe('AuthState · recuperar contraseña', () => {
 	});
 });
 
+describe('AuthState · inicio de sesión en dos pasos', () => {
+	async function challenge(now?: () => Date) {
+		const app = await testApp({ startAuthenticated: false, now });
+		app.scenario.mfaEnabled = true;
+		const result = await app.auth.login({ email: DEMO_USER_EMAIL, password: DEMO_USER_PASSWORD });
+		return { app, result };
+	}
+
+	it('el primer paso no abre sesión ni desbloquea', async () => {
+		const { app, result } = await challenge();
+		expect(result.ok).toBe(true);
+		expect(app.auth.mfaPending).toBe(true);
+		expect(app.auth.status).toBe('anonymous');
+		expect(app.auth.user).toBeNull();
+		expect(app.vault.status).toBe('locked');
+	});
+
+	it('código erróneo no cierra el reto; el correcto desbloquea', async () => {
+		const { app } = await challenge();
+		expect((await app.auth.verifyMfa('000000')).ok).toBe(false);
+		expect(app.auth.fieldErrors).toEqual({ code: 'invalid-code' });
+		expect(app.auth.mfaPending).toBe(true);
+
+		expect((await app.auth.verifyMfa('123456')).ok).toBe(true);
+		expect(app.auth.mfaPending).toBe(false);
+		expect(app.auth.status).toBe('authenticated');
+		expect(app.vault.status).toBe('unlocked');
+		// Un segundo intento ya no tiene reto pendiente.
+		expect((await app.auth.verifyMfa('123456')).ok).toBe(false);
+	});
+
+	it('un código de respaldo sirve una vez y baja el contador', async () => {
+		const { app } = await challenge();
+		expect((await app.auth.verifyMfa('ABCDE-FGHJK')).ok).toBe(true);
+		expect(app.auth.status).toBe('authenticated');
+		await app.mfa.load();
+		expect(app.mfa.recoveryCodesLeft).toBe(9);
+	});
+
+	it('si el ticket vence, se vuelve a pedir el login', async () => {
+		const clock = createClock();
+		const { app } = await challenge(clock.now);
+		clock.advance(6 * 60 * 1000);
+		const result = await app.auth.verifyMfa('123456');
+		expect(result.ok).toBe(false);
+		expect(app.auth.mfaPending).toBe(false);
+		expect(app.auth.notice).toBe('mfa-expired');
+		expect(app.auth.status).toBe('anonymous');
+	});
+
+	it('cerrar sesión olvida el reto pendiente y la kek', async () => {
+		const { app } = await challenge();
+		await app.auth.logout();
+		expect(app.auth.mfaPending).toBe(false);
+		expect((await app.auth.verifyMfa('123456')).ok).toBe(false);
+		expect(app.auth.status).toBe('anonymous');
+	});
+});
+
 describe('AuthState · mi cuenta', () => {
 	it('cambia el nombre y lo refleja al instante', async () => {
 		const { auth } = await testApp();
@@ -262,6 +321,7 @@ describe('AuthState · mi cuenta', () => {
 				email: 'otra@correo.com',
 				fullName: 'Otra',
 				emailVerified: true,
+				hasGoogle: false,
 				createdAt: ''
 			}
 		});
@@ -389,5 +449,130 @@ describe('AuthState · cofre de claves', () => {
 		expect((await auth.rotateRecoveryKey(DEMO_USER_PASSWORD)).ok).toBe(true);
 		expect(auth.pendingRecoveryKey).not.toBe(DEMO_RECOVERY_KEY);
 		expect(auth.pendingRecoveryKey).toMatch(/^([0-9A-Z*~$=]{4}-){13}[0-9A-Z*~$=]$/);
+	});
+});
+
+describe('AuthState · acceso con Google', () => {
+	/** Stubs de las APIs de navegador que usa el flujo (en el entorno de node no existen). */
+	function browserApis() {
+		const store = new Map<string, string>();
+		vi.stubGlobal('sessionStorage', {
+			getItem: (k: string) => store.get(k) ?? null,
+			setItem: (k: string, v: string) => void store.set(k, v),
+			removeItem: (k: string) => void store.delete(k)
+		});
+		const replaceState = vi.fn();
+		const assign = vi.fn();
+		vi.stubGlobal('location', {
+			origin: 'https://app.test',
+			pathname: '/auth/google',
+			search: '',
+			assign
+		});
+		vi.stubGlobal('history', { state: null, replaceState });
+		return { store, replaceState, assign };
+	}
+
+	afterEach(() => vi.unstubAllGlobals());
+
+	async function withScenario(scenario: 'new' | 'unlinked' | 'linked' | 'with-mfa') {
+		const app = await testApp({ startAuthenticated: false });
+		app.scenario.googleScenario = scenario;
+		const apis = browserApis();
+		apis.store.set('axonote-google-verifier', 'verifier-de-prueba');
+		const result = await app.auth.completeGoogle('#code=codigo');
+		return { app, apis, result };
+	}
+
+	it('empieza el flujo guardando el verifier y redirigiendo', async () => {
+		const app = await testApp({ startAuthenticated: false });
+		app.scenario.googleScenario = 'linked';
+		const { store, assign } = browserApis();
+		const result = await app.auth.startGoogle();
+		expect(result.ok).toBe(true);
+		expect(store.get('axonote-google-verifier')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+		expect(assign).toHaveBeenCalledWith(expect.stringContaining('/auth/google#code='));
+	});
+
+	it('con Google apagado el inicio falla con google-disabled', async () => {
+		const app = await testApp({ startAuthenticated: false });
+		browserApis();
+		const result = await app.auth.startGoogle();
+		expect(result.ok).toBe(false);
+		expect(app.auth.googleError).toEqual({ kind: 'forbidden', code: 'google-disabled' });
+	});
+
+	it('cuenta nueva: pide crear la contraseña', async () => {
+		const { app, result } = await withScenario('new');
+		expect(result.ok).toBe(true);
+		expect(app.auth.googleSignup).toMatchObject({ email: 'nueva.persona@gmail.com' });
+		expect(app.auth.status).toBe('anonymous');
+	});
+
+	it('cuenta existente sin vincular: pide la contraseña para vincular', async () => {
+		const { app } = await withScenario('unlinked');
+		expect(app.auth.googleLink?.email).toBe(DEMO_USER_EMAIL);
+		expect(app.auth.googleLink?.linkToken).toBeTruthy();
+	});
+
+	it('cuenta vinculada: abre sesión pero deja la app bloqueada', async () => {
+		const { app } = await withScenario('linked');
+		expect(app.auth.status).toBe('authenticated');
+		expect(app.auth.user?.hasGoogle).toBe(true);
+		expect(app.auth.isLocked).toBe(true);
+		expect(app.auth.signedInWithGoogle).toBe(true);
+	});
+
+	it('cuenta vinculada con dos pasos: Google + código, sin contraseña', async () => {
+		const { app } = await withScenario('with-mfa');
+		expect(app.auth.mfaPending).toBe(true);
+		expect(app.auth.status).toBe('anonymous');
+		expect((await app.auth.verifyMfa('123456')).ok).toBe(true);
+		expect(app.auth.status).toBe('authenticated');
+		expect(app.auth.isLocked).toBe(true);
+		expect(app.auth.signedInWithGoogle).toBe(true);
+	});
+
+	it('borra el verifier y limpia el fragmento al volver', async () => {
+		const { app, apis } = await withScenario('linked');
+		expect(app.auth.googleProcessing).toBe(false);
+		expect(apis.store.has('axonote-google-verifier')).toBe(false);
+		expect(apis.replaceState).toHaveBeenCalled();
+	});
+
+	it('vincular con la contraseña errónea no vincula', async () => {
+		const { app } = await withScenario('unlinked');
+		const bad = await app.auth.linkGoogle('mala');
+		expect(bad.ok).toBe(false);
+		// Es, a efectos de seguridad, un login: el error es el mismo (no revela por campo).
+		expect(app.auth.error).toEqual({ kind: 'unauthorized', code: 'invalid-credentials' });
+		expect(app.auth.status).toBe('anonymous');
+
+		expect((await app.auth.linkGoogle(DEMO_USER_PASSWORD)).ok).toBe(true);
+		expect(app.auth.status).toBe('authenticated');
+		expect(app.auth.isLocked).toBe(false);
+		expect(app.auth.user?.hasGoogle).toBe(true);
+	});
+
+	it('registro con Google: crea las claves y deja la clave de recuperación para mostrar', async () => {
+		const { app } = await withScenario('new');
+		const result = await app.auth.registerWithGoogle({
+			fullName: 'Nueva Persona',
+			password: 'Secret123!',
+			acceptedTerms: true
+		});
+		expect(result.ok).toBe(true);
+		expect(app.auth.status).toBe('authenticated');
+		expect(app.auth.isLocked).toBe(false);
+		expect(app.auth.user?.hasGoogle).toBe(true);
+		expect(app.auth.pendingRecoveryKey).toMatch(/^([0-9A-Z*~$=]{4}-){13}[0-9A-Z*~$=]$/);
+	});
+
+	it('desvincular exige la contraseña y actualiza la cuenta', async () => {
+		const { auth } = await testApp();
+		expect((await auth.unlinkGoogle('mala')).ok).toBe(false);
+		expect(auth.fieldErrors).toEqual({ password: 'wrong-password' });
+		expect((await auth.unlinkGoogle(DEMO_USER_PASSWORD)).ok).toBe(true);
+		expect(auth.user?.hasGoogle).toBe(false);
 	});
 });

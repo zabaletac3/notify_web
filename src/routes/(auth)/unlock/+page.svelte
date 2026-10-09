@@ -23,7 +23,8 @@
 	}
 
 	async function logout() {
-		const result = await auth.logout();
+		// La app estaba bloqueada: cerrar sesión aquí siempre olvida el dispositivo de confianza.
+		const result = await auth.logout({ forgetDevice: true });
 		if (result.ok) await goto('/welcome');
 	}
 
@@ -34,9 +35,11 @@
 
 <AuthCard
 	title="Desbloquea AxoNote"
-	subtitle={auth.user
-		? `Ingresa tu contraseña para leer tus notas, ${auth.user.fullName}.`
-		: 'Ingresa tu contraseña para leer tus notas.'}
+	subtitle={auth.signedInWithGoogle
+		? 'Entraste con Google. Es la primera vez en este dispositivo: escribe tu contraseña una vez para leer tus notas aquí.'
+		: auth.user
+			? `Ingresa tu contraseña para leer tus notas, ${auth.user.fullName}.`
+			: 'Ingresa tu contraseña para leer tus notas.'}
 >
 	{#snippet mark()}
 		<span class="grid size-18 place-content-center rounded-full bg-accent text-accent-foreground">

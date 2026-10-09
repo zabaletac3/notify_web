@@ -1,5 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { setGoogleScenario, startGoogle } from './google-helpers.js';
+import { activateMfa, loginWithPassword, logout } from './mfa-helpers.js';
 
 /**
  * Accesibilidad automática (axe-core, WCAG 2.1 A y AA) en las pantallas principales, en claro y en
@@ -64,12 +66,49 @@ for (const mode of ['light', 'dark'] as const) {
 			await audit(page, 'Notas (barra recogida)');
 		});
 
-		for (const section of ['general', 'privacy', 'sync', 'storage', 'account'])
+		for (const section of ['general', 'privacy', 'sync', 'storage', 'account', 'two-factor'])
 			test(`ajustes / ${section}`, async ({ page }) => {
 				await page.goto(`/settings/${section}`);
 				await page.waitForTimeout(1200);
 				await audit(page, `Ajustes ${section}`);
 			});
+
+		test('verificación en dos pasos (login)', async ({ page }) => {
+			await activateMfa(page);
+			await logout(page);
+			await loginWithPassword(page);
+			await page.waitForTimeout(500);
+			await audit(page, 'Login verificación en dos pasos');
+		});
+
+		test('acceso con Google: vincular', async ({ page }) => {
+			await setGoogleScenario(page, 'unlinked');
+			await page.goto('/login');
+			await startGoogle(page);
+			await expect(page.getByRole('heading', { name: 'Vincula tu cuenta' })).toBeVisible();
+			await page.waitForTimeout(300);
+			await audit(page, 'Acceso con Google (vincular)');
+		});
+
+		test('acceso con Google: crear cuenta', async ({ page }) => {
+			await setGoogleScenario(page, 'new');
+			await page.goto('/register');
+			await startGoogle(page, 'Registrarse con Google');
+			await expect(
+				page.getByRole('heading', { name: 'Crea tu contraseña de AxoNote' })
+			).toBeVisible();
+			await page.waitForTimeout(300);
+			await audit(page, 'Acceso con Google (crear cuenta)');
+		});
+
+		test('acceso con Google: error', async ({ page }) => {
+			await page.goto('/auth/google#error=access_denied');
+			await expect(
+				page.getByRole('heading', { name: 'No pudimos completar el acceso' })
+			).toBeVisible();
+			await page.waitForTimeout(300);
+			await audit(page, 'Acceso con Google (error)');
+		});
 
 		test('diálogo de compartir', async ({ page }) => {
 			await page.goto('/notes');

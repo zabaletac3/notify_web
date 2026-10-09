@@ -1,12 +1,16 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { getApp } from '#lib/app/index.js';
 	import { ChoiceRow, SettingRow, SettingsGroup } from '#lib/components/app/index.js';
 	import { Switch } from '#lib/components/ui/switch/index.js';
 	import { formatCount } from '#lib/core/index.js';
 
-	const { settings, devices, vault } = getApp();
+	const { settings, devices, vault, mfa } = getApp();
 	const values = $derived(settings.values);
+
+	// El estado real de la verificación en dos pasos lo calcula el backend.
+	onMount(() => void mfa.load());
 </script>
 
 <svelte:head><title>Privacidad y seguridad · AxoNote</title></svelte:head>
@@ -32,6 +36,8 @@
 					void settings.update({ lockOnExit });
 					// Sin bloqueo al salir, la clave se recuerda (cifrada) en este dispositivo.
 					void vault.setRemember(!lockOnExit);
+					// Activar el bloqueo al salir se comporta como un bloqueo: se pierde la confianza (S1).
+					if (lockOnExit && vault.userId) void vault.forgetTrust(vault.userId);
 				}}
 			/>
 		{/snippet}
@@ -48,6 +54,11 @@
 		]}
 		onchange={(lockTimeout) => settings.update({ lockTimeout })}
 	/>
+	<p class="px-4 py-2.5 text-label text-muted-foreground">
+		{#if values.lockOnExit || values.lockTimeout !== 'never'}
+			Con el bloqueo activado se pedirá tu contraseña y este dispositivo dejará de ser de confianza.
+		{/if}
+	</p>
 	<p class="px-4 py-2.5 text-label text-muted-foreground">
 		{#if values.lockTimeout === 'never'}
 			La app no se bloqueará por inactividad.
@@ -75,9 +86,9 @@
 <SettingsGroup title="Cuenta">
 	<SettingRow
 		label="Verificación en dos pasos"
-		value={values.twoFactor ? 'Activada' : 'Desactivada'}
+		value={mfa.enabled ? 'Activada' : 'Desactivada'}
 		chevron
-		onclick={() => settings.update({ twoFactor: !values.twoFactor })}
+		onclick={() => goto('/settings/two-factor')}
 	/>
 	<SettingRow
 		label="Sesiones activas"

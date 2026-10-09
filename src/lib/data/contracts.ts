@@ -1,11 +1,18 @@
 import type {
 	AppSettings,
+	AppSettingsPatch,
 	Conflict,
 	ConflictResolution,
 	Device,
 	Folder,
+	GoogleOutcome,
+	GoogleRegisterInput,
 	Id,
 	LoginResult,
+	MfaChallenge,
+	MfaRecoveryCodes,
+	MfaSetupResult,
+	MfaStatus,
 	Note,
 	NoteDraft,
 	NoteQuery,
@@ -24,6 +31,9 @@ import type {
 	EncryptedSyncRequest,
 	EncryptedSyncResponse,
 	SyncSnapshot,
+	TrustedDevice,
+	TrustedDeviceInput,
+	Sealed,
 	User
 } from '#lib/domain/index.js';
 
@@ -68,7 +78,35 @@ export interface AuthRepository {
 	verifyEmail(email: string, code: string): Promise<User>;
 	resendVerificationCode(email: string): Promise<void>;
 	/** `authKey` se deriva de la contraseña en el cliente. Devuelve la sesión y las claves cifradas. */
-	login(input: { email: string; authKey: string }): Promise<LoginResult>;
+	login(input: { email: string; authKey: string }): Promise<LoginResult | MfaChallenge>;
+	/** Segundo paso del login: completa un `MfaChallenge` con el código TOTP o de respaldo. */
+	loginMfa(mfaToken: string, code: string): Promise<LoginResult>;
+	/** Estado de la verificación en dos pasos de la cuenta. */
+	mfaStatus(): Promise<MfaStatus>;
+	/** Genera (o sustituye) un secreto TOTP pendiente. Exige la prueba de la contraseña. */
+	mfaSetup(authKey: string): Promise<MfaSetupResult>;
+	/** Confirma el código y activa la verificación en dos pasos; devuelve los códigos de respaldo. */
+	mfaEnable(code: string): Promise<MfaRecoveryCodes>;
+	/** Desactiva la verificación en dos pasos (contraseña + código). */
+	mfaDisable(authKey: string, code: string): Promise<void>;
+	/** Regenera los 10 códigos de respaldo (contraseña + código). */
+	mfaRegenerateCodes(authKey: string, code: string): Promise<MfaRecoveryCodes>;
+	/**
+	 * Inicia el flujo OAuth con Google. La web envía su `challenge` (PKCE) y el servidor devuelve la
+	 * URL de autorización a la que hay que redirigir. No hay ventanas emergentes ni scripts de Google.
+	 */
+	googleStart(challenge: string): Promise<{ url: string }>;
+	/**
+	 * Canjea el resultado de Google con el `verifier` guardado en el navegador (ata el retorno al
+	 * navegador que empezó el flujo). Devuelve la unión de cuatro estados.
+	 */
+	googleExchange(code: string, verifier: string): Promise<GoogleOutcome>;
+	/** Vincula Google a una cuenta existente; exige la contraseña (es, a efectos, un login). */
+	googleLink(linkToken: string, authKey: string): Promise<LoginResult | MfaChallenge>;
+	/** Crea la cuenta con Google (correo ya verificado) e inicia sesión. */
+	googleRegister(input: GoogleRegisterInput): Promise<LoginResult>;
+	/** Desvincula Google de la cuenta (exige la prueba de la contraseña). */
+	unlinkGoogle(authKey: string): Promise<void>;
 	/** Claves cifradas de la cuenta con sesión vigente (para desbloquear sin volver a iniciar sesión). */
 	keys(): Promise<KeyBundle>;
 	logout(): Promise<void>;
@@ -102,13 +140,28 @@ export interface DeviceRepository {
 	remove(id: Id): Promise<void>;
 }
 
+/**
+ * Dispositivos de confianza: el servidor guarda la clave maestra cifrada con la clave propia del
+ * navegador y solo la entrega a una sesión válida. Sin la clave local no sirve de nada.
+ */
+export interface TrustedDeviceRepository {
+	/** Dispositivos vigentes de la cuenta. Solo para cuentas con Google vinculado. */
+	list(): Promise<TrustedDevice[]>;
+	/** Da de alta este dispositivo (la clave maestra llega ya cifrada con la clave del navegador). */
+	add(input: TrustedDeviceInput): Promise<void>;
+	/** Clave maestra cifrada de un dispositivo. Lanza `not-found` si ya no existe (revocado). */
+	get(id: Id): Promise<{ wrappedMasterKey: Sealed }>;
+	/** Revoca un dispositivo de confianza. */
+	remove(id: Id): Promise<void>;
+}
+
 export interface SettingsRepository {
 	/**
 	 * Preferencias del dispositivo. `userId` solo lo usan las implementaciones que las guardan por
 	 * cuenta (las locales); el resto lo ignora.
 	 */
 	get(userId?: string): Promise<AppSettings>;
-	update(patch: Partial<AppSettings>, userId?: string): Promise<AppSettings>;
+	update(patch: AppSettingsPatch, userId?: string): Promise<AppSettings>;
 }
 
 export interface SyncRepository {
@@ -148,6 +201,7 @@ export interface Repositories {
 	folders: FolderRepository;
 	auth: AuthRepository;
 	devices: DeviceRepository;
+	trustedDevices: TrustedDeviceRepository;
 	settings: SettingsRepository;
 	sync: SyncRepository;
 	share: ShareRepository;

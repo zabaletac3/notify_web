@@ -4,6 +4,11 @@ export const settingsSections = [
 	{ href: '/settings/account', label: 'Mi cuenta', title: 'Mi cuenta' },
 	{ href: '/settings/sync', label: 'Sincronización', title: 'Sincronización y dispositivos' },
 	{ href: '/settings/privacy', label: 'Privacidad y seguridad', title: 'Privacidad y seguridad' },
+	{
+		href: '/settings/two-factor',
+		label: 'Verificación en dos pasos',
+		title: 'Verificación en dos pasos'
+	},
 	{ href: '/settings/storage', label: 'Almacenamiento', title: 'Almacenamiento y exportación' },
 	{ href: '/settings/delete-account', label: 'Eliminar cuenta', title: 'Eliminar cuenta' },
 	{ href: '/settings/about', label: 'Acerca de', title: 'Acerca de' }

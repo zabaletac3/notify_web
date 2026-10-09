@@ -5,7 +5,8 @@ import type {
 	DeviceRepository,
 	ShareRepository,
 	StorageRepository,
-	SyncTransport
+	SyncTransport,
+	TrustedDeviceRepository
 } from '../contracts.js';
 import { createMockBackend, type MockBackend } from '../mock/create-mock-repositories.js';
 import { MockSyncServer } from '../mock/mock-sync-server.js';
@@ -25,6 +26,7 @@ import { LocalSyncRepository } from './local-sync-repository.js';
 export interface RemoteServices {
 	auth: AuthRepository;
 	devices: DeviceRepository;
+	trustedDevices: TrustedDeviceRepository;
 	share: ShareRepository;
 	storage: StorageRepository;
 	transport: SyncTransport;
@@ -154,6 +156,7 @@ export function createLocalBackend(options: LocalBackendOptions): LocalBackend {
 				? {
 						auth: options.remote.auth,
 						devices: options.remote.devices,
+						trustedDevices: options.remote.trustedDevices,
 						share: options.remote.share,
 						storage: options.remote.storage
 					}

@@ -13,7 +13,7 @@ app/     raíz de composición + contexto        dev/  panel del simulador
 | Archivo                              | Contenido                                                                                                                        |
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | `note.ts`, `folder.ts`               | `Note` (Markdown, etiquetas, fijada, papelera `deletedAt`, `revision`, `syncStatus`), `Folder`, filtros (`NotesFilter`), conteos |
-| `auth.ts`, `user.ts`, `device.ts`    | `Session`, `User`, entradas de registro/login, `Device`                                                                          |
+| `auth.ts`, `user.ts`, `device.ts`    | `Session`, `User` (`hasGoogle`), entradas de registro/login, `Device`, `MfaChallenge`/`MfaStatus`, `GoogleOutcome`               |
 | `sync.ts`, `share.ts`, `settings.ts` | Fase de sincronización, `Conflict` y resoluciones, `ShareLink`, `AppSettings` con valores por defecto                            |
 | `errors.ts`                          | `AppError` (unión por `kind`), `AppFailure` (lo que lanzan los repositorios), `ActionResult`                                     |
 | `validation.ts`                      | Reglas puras con **códigos** (`invalid-email`, `name-taken`…) y `passwordStrength` (0–4, el medidor del diseño)                  |
@@ -23,7 +23,7 @@ Regla: el dominio no importa nada de la app. Los textos en español viven en `co
 
 ## Contratos de datos (`src/lib/data/contracts.ts`)
 
-`NoteRepository`, `FolderRepository`, `AuthRepository`, `DeviceRepository`, `SettingsRepository`, `SyncRepository`, `ShareRepository` y `Repositories` (el conjunto). Devuelven la entidad; ante un fallo **lanzan `AppFailure`**. Las implementaciones: `data/mock` (hoy), luego `local` y `remote`.
+`NoteRepository`, `FolderRepository`, `AuthRepository`, `DeviceRepository`, `SettingsRepository`, `SyncRepository`, `ShareRepository`, `TrustedDeviceRepository` y `Repositories` (el conjunto). Devuelven la entidad; ante un fallo **lanzan `AppFailure`**. Las implementaciones: `data/mock` (hoy), luego `local` y `remote`. `AuthRepository` incluye, además de la cuenta, la verificación en dos pasos (`loginMfa`, `mfaStatus`, `mfaSetup`, `mfaEnable`, `mfaDisable`, `mfaRegenerateCodes`) y Google (`googleStart`, `googleExchange`, `googleLink`, `googleRegister`, `unlinkGoogle`).
 
 ## Datos simulados (`src/lib/data/mock`)
 
@@ -36,30 +36,33 @@ Regla: el dominio no importa nada de la app. Los textos en español viven en `co
 
 `app.scenario` (reactivo) + panel en **`/dev/simulator`** (solo en desarrollo). Cada interruptor existe para poder ver pantallas del diseño:
 
-| Interruptor                            | Vistas que habilita                                    |
-| -------------------------------------- | ------------------------------------------------------ |
-| `offline`                              | 29 banner sin conexión (y los avisos de red en toasts) |
-| `injectConflict` + "Sincronizar ahora" | 30 conflicto de sincronización                         |
-| `sessionExpired`                       | 31 sesión expirada                                     |
-| `serverError`                          | 32 error de servidor                                   |
-| `latencyMs` alto (3000)                | 33 skeletons de carga                                  |
-| `dataset: first-time`                  | 22 vacío: primera vez                                  |
-| carpeta `Proyectos`                    | 21 vacío: carpeta sin notas                            |
-| filtro `trash`                         | 23 papelera                                            |
+| Interruptor                                             | Vistas que habilita                                       |
+| ------------------------------------------------------- | --------------------------------------------------------- |
+| `offline`                                               | 29 banner sin conexión (y los avisos de red en toasts)    |
+| `injectConflict` + "Sincronizar ahora"                  | 30 conflicto de sincronización                            |
+| `sessionExpired`                                        | 31 sesión expirada                                        |
+| `serverError`                                           | 32 error de servidor                                      |
+| `latencyMs` alto (3000)                                 | 33 skeletons de carga                                     |
+| `dataset: first-time`                                   | 22 vacío: primera vez                                     |
+| carpeta `Proyectos`                                     | 21 vacío: carpeta sin notas                               |
+| filtro `trash`                                          | 23 papelera                                               |
+| `mfaEnabled`                                            | Verificación en dos pasos (retos, `/two-factor`, ajustes) |
+| `googleScenario` (`new`/`unlinked`/`linked`/`with-mfa`) | Acceso con Google en sus cuatro estados                   |
 
 Las demás vistas (autenticación 5–10, ajustes 11–17, menús y modales 24–28, búsqueda 19–20) se ven con los datos normales y el estado correspondiente.
 
 ## Estado (`src/lib/features/*/state`, runes)
 
-| Clase                           | Qué expone                                                                                                                                                                                                                                              |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NotesState`                    | `all`, `visible`, `groups`, `counts`, `tags`, `selected`, `filter`, `sort`, `status`/`error`; acciones `create`, `update` (optimista, con reversión), `togglePin`, `moveToFolder`, `duplicate`, `moveToTrash`, `restore`, `deleteForever`, `emptyTrash` |
-| `FoldersState`                  | `list`, `name(id)`; `create`/`rename` con validación en cliente, `remove` (recarga las notas)                                                                                                                                                           |
-| `SearchState`                   | `query`, `scope`, `results`, `status` (`idle`/`results`/`empty`), `terms` (para resaltar). Sin tildes ni mayúsculas, prefijos y tolerancia a errores de tipeo                                                                                           |
-| `AuthState`                     | `status` (`unknown`/`anonymous`/`authenticated`/`expired`), `fieldErrors`, `pendingEmail`, enfriamiento de reenvío; `register`, `verify`, `resendCode`, `login`, `logout`, `forgotPassword`, `resetPassword`                                            |
-| `SyncState`                     | `phase` (`idle`/`syncing`/`offline`/`error`), `pendingCount`, `firstConflict`; `syncNow`, `resolve`                                                                                                                                                     |
-| `SettingsState`, `DevicesState` | Ajustes con cambio optimista; dispositivos (actual / otros)                                                                                                                                                                                             |
-| `ShareState`                    | Enlaces de solo lectura por nota                                                                                                                                                                                                                        |
+| Clase                           | Qué expone                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NotesState`                    | `all`, `visible`, `groups`, `counts`, `tags`, `selected`, `filter`, `sort`, `status`/`error`; acciones `create`, `update` (optimista, con reversión), `togglePin`, `moveToFolder`, `duplicate`, `moveToTrash`, `restore`, `deleteForever`, `emptyTrash`                                                                                                                                   |
+| `FoldersState`                  | `list`, `name(id)`; `create`/`rename` con validación en cliente, `remove` (recarga las notas)                                                                                                                                                                                                                                                                                             |
+| `SearchState`                   | `query`, `scope`, `results`, `status` (`idle`/`results`/`empty`), `terms` (para resaltar). Sin tildes ni mayúsculas, prefijos y tolerancia a errores de tipeo                                                                                                                                                                                                                             |
+| `AuthState`                     | `status` (`unknown`/`anonymous`/`authenticated`/`expired`), `fieldErrors`, `pendingEmail`, enfriamiento de reenvío; `register`, `verify`, `resendCode`, `login`, `verifyMfa`, `logout`, `forgotPassword`, `resetPassword`; Google (`startGoogle`, `completeGoogle`, `linkGoogle`, `registerWithGoogle`, `unlinkGoogle`) y el reto de segundo paso (`mfaPending`, `pendingMfa` en memoria) |
+| `SyncState`                     | `phase` (`idle`/`syncing`/`offline`/`error`), `pendingCount`, `firstConflict`; `syncNow`, `resolve`                                                                                                                                                                                                                                                                                       |
+| `SettingsState`, `DevicesState` | Ajustes con cambio optimista; dispositivos (actual / otros)                                                                                                                                                                                                                                                                                                                               |
+| `MfaState`                      | Verificación en dos pasos: `enabled`, `enabledAt`, `recoveryCodesLeft`, `pendingSetup` (`secret` + `otpauthUri`), `recoveryCodes`; `load`, `setup`, `enable`, `disable`, `regenerate`, `cancelSetup`, `acknowledgeCodes`                                                                                                                                                                  |
+| `ShareState`                    | Enlaces de solo lectura por nota                                                                                                                                                                                                                                                                                                                                                          |
 
 Convenciones:
 
@@ -102,6 +105,8 @@ Convenciones:
 `createApp({ persistence: 'indexeddb' })` (el layout raíz) guarda notas, carpetas y ajustes en IndexedDB (`data/local`) y los sincroniza con `MockSyncServer`. `persistence: 'memory'` (por defecto, usado en las pruebas) mantiene todo en el simulador. Protocolo y decisiones en `docs/adr/0004-sincronizacion.md`; pruebas en `src/lib/data/local/local-sync.spec.ts`.
 
 **Preferencias del dispositivo.** Los ajustes (sobre todo los de bloqueo: `lockOnExit`, `lockTimeout`) no viven en la base de la cuenta ni se sincronizan. Se guardan en `localStorage` con una clave por cuenta (`apunte-prefs-<userId>`, `data/local/device-prefs.ts`), se leen de forma **síncrona** en cuanto se conoce el `userId` (arranque e inicio de sesión) y **antes** de desbloquear el cofre, porque `rememberDevice` depende de `lockOnExit`. Cerrar sesión no las borra; eliminar la cuenta sí. `LocalSettingsRepository` migra una sola vez los ajustes antiguos de `meta.settings` si aún no hay preferencias guardadas.
+
+**Dispositivos de confianza.** Solo para cuentas con Google. Además de las preferencias, `data/local/device-prefs.ts` guarda una **marca** («en este dispositivo se entra con Google», escrita al completar un login con Google y borrada al olvidar el dispositivo o borrar la cuenta) y `data/crypto/device-keys.ts` (IndexedDB `apunte-keys`, tabla `trustedDevices`) guarda `{userId, trustId, deviceKey}` con `deviceKey` AES-GCM **no exportable**. La clave maestra **no** se guarda local: el servidor la tiene cifrada con esa clave y solo la entrega a una sesión válida. Bloquear la app borra la mitad local (S1); «Cerrar sesión» la conserva y «Cerrar sesión y olvidar este dispositivo» la borra. Vector compartido en `docs/api/vectors/trusted-device.json`.
 
 **Cifrado de extremo a extremo (modo `indexeddb`).** Las notas y carpetas se guardan **cifradas** en IndexedDB y viajan cifradas a `POST /sync`; el servidor solo ve metadatos (id, carpeta, fechas, papelera, revisión) y dos textos cifrados por elemento. La clave sale de la sesión (`VaultState`); bloqueada la app, los repositorios locales lanzan `locked` pero la sincronización sigue subiendo y bajando filas cifradas. Cifrar es asíncrono y no cabe en una transacción de IndexedDB, así que cada operación de escritura pasa por una cola (`Mutex`): lee, cifra y escribe de principio a fin. Una fila que no se puede descifrar sale como «Nota ilegible» en vez de romper la lista. El modo `memory` (pruebas y simulador por defecto) **no cifra**: solo sirve para la interfaz. Plan completo en `docs/plans/0005-cifrado-extremo-a-extremo.md`.
 

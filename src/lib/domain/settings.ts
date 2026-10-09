@@ -17,6 +17,12 @@ export interface AppSettings {
 	twoFactor: boolean;
 }
 
+/**
+ * Campos que se pueden cambiar desde Ajustes. `twoFactor` es de solo lectura: la verificación en dos
+ * pasos se gestiona con los endpoints `/mfa` y el servidor lo calcula; enviarlo da `422`.
+ */
+export type AppSettingsPatch = Partial<Omit<AppSettings, 'twoFactor'>>;
+
 export const DEFAULT_SETTINGS: AppSettings = {
 	theme: 'system',
 	textSize: 'medium',

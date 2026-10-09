@@ -13,6 +13,8 @@ declare global {
 		readonly PUBLIC_BACKEND?: string;
 		/** `cookie` (por defecto, web: refresh en cookie HttpOnly) o `body` (escritorio/móvil). */
 		readonly PUBLIC_SESSION_MODE?: 'cookie' | 'body';
+		/** `true` muestra el botón de acceso con Google; cualquier otro valor lo oculta. */
+		readonly PUBLIC_GOOGLE_AUTH?: string;
 	}
 
 	namespace App {

@@ -4,9 +4,12 @@ import { normalizeSettings, type AppSettings } from '#lib/domain/index.js';
 export const DEVICE_PREFS_PREFIX = 'apunte-prefs-';
 /** Prefijo de la última actividad por cuenta (para bloquear al recargar si pasó el tiempo). */
 export const DEVICE_ACTIVE_PREFIX = 'apunte-active-';
+/** Prefijo de la marca «en este dispositivo se entra con Google» (dispositivo de confianza). */
+export const DEVICE_TRUST_PREFIX = 'apunte-trust-';
 
 export const devicePrefsKey = (userId: string) => `${DEVICE_PREFS_PREFIX}${userId}`;
 export const deviceActiveAtKey = (userId: string) => `${DEVICE_ACTIVE_PREFIX}${userId}`;
+export const deviceTrustKey = (userId: string) => `${DEVICE_TRUST_PREFIX}${userId}`;
 
 /** Lo mínimo de `localStorage` que usa el almacén (se puede sustituir en pruebas y SSR). */
 export interface PrefsStorage {
@@ -99,6 +102,41 @@ export class DevicePrefs {
 		try {
 			store.removeItem(devicePrefsKey(userId));
 			store.removeItem(deviceActiveAtKey(userId));
+			store.removeItem(deviceTrustKey(userId));
+		} catch {
+			// Nada que borrar.
+		}
+	}
+
+	/**
+	 * `true` si en este dispositivo se ha entrado con Google (marca que decide el diálogo de cierre de
+	 * sesión con dos opciones). Se borra al olvidar el dispositivo y al borrar la cuenta.
+	 */
+	readTrust(userId: string): boolean {
+		const store = this.store;
+		if (!store) return false;
+		try {
+			return store.getItem(deviceTrustKey(userId)) === '1';
+		} catch {
+			return false;
+		}
+	}
+
+	writeTrust(userId: string): void {
+		const store = this.store;
+		if (!store) return;
+		try {
+			store.setItem(deviceTrustKey(userId), '1');
+		} catch {
+			// Sin almacenamiento disponible: la marca no persiste.
+		}
+	}
+
+	removeTrust(userId: string): void {
+		const store = this.store;
+		if (!store) return;
+		try {
+			store.removeItem(deviceTrustKey(userId));
 		} catch {
 			// Nada que borrar.
 		}

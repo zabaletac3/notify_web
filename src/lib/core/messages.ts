@@ -19,6 +19,7 @@ export const validationMessages: Record<ValidationCode, string> = {
 	'wrong-password': 'La contraseña no es correcta.',
 	'same-password': 'La nueva contraseña debe ser distinta de la actual.',
 	'invalid-recovery-key': 'La clave de recuperación no es correcta.',
+	'invalid-payload': 'Ese ajuste ya no se puede cambiar desde aquí.',
 	'wipe-not-confirmed': 'Confirma que entiendes que se borrarán tus notas.'
 };
 
@@ -36,9 +37,14 @@ export function errorMessage(error: AppError): string {
 		case 'unauthorized':
 			return 'Correo o contraseña incorrectos.';
 		case 'forbidden':
-			return error.code === 'email-not-verified'
-				? 'Verifica tu correo para poder iniciar sesión.'
-				: 'No tienes permiso para hacer esto.';
+			if (error.code === 'email-not-verified')
+				return 'Verifica tu correo para poder iniciar sesión.';
+			if (error.code === 'google-disabled') return 'El acceso con Google no está disponible.';
+			if (error.code === 'google-email-unverified')
+				return 'El correo de tu cuenta de Google no está verificado.';
+			if (error.code === 'account-deleted')
+				return 'Esta cuenta está en proceso de eliminación. Restablece la contraseña para recuperarla.';
+			return 'No tienes permiso para hacer esto.';
 		case 'session-expired':
 			return 'Tu sesión expiró. Inicia sesión de nuevo.';
 		case 'locked':
@@ -52,6 +58,11 @@ export function errorMessage(error: AppError): string {
 		case 'validation':
 			return 'Revisa los datos ingresados.';
 		case 'conflict':
+			if (error.code === 'mfa-already-enabled')
+				return 'La verificación en dos pasos ya está activada.';
+			if (error.code === 'mfa-not-pending')
+				return 'No hay una configuración de verificación pendiente.';
+			if (error.code === 'mfa-not-enabled') return 'La verificación en dos pasos no está activada.';
 			return 'Esta nota se editó en otro dispositivo.';
 		case 'rate-limited':
 			return 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.';

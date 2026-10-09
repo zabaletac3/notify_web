@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
@@ -18,6 +19,17 @@
 	// ¿Tiene la clave de recuperación? Con ella se conservan las notas; sin ella se empieza de cero.
 	let choice = $state<'keep' | 'wipe'>('keep');
 	let confirmedWipe = $state(false);
+	// Verificación en dos pasos: `wipe` exige el código; `keep` permite desactivarla.
+	let mfaEnabled = $state(false);
+	let mfaCode = $state('');
+	let disableMfa = $state(false);
+
+	// El enlace dice si la cuenta tiene MFA para pedir el código solo cuando hace falta.
+	onMount(async () => {
+		if (!token) return;
+		const result = await auth.loadPasswordResetBundle(token);
+		if (result.ok) mfaEnabled = result.value.mfaEnabled;
+	});
 
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
@@ -25,7 +37,9 @@
 			token,
 			password,
 			confirmation,
-			choice === 'keep' ? { mode: 'keep', recoveryKey } : { mode: 'wipe', confirmed: confirmedWipe }
+			choice === 'keep'
+				? { mode: 'keep', recoveryKey, ...(mfaEnabled ? { disableMfa } : {}) }
+				: { mode: 'wipe', confirmed: confirmedWipe, ...(mfaEnabled ? { mfaCode } : {}) }
 		);
 		if (!result.ok) return;
 		toast.success('Contraseña actualizada. Ya puedes iniciar sesión.');
@@ -76,6 +90,14 @@
 					bind:value={recoveryKey}
 					error={validationMessage(auth.fieldErrors.recoveryKey)}
 				/>
+				{#if mfaEnabled}
+					<div class="flex items-start gap-2.5">
+						<Checkbox id="disable-mfa" bind:checked={disableMfa} class="mt-0.5" />
+						<label for="disable-mfa" class="text-label text-muted-foreground">
+							También perdí mi app de autenticación: desactivar la verificación en dos pasos.
+						</label>
+					</div>
+				{/if}
 			{:else}
 				<div
 					class="flex flex-col gap-2.5 rounded-xl border border-destructive bg-destructive-soft p-3.5"
@@ -94,6 +116,16 @@
 						<p class="text-caption text-destructive">{validationMessage(auth.fieldErrors.wipe)}</p>
 					{/if}
 				</div>
+				{#if mfaEnabled}
+					<AuthField
+						id="mfa-code"
+						label="Código de verificación en dos pasos"
+						placeholder="123456 o XXXXX-XXXXX"
+						autocomplete="one-time-code"
+						bind:value={mfaCode}
+						error={validationMessage(auth.fieldErrors.mfaCode)}
+					/>
+				{/if}
 			{/if}
 
 			<div class="flex flex-col gap-4">

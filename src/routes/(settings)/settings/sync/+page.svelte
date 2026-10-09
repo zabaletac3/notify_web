@@ -6,7 +6,7 @@
 	import { formatRelativeTime } from '#lib/core/index.js';
 	import type { DevicePlatform } from '#lib/domain/index.js';
 
-	const { settings, sync, devices } = getApp();
+	const { settings, sync, devices, trustedDevices } = getApp();
 	const values = $derived(settings.values);
 	const now = new Date();
 
@@ -40,6 +40,13 @@
 		const result = await devices.remove(id);
 		toast[result.ok ? 'success' : 'error'](
 			result.ok ? 'Dispositivo eliminado' : 'No se pudo quitar el dispositivo'
+		);
+	}
+
+	async function removeTrusted(id: string) {
+		const result = await trustedDevices.remove(id);
+		toast[result.ok ? 'success' : 'error'](
+			result.ok ? 'Dispositivo de confianza eliminado' : 'No se pudo quitar el dispositivo'
 		);
 	}
 </script>
@@ -98,5 +105,35 @@
 				{/if}
 			{/snippet}
 		</SettingRow>
+	{/each}
+</SettingsGroup>
+
+<SettingsGroup title="Dispositivos de confianza">
+	<p class="px-4 py-3 text-label text-muted-foreground">
+		En estos dispositivos puedes entrar con Google sin escribir tu contraseña.
+	</p>
+	{#each trustedDevices.list as device (device.id)}
+		<SettingRow
+			label={device.name}
+			description="{platforms[device.platform]} · usado {formatRelativeTime(
+				device.lastUsedAt,
+				now
+			)}"
+		>
+			{#snippet control()}
+				<button
+					type="button"
+					class="text-sm font-semibold text-primary"
+					onclick={() => removeTrusted(device.id)}
+				>
+					Quitar<span class="sr-only"> {device.name}</span>
+				</button>
+			{/snippet}
+		</SettingRow>
+	{:else}
+		<SettingRow
+			label="Ninguno"
+			description="Entra con Google y desbloquea con tu contraseña para añadir este dispositivo."
+		/>
 	{/each}
 </SettingsGroup>
