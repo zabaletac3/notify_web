@@ -9,7 +9,7 @@ describe('parseMarkdownNote', () => {
 		});
 	});
 
-	it('lee lo que escribe la exportación de Apunte (título, línea en blanco y contenido)', () => {
+	it('lee lo que escribe la exportación de AxoNote (título, línea en blanco y contenido)', () => {
 		const exported = '# Reunión del lunes\n\nTemas:\n\n- Presupuesto\n';
 		expect(parseMarkdownNote('Reunión del lunes.md', exported)).toEqual({
 			title: 'Reunión del lunes',

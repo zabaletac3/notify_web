@@ -11,7 +11,7 @@ import { createMockBackend, type MockBackend } from '../mock/create-mock-reposit
 import { MockSyncServer } from '../mock/mock-sync-server.js';
 import { DEMO_DEVICE_ID } from '../mock/fixtures/index.js';
 import type { MockDatabase, MockDatabaseOptions } from '../mock/mock-database.js';
-import { ApunteDb } from './apunte-db.js';
+import { AxoNoteDb } from './axonote-db.js';
 import type { DataGate } from './gate.js';
 import { Mutex } from './gate.js';
 import { DevicePrefs } from './device-prefs.js';
@@ -50,7 +50,7 @@ export interface LocalBackendOptions extends MockDatabaseOptions {
 export interface LocalBackend extends MockBackend {
 	local: {
 		/** Base de la cuenta abierta. Lanza `session-expired` si no hay ninguna. */
-		readonly db: ApunteDb;
+		readonly db: AxoNoteDb;
 		/** Cuenta cuya base está abierta, o `null`. */
 		readonly userId: string | null;
 		sync: LocalSyncRepository;
@@ -76,10 +76,10 @@ export function createLocalBackend(options: LocalBackendOptions): LocalBackend {
 	const scenario = serverDb.scenario;
 	const prefix = options.dbName ?? 'apunte';
 	const dbNameFor = (userId: string) => `${prefix}-${userId}`;
-	let holder: { db: ApunteDb; userId: string } | null = null;
+	let holder: { db: AxoNoteDb; userId: string } | null = null;
 	const attach = (userId: string) => {
 		holder?.db.close();
-		holder = { db: new ApunteDb(dbNameFor(userId)), userId };
+		holder = { db: new AxoNoteDb(dbNameFor(userId)), userId };
 	};
 	if (options.userId) attach(options.userId);
 	// Sin base abierta (sin sesión) nadie puede leer ni escribir: las operaciones fallan como sesión vencida.

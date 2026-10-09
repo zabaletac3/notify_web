@@ -1,7 +1,7 @@
 import { getContext, setContext } from 'svelte';
 import type { App } from './create-app.svelte.js';
 
-const KEY = Symbol('apunte.app');
+const KEY = Symbol('axonote.app');
 
 /** Publica la app para todos los componentes descendientes (se llama en el layout raíz). */
 export const setApp = (app: App): App => setContext(KEY, app);

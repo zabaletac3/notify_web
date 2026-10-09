@@ -20,7 +20,7 @@
 			href="/"
 			class="rounded-lg px-2 py-1 text-heading font-bold outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 		>
-			Apunte
+			AxoNote
 		</a>
 		<button
 			type="button"

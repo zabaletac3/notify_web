@@ -151,7 +151,7 @@
 	</div>
 	<div class={cn('flex-1 overflow-y-auto', className)}>
 		{@render header?.()}
-		<div bind:this={element} class="prose-apunte"></div>
+		<div bind:this={element} class="prose-axonote"></div>
 	</div>
 
 	<!-- Barra de formato flotante (pantallas estrechas) -->

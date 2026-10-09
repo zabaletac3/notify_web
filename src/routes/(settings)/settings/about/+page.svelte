@@ -3,7 +3,7 @@
 	import { APP_BUILD, APP_VERSION } from '#lib/legal/version.js';
 </script>
 
-<svelte:head><title>Acerca de · Apunte</title></svelte:head>
+<svelte:head><title>Acerca de · AxoNote</title></svelte:head>
 
 <h1 class="text-page font-bold max-md:sr-only">Acerca de</h1>
 
@@ -12,7 +12,7 @@
 		class="grid size-18 place-content-center rounded-[18px] bg-primary text-4xl font-bold text-primary-foreground"
 		aria-hidden="true">A</span
 	>
-	<p class="text-[22px] font-bold">Apunte</p>
+	<p class="text-[22px] font-bold">AxoNote</p>
 	<p class="text-sm text-muted-foreground">Versión {APP_VERSION} (build {APP_BUILD})</p>
 </section>
 
@@ -24,4 +24,4 @@
 	<SettingRow label="Contacto y soporte" chevron href="/support" />
 </SettingsGroup>
 
-<p class="text-center text-caption text-tertiary">© 2026 Apunte. Todos los derechos reservados.</p>
+<p class="text-center text-caption text-tertiary">© 2026 AxoNote. Todos los derechos reservados.</p>

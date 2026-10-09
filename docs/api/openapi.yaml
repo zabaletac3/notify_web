@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Apunte API
+  title: AxoNote API
   version: 0.1.0-draft
   summary: Borrador del contrato HTTP entre los clientes (web, escritorio, móvil) y el backend.
   description: |
@@ -131,7 +131,7 @@ paths:
       tags: [auth]
       summary: Verifica el correo con el código de 6 dígitos e inicia sesión
       description: |
-        Con `X-Apunte-Session: cookie` el token de renovación llega solo como cookie `HttpOnly`
+        Con `X-AxoNote-Session: cookie` el token de renovación llega solo como cookie `HttpOnly`
         (no en `refreshToken`); sin la cabecera, la respuesta es la de siempre.
       x-contract: AuthRepository.verifyEmail
       security: []
@@ -187,7 +187,7 @@ paths:
         Mismo error (`unauthorized`) para correo inexistente y contraseña incorrecta.
         `403 forbidden/email-not-verified` si falta verificar el correo.
         Bloqueo temporal tras 5 intentos fallidos (`429`).
-        Con `X-Apunte-Session: cookie` el token de renovación llega solo como cookie `HttpOnly`
+        Con `X-AxoNote-Session: cookie` el token de renovación llega solo como cookie `HttpOnly`
         (no en `refreshToken`); sin la cabecera, la respuesta es la de siempre.
       x-contract: AuthRepository.login
       security: []
@@ -216,10 +216,10 @@ paths:
       summary: Renueva el token de acceso con el de renovación
       description: |
         Dos modos:
-        - Sin `X-Apunte-Session`, el `refreshToken` viaja en el cuerpo como hasta ahora (escritorio,
+        - Sin `X-AxoNote-Session`, el `refreshToken` viaja en el cuerpo como hasta ahora (escritorio,
           móvil y bundles web antiguos no cambian).
-        - Con `X-Apunte-Session: cookie` la petición no lleva cuerpo: el servidor lee la cookie
-          `apunte_rt`, la rota (nueva `Set-Cookie`) y devuelve el nuevo token de acceso en el cuerpo.
+        - Con `X-AxoNote-Session: cookie` la petición no lleva cuerpo: el servidor lee la cookie
+          `axonote_rt`, la rota (nueva `Set-Cookie`) y devuelve el nuevo token de acceso en el cuerpo.
         La rotación y la detección de reutilización no cambian: reutilizar una cookie ya usada revoca
         la familia y el dispositivo, con el mismo error que hoy.
         En modo cookie la cabecera es obligatoria (fuerza el preflight CORS) y, si la petición trae
@@ -240,7 +240,7 @@ paths:
                 refreshToken:
                   {
                     type: string,
-                    description: 'Solo en modo cuerpo (sin la cookie `X-Apunte-Session: cookie`)'
+                    description: 'Solo en modo cuerpo (sin la cookie `X-AxoNote-Session: cookie`)'
                   }
       responses:
         '200':
@@ -258,7 +258,7 @@ paths:
       tags: [auth]
       summary: Cierra la sesión de este dispositivo
       description: |
-        En modo cookie (`X-Apunte-Session: cookie`) se acepta aunque el token de acceso haya vencido:
+        En modo cookie (`X-AxoNote-Session: cookie`) se acepta aunque el token de acceso haya vencido:
         la sesión se revoca con la cookie de renovación y **siempre** se responde borrándola
         (`Set-Cookie` con `Max-Age=0`). En modo cookie la cabecera es obligatoria y un `Origin`
         presente debe estar en `ALLOWED_ORIGINS`; si no, `403` con `kind: forbidden` (anti-CSRF).
@@ -787,19 +787,19 @@ components:
     refreshCookie:
       type: apiKey
       in: cookie
-      name: apunte_rt
+      name: axonote_rt
       description: |
         Cookie `HttpOnly` con el token de renovación (modo cookie, cabecera
-        `X-Apunte-Session: cookie`). En `POST /auth/logout` permite cerrar la sesión aunque el token
+        `X-AxoNote-Session: cookie`). En `POST /auth/logout` permite cerrar la sesión aunque el token
         de acceso haya vencido.
   parameters:
     SessionMode:
-      name: X-Apunte-Session
+      name: X-AxoNote-Session
       in: header
       required: false
       description: |
         Modo cookie de la sesión. Si vale `cookie`, el servidor entrega el token de renovación solo
-        como cookie `HttpOnly` (`apunte_rt`) y omite `refreshToken` del cuerpo; sin esta cabecera todo
+        como cookie `HttpOnly` (`axonote_rt`) y omite `refreshToken` del cuerpo; sin esta cabecera todo
         funciona como hasta ahora, con el `refreshToken` en el cuerpo (escritorio, móvil y bundles web
         antiguos). En modo cookie la cabecera es obligatoria y exige un `Origin` permitido (anti-CSRF).
       schema: { type: string, enum: [cookie] }
@@ -820,13 +820,13 @@ components:
     SetRefreshCookie:
       description: |
         Solo en modo cookie: token de renovación como cookie `HttpOnly`, con la forma
-        `apunte_rt=<valor>; HttpOnly; Secure; SameSite=Strict; Path=/v1/auth; Max-Age=<segundos>`
+        `axonote_rt=<valor>; HttpOnly; Secure; SameSite=Strict; Path=/v1/auth; Max-Age=<segundos>`
         (sin `Domain` por defecto).
       schema: { type: string }
     ClearRefreshCookie:
       description: |
         Solo en modo cookie: borra la cookie de renovación con
-        `apunte_rt=; Max-Age=0; Path=/v1/auth; HttpOnly; Secure; SameSite=Strict`.
+        `axonote_rt=; Max-Age=0; Path=/v1/auth; HttpOnly; Secure; SameSite=Strict`.
       schema: { type: string }
   responses:
     ValidationError:
@@ -931,7 +931,7 @@ components:
         refreshToken:
           {
             type: string,
-            description: 'Ausente en modo cookie (cabecera X-Apunte-Session: cookie): llega como cookie HttpOnly'
+            description: 'Ausente en modo cookie (cabecera X-AxoNote-Session: cookie): llega como cookie HttpOnly'
           }
     Sealed:
       type: string

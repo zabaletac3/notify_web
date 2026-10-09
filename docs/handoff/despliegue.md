@@ -1,4 +1,4 @@
-# Apunte · Despliegue de QA y producción — decisiones y pasos
+# AxoNote · Despliegue de QA y producción — decisiones y pasos
 
 > Documento de traspaso para una sesión de Claude Code que haga el **primer despliegue**.
 > Actualizado: 2026-10-08. Nada de esto se ha ejecutado todavía en un servidor real.

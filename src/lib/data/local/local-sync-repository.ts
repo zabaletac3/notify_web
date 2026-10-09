@@ -10,13 +10,13 @@ import {
 	type SyncSnapshot
 } from '#lib/domain/index.js';
 import type { SyncRepository, SyncTransport } from '../contracts.js';
-import type { ApunteDb, ConflictRow, NoteRow, OutboxEntry } from './apunte-db.js';
+import type { AxoNoteDb, ConflictRow, NoteRow, OutboxEntry } from './axonote-db.js';
 import { noGate, type DataGate, type Mutex } from './gate.js';
 import type { LocalCodec } from './local-codec.js';
 import { enqueue, noteFields } from './outbox.js';
 
 export interface LocalSyncDeps {
-	db: ApunteDb;
+	db: AxoNoteDb;
 	codec: LocalCodec;
 	lock: Mutex;
 	transport: SyncTransport;

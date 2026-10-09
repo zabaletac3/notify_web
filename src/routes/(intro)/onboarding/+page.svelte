@@ -26,7 +26,7 @@
 	const next = () => (last ? finish() : (step += 1));
 </script>
 
-<svelte:head><title>Primeros pasos · Apunte</title></svelte:head>
+<svelte:head><title>Primeros pasos · AxoNote</title></svelte:head>
 
 {#snippet illustration()}
 	<div

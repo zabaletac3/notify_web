@@ -4,7 +4,7 @@ export {
 	type LocalBackend,
 	type LocalBackendOptions
 } from './create-local-backend.js';
-export { ApunteDb } from './apunte-db.js';
+export { AxoNoteDb } from './axonote-db.js';
 export {
 	DevicePrefs,
 	devicePrefsKey,

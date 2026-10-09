@@ -7,10 +7,10 @@
 </script>
 
 <svelte:head>
-	<title>Contacto y soporte · Apunte</title>
+	<title>Contacto y soporte · AxoNote</title>
 	<meta
 		name="description"
-		content="Cómo contactar con el equipo de Apunte, qué incluir en tu mensaje y dónde ejercer tus derechos sobre tus datos."
+		content="Cómo contactar con el equipo de AxoNote, qué incluir en tu mensaje y dónde ejercer tus derechos sobre tus datos."
 	/>
 </svelte:head>
 
@@ -18,7 +18,7 @@
 	<header class="flex flex-col gap-2">
 		<h1 class="text-title font-bold">Contacto y soporte</h1>
 		<p class="text-body">
-			¿Tienes un problema con Apunte o una duda? Escríbenos a
+			¿Tienes un problema con AxoNote o una duda? Escríbenos a
 			<a
 				href={mailto}
 				class="font-semibold text-primary underline underline-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -30,14 +30,14 @@
 	</header>
 
 	<Banner
-		message="Nunca te pediremos tu contraseña ni tu clave de recuperación. Si alguien te los pide en nombre de Apunte, no se los des."
+		message="Nunca te pediremos tu contraseña ni tu clave de recuperación. Si alguien te los pide en nombre de AxoNote, no se los des."
 	/>
 
 	<section class="flex flex-col gap-2">
 		<h2 class="text-heading font-semibold">Qué incluir en tu mensaje</h2>
 		<ul class="flex list-disc flex-col gap-1.5 pl-5 text-body">
 			<li>El correo de tu cuenta.</li>
-			<li>La plataforma en la que usas Apunte (web, escritorio, iOS o Android).</li>
+			<li>La plataforma en la que usas AxoNote (web, escritorio, iOS o Android).</li>
 			<li>
 				La versión de la app (versión {APP_VERSION}) y, si puedes, una descripción del problema.
 			</li>

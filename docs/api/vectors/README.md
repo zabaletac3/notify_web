@@ -2,7 +2,7 @@
 
 > **SOLO PRUEBAS: todas las claves, contraseñas y sales de estos archivos son públicas; no usar jamás en una cuenta real.**
 
-Propósito: fijar el formato criptográfico de Apunte para que las apps nativas (escritorio Tauri,
+Propósito: fijar el formato criptográfico de AxoNote para que las apps nativas (escritorio Tauri,
 móvil) y la web comprueben que leen y escriben **exactamente los mismos bytes**. Cada JSON lleva
 `version: 1`. Se generan de forma determinista con `pnpm vectors:generate` y se comprueban en
 `pnpm test:unit --run`: si el formato cambia, las pruebas fallan hasta regenerar y revisar el diff.

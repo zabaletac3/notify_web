@@ -81,7 +81,7 @@ const backendBanner = (mode: string): Plugin => ({
 			const log = server.config.logger;
 			if (env.PUBLIC_BACKEND !== 'http' || !env.PUBLIC_API_URL) {
 				log.info(
-					'\n  Apunte → backend SIMULADO (sin API; el código de verificación es 123456).\n' +
+					'\n  AxoNote → backend SIMULADO (sin API; el código de verificación es 123456).\n' +
 						'  Para la API real: PUBLIC_BACKEND=http y PUBLIC_API_URL en .env, y reinicia.\n'
 				);
 				return;
@@ -89,9 +89,11 @@ const backendBanner = (mode: string): Plugin => ({
 			const url = env.PUBLIC_API_URL.replace(/\/$/, '');
 			try {
 				const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(3000) });
-				log.info(`\n  Apunte → API real ${url} (health: ${res.status}).\n`);
+				log.info(`\n  AxoNote → API real ${url} (health: ${res.status}).\n`);
 			} catch {
-				log.warn(`\n  Apunte → API real ${url}, pero NO responde. ¿Está corriendo \`make run\`?\n`);
+				log.warn(
+					`\n  AxoNote → API real ${url}, pero NO responde. ¿Está corriendo \`make run\`?\n`
+				);
 			}
 		});
 	}

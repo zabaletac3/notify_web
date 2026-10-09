@@ -29,19 +29,19 @@
 
 	function download() {
 		const lines = [
-			'Clave de recuperación de Apunte',
+			'Clave de recuperación de AxoNote',
 			email ? `Cuenta: ${email}` : '',
 			'',
 			recoveryKey,
 			'',
 			'Guarda este archivo en un lugar seguro (no en la nube sin cifrar).',
 			'Si olvidas tu contraseña, es la única forma de recuperar tus notas.',
-			'Nadie más la tiene, ni siquiera Apunte.'
+			'Nadie más la tiene, ni siquiera AxoNote.'
 		];
 		const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/plain' }));
 		const link = document.createElement('a');
 		link.href = url;
-		link.download = 'apunte-clave-de-recuperacion.txt';
+		link.download = 'axonote-clave-de-recuperacion.txt';
 		link.click();
 		URL.revokeObjectURL(url);
 	}

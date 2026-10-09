@@ -1,10 +1,10 @@
-# Apunte · App de escritorio (Tauri 2 · Linux y Windows) — plan y contexto
+# AxoNote · App de escritorio (Tauri 2 · Linux y Windows) — plan y contexto
 
 > Documento de traspaso para una sesión nueva de Claude Code que **crea** el repo `zabaletac3/notify_desktop`.
 > Actualizado: 2026-10-08. Todavía no existe código de escritorio. Léelo entero antes de empezar.
 > Copia este archivo al repo nuevo como `docs/handoff.md` y deriva de él su `CLAUDE.md`.
 
-## 1. Qué es Apunte y qué ya existe
+## 1. Qué es AxoNote y qué ya existe
 
 App de notas **offline-first con cifrado de extremo a extremo** (Markdown, carpetas, búsqueda, papelera,
 enlaces públicos, varios dispositivos). El servidor nunca descifra. UI en **español**.

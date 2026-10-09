@@ -28,7 +28,7 @@
 			: undefined;
 	if (import.meta.env.DEV && typeof window !== 'undefined')
 		console.info(
-			api ? `Apunte: API real ${api.baseUrl}` : 'Apunte: backend simulado (código 123456)'
+			api ? `AxoNote: API real ${api.baseUrl}` : 'AxoNote: backend simulado (código 123456)'
 		);
 
 	// Estado global de la app. En desarrollo se simula una pequeña latencia para ver los estados de carga.
@@ -75,7 +75,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>Apunte</title>
+	<title>AxoNote</title>
 </svelte:head>
 
 <!-- El script del tema va en `static/theme-init.js` (la CSP no admite scripts en línea). -->

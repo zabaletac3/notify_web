@@ -1,9 +1,9 @@
-# Apunte · Backend (Go + PostgreSQL) — estado y pendientes
+# AxoNote · Backend (Go + PostgreSQL) — estado y pendientes
 
 > Documento de traspaso para una sesión nueva de Claude Code en el repo **`zabaletac3/notify_backend`**.
 > Actualizado: 2026-10-08. Léelo entero antes de tocar código; después lee el `CLAUDE.md` del repo.
 
-## 1. Qué es Apunte
+## 1. Qué es AxoNote
 
 App de notas **offline-first con cifrado de extremo a extremo**. El servidor **nunca descifra**: guarda
 metadatos (ids, fechas, carpeta, revisión, papelera) y dos textos cifrados por elemento (`wrappedKey`,

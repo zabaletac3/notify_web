@@ -139,7 +139,7 @@ const POOLS: Record<string, { titles: string[]; texts: string[] }> = {
 		titles: [
 			'App de recordatorios de riego',
 			'Idea de podcast universitario',
-			'Mejoras para Apunte',
+			'Mejoras para AxoNote',
 			'Nombre para el proyecto'
 		],
 		texts: [

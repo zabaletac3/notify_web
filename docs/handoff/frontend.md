@@ -1,9 +1,9 @@
-# Apunte · Web (SvelteKit) — estado y pendientes
+# AxoNote · Web (SvelteKit) — estado y pendientes
 
 > Documento de traspaso para una sesión nueva de Claude Code en el repo **`zabaletac3/notify_web`**.
 > Actualizado: 2026-10-08. Léelo entero; después `CLAUDE.md`, `docs/architecture.md` y `docs/conventions.md`.
 
-## 1. Qué es Apunte
+## 1. Qué es AxoNote
 
 App de notas **offline-first con cifrado de extremo a extremo** (Markdown, carpetas, búsqueda, papelera,
 enlaces públicos de solo lectura, varios dispositivos). Cada dispositivo guarda una copia local cifrada
@@ -18,7 +18,7 @@ y sincroniza con la API; el servidor solo ve metadatos y textos cifrados. UI en 
 
 Este repo es la **fuente de verdad compartida**: contrato `docs/api/openapi.yaml`, decisiones
 `docs/api/decisions.md`, ADRs `docs/adr/0001…0005`, planes `docs/plans/0005` (cifrado) y `0006` (backend),
-`docs/roadmap.md`. Diseño: Figma «Apunte – App de notas» (35 vistas; no tocar Figma sin que se pida).
+`docs/roadmap.md`. Diseño: Figma «AxoNote – App de notas» (35 vistas; no tocar Figma sin que se pida).
 
 ## 2. Stack y arquitectura
 
@@ -94,7 +94,7 @@ pequeños, con husky + lint-staged).
    sincronización, y una prueba que los regenere/verifique en la CI. Es lo que garantiza que otra app
    lea las notas escritas aquí.
 5. **Tokens fuera de `localStorage`** (hecho para la web en D15): la web usa cookie `HttpOnly`
-   (`apunte_rt`) con `X-Apunte-Session: cookie` y el token de acceso solo en memoria
+   (`axonote_rt`) con `X-AxoNote-Session: cookie` y el token de acceso solo en memoria
    (`PUBLIC_SESSION_MODE=cookie`, por defecto). Escritorio/móvil siguen en modo cuerpo
    (`Authorization: Bearer` + `refreshToken` en el cuerpo, `PUBLIC_SESSION_MODE=body`); para ellos
    valorar el llavero del sistema (`TokenStore` inyectable, ver `escritorio.md`).

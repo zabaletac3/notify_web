@@ -7,7 +7,7 @@ import type {
 	IsoDate,
 	SyncEntity
 } from '#lib/domain/index.js';
-import type { ApunteDb, OutboxEntry } from './apunte-db.js';
+import type { AxoNoteDb, OutboxEntry } from './axonote-db.js';
 
 /** Lo que se sube de una nota: sus metadatos y los dos textos cifrados. */
 export const noteFields = (n: EncryptedNote): EncryptedNoteFields => ({
@@ -42,7 +42,7 @@ export interface PendingChange {
  *  - crear y borrar sin haber sincronizado → no queda nada que contarle al servidor;
  *  - editar y luego borrar → solo el borrado.
  */
-export async function enqueue(db: ApunteDb, change: PendingChange, now: IsoDate): Promise<void> {
+export async function enqueue(db: AxoNoteDb, change: PendingChange, now: IsoDate): Promise<void> {
 	const existing = await db.outbox
 		.where('[entity+entityId]')
 		.equals([change.entity, change.entityId])

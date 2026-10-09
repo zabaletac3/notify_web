@@ -1,6 +1,6 @@
 # Tokens de diseño: Figma → CSS
 
-Fuente: archivo de Figma "Apunte – App de notas", colecciones **Apunte / Color** (claro) y **Apunte / Color oscuro**.
+Fuente: archivo de Figma "AxoNote – App de notas", colecciones **AxoNote / Color** (claro) y **AxoNote / Color oscuro**.
 Implementación: `src/lib/styles/tokens.css` (valores) y `theme.css` (utilidades Tailwind).
 
 | Token en Figma     | Variable CSS             | Utilidad Tailwind                    | Claro     | Oscuro    |
@@ -29,4 +29,4 @@ Otros valores de diseño: fuente **Inter**; radios 8/12/14 px (base `--radius: 0
 
 ## Contraste (WCAG AA)
 
-Se oscurecieron `text/secondary`, `text/tertiary` y `tag/amber` (y en oscuro se aclararon los dos textos) para llegar a 4,5:1 sobre las superficies del diseño. Valores originales del primer diseño: secundario `#6F685E`/`#A39C91`, terciario `#9C958A`/`#7C766D`, ámbar `#B7791F`. **Las variables de Figma ya tienen estos mismos valores** (actualizadas en las dos colecciones, "Apunte / Color" y "Apunte / Color oscuro", y comprobadas una a una contra esta tabla: 34 valores, sin diferencias). El texto terciario sigue siendo el de menor contraste (placeholders y texto deshabilitado); `axe-core` pasa en las pantallas principales en claro y oscuro (`e2e/accesibilidad.e2e.ts`).
+Se oscurecieron `text/secondary`, `text/tertiary` y `tag/amber` (y en oscuro se aclararon los dos textos) para llegar a 4,5:1 sobre las superficies del diseño. Valores originales del primer diseño: secundario `#6F685E`/`#A39C91`, terciario `#9C958A`/`#7C766D`, ámbar `#B7791F`. **Las variables de Figma ya tienen estos mismos valores** (actualizadas en las dos colecciones, "AxoNote / Color" y "AxoNote / Color oscuro", y comprobadas una a una contra esta tabla: 34 valores, sin diferencias). El texto terciario sigue siendo el de menor contraste (placeholders y texto deshabilitado); `axe-core` pasa en las pantallas principales en claro y oscuro (`e2e/accesibilidad.e2e.ts`).

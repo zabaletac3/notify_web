@@ -15,7 +15,7 @@
 	--radius-2xl: calc(var(--radius) + 8px); /* 20: diálogos */
 	--radius-3xl: calc(var(--radius) + 12px); /* 24: bottom sheet */
 
-	/* Escala tipográfica de Apunte (Inter). Uso: text-title, text-body… */
+	/* Escala tipográfica de AxoNote (Inter). Uso: text-title, text-body… */
 	--text-title: calc(1.75rem * var(--text-scale)); /* 28 · títulos de pantalla (bold) */
 	--text-title--line-height: calc(2.125rem * var(--text-scale));
 	--text-heading: calc(1.125rem * var(--text-scale)); /* 18 · encabezados de sección (semibold) */
@@ -61,7 +61,7 @@
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-ring: var(--sidebar-ring);
 
-	/* Propios de Apunte */
+	/* Propios de AxoNote */
 	--color-hover: var(--hover);
 	--color-input-fill: var(--input-fill);
 	--color-tertiary: var(--tertiary);

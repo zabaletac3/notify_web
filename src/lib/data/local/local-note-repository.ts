@@ -11,7 +11,7 @@ import {
 	type NoteQuery
 } from '#lib/domain/index.js';
 import type { NoteRepository } from '../contracts.js';
-import type { NoteRow } from './apunte-db.js';
+import type { NoteRow } from './axonote-db.js';
 import { enqueue, noteFields } from './outbox.js';
 import { noGate, type LocalDeps } from './gate.js';
 

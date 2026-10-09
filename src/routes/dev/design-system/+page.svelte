@@ -12,8 +12,8 @@
 		<div class="flex flex-col gap-1">
 			<h1 class="text-title font-bold">Sistema de diseño</h1>
 			<p class="text-body text-muted-foreground">
-				Tokens y componentes de Apunte. Referencia viva: debe verse igual que el marco "Componentes"
-				de Figma, en claro y oscuro.
+				Tokens y componentes de AxoNote. Referencia viva: debe verse igual que el marco
+				"Componentes" de Figma, en claro y oscuro.
 			</p>
 		</div>
 		<ThemeToggle />

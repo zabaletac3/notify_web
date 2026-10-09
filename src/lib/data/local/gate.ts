@@ -10,7 +10,7 @@ export interface DataGate {
 export const noGate: DataGate = { read: async () => {}, write: async () => {} };
 
 export interface LocalDeps {
-	db: import('./apunte-db.js').ApunteDb;
+	db: import('./axonote-db.js').AxoNoteDb;
 	/** Cifra y descifra las filas (usa la clave de la sesión). */
 	codec: import('./local-codec.js').LocalCodec;
 	lock: Mutex;

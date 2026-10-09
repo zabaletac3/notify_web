@@ -4,10 +4,10 @@
 </script>
 
 <svelte:head>
-	<title>Términos de uso · Apunte</title>
+	<title>Términos de uso · AxoNote</title>
 	<meta
 		name="description"
-		content="Condiciones de uso de Apunte: tu cuenta, el cifrado, tu contenido, el uso aceptable y la responsabilidad."
+		content="Condiciones de uso de AxoNote: tu cuenta, el cifrado, tu contenido, el uso aceptable y la responsabilidad."
 	/>
 </svelte:head>
 

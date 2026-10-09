@@ -3,10 +3,10 @@
 </script>
 
 <svelte:head>
-	<title>Notas de la versión · Apunte</title>
+	<title>Notas de la versión · AxoNote</title>
 	<meta
 		name="description"
-		content="Historial de versiones de Apunte y las funciones que se han ido añadiendo."
+		content="Historial de versiones de AxoNote y las funciones que se han ido añadiendo."
 	/>
 </svelte:head>
 
@@ -14,7 +14,7 @@
 	<header class="flex flex-col gap-2">
 		<h1 class="text-title font-bold">Notas de la versión</h1>
 		<p class="text-body text-muted-foreground">
-			Un resumen de lo que ha cambiado en cada versión de Apunte.
+			Un resumen de lo que ha cambiado en cada versión de AxoNote.
 		</p>
 	</header>
 

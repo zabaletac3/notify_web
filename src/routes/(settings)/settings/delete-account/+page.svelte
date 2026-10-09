@@ -22,7 +22,7 @@
 	}
 </script>
 
-<svelte:head><title>Eliminar cuenta · Apunte</title></svelte:head>
+<svelte:head><title>Eliminar cuenta · AxoNote</title></svelte:head>
 
 <h1 class="text-page font-bold max-md:sr-only">Eliminar cuenta</h1>
 

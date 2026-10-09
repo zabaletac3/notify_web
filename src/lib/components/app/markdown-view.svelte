@@ -8,4 +8,4 @@
 </script>
 
 <!-- eslint-disable-next-line svelte/no-at-html-tags -- HTML sanitizado por renderMarkdown -->
-<div class={cn('prose-apunte', className)}>{@html html}</div>
+<div class={cn('prose-axonote', className)}>{@html html}</div>

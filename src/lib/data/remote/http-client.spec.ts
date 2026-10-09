@@ -443,7 +443,7 @@ describe('HttpClient en modo cookie', () => {
 		expect(loginCall.init.credentials).toBe('include');
 	});
 
-	it('la cabecera X-Apunte-Session solo va en login, verify-email, refresh y logout', async () => {
+	it('la cabecera X-AxoNote-Session solo va en login, verify-email, refresh y logout', async () => {
 		const marker = new MemorySessionMarker();
 		const { fn, calls } = fakeFetch((c) => {
 			if (c.url.endsWith('/auth/login'))

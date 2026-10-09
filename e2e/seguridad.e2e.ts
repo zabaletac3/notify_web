@@ -40,7 +40,7 @@ test('la página de inicio (prerenderizada) lleva la CSP en una etiqueta meta, s
 	page
 }) => {
 	await page.goto('/');
-	await expect(page.getByRole('heading', { level: 1, name: 'Apunte' })).toBeVisible();
+	await expect(page.getByRole('heading', { level: 1, name: 'AxoNote' })).toBeVisible();
 	const meta = await page
 		.locator('meta[http-equiv="content-security-policy"]')
 		.getAttribute('content');

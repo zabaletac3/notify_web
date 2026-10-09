@@ -115,7 +115,7 @@
 	);
 </script>
 
-<svelte:head><title>Mi cuenta · Apunte</title></svelte:head>
+<svelte:head><title>Mi cuenta · AxoNote</title></svelte:head>
 
 <h1 class="text-page font-bold max-md:sr-only">Mi cuenta</h1>
 

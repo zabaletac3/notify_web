@@ -1,6 +1,6 @@
 import { fail, newId, validateFolderName, type Folder, type Id } from '#lib/domain/index.js';
 import type { FolderRepository } from '../contracts.js';
-import type { FolderRow } from './apunte-db.js';
+import type { FolderRow } from './axonote-db.js';
 import { noGate, type LocalDeps } from './gate.js';
 import { enqueue, folderFields, noteFields } from './outbox.js';
 

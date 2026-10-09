@@ -1,4 +1,4 @@
-# Apunte web — guía para asistentes
+# AxoNote web — guía para asistentes
 
 App de notas (SvelteKit + Svelte 5 + shadcn-svelte + Tailwind v4). Lee `docs/architecture.md` y `docs/conventions.md` antes de añadir código.
 
@@ -21,7 +21,7 @@ App de notas (SvelteKit + Svelte 5 + shadcn-svelte + Tailwind v4). Lee `docs/arc
 
 ## Diseño
 
-Fuente de verdad: archivo de Figma "Apunte – App de notas" (35 vistas, escritorio y móvil, claro y oscuro). No tocar Figma sin que se pida.
+Fuente de verdad: archivo de Figma "AxoNote – App de notas" (35 vistas, escritorio y móvil, claro y oscuro). No tocar Figma sin que se pida.
 
 ## Sistema de diseño
 
