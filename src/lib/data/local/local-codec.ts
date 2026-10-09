@@ -10,7 +10,7 @@ import {
 } from '../crypto/index.js';
 import type { Vault } from '../crypto/index.js';
 import type { Folder, Note, Sealed } from '#lib/domain/index.js';
-import type { FolderRow, NoteRow } from './apunte-db.js';
+import type { FolderRow, NoteRow } from './axonote-db.js';
 
 const isUnreadable = (e: unknown) => e instanceof DecryptError || e instanceof CryptoFormatError;
 

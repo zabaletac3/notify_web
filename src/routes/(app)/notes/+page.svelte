@@ -515,7 +515,7 @@
 			</div>
 			<div class="flex min-h-0 flex-1 md:hidden">
 				<EmptyState
-					title="Bienvenido a Apunte"
+					title="Bienvenido a AxoNote"
 					description="Aquí vivirán tus apuntes, listas y ideas. Escribe tu primera nota para empezar."
 				>
 					{#snippet mark()}
@@ -750,7 +750,7 @@
 	{:else if notes.status === 'ready'}
 		{#if notes.isFirstTime}
 			<EmptyState
-				title="Bienvenido a Apunte"
+				title="Bienvenido a AxoNote"
 				description="Escribe tu primera nota. Se guarda sola y se sincroniza con tus otros dispositivos."
 				hint="Ctrl N"
 			>

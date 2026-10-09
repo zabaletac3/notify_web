@@ -9,7 +9,7 @@
 	});
 </script>
 
-<svelte:head><title>Ajustes · Apunte</title></svelte:head>
+<svelte:head><title>Ajustes · AxoNote</title></svelte:head>
 
 <h1 class="sr-only">Ajustes</h1>
 

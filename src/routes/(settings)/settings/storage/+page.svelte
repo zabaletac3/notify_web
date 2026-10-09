@@ -64,7 +64,7 @@
 	}
 </script>
 
-<svelte:head><title>Almacenamiento · Apunte</title></svelte:head>
+<svelte:head><title>Almacenamiento · AxoNote</title></svelte:head>
 
 <h1 class="text-page font-bold max-md:sr-only">Almacenamiento y exportación</h1>
 

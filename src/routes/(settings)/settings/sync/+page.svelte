@@ -44,7 +44,7 @@
 	}
 </script>
 
-<svelte:head><title>Sincronización · Apunte</title></svelte:head>
+<svelte:head><title>Sincronización · AxoNote</title></svelte:head>
 
 <h1 class="text-page font-bold max-md:sr-only">Sincronización y dispositivos</h1>
 

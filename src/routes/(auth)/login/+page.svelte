@@ -20,7 +20,7 @@
 	}
 </script>
 
-<svelte:head><title>Iniciar sesión · Apunte</title></svelte:head>
+<svelte:head><title>Iniciar sesión · AxoNote</title></svelte:head>
 
 <AuthCard title="Bienvenido de vuelta">
 	<GoogleButton label="Continuar con Google" />

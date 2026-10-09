@@ -40,7 +40,7 @@ import {
 } from '@lucide/svelte';
 
 /**
- * Iconos de Apunte. Las claves coinciden con los componentes `icon/*` de Figma;
+ * Iconos de AxoNote. Las claves coinciden con los componentes `icon/*` de Figma;
  * el valor es el icono de Lucide equivalente. Se dibujan siempre con trazo 1.75.
  */
 export const icons = {

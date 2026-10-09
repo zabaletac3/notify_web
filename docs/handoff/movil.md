@@ -1,10 +1,10 @@
-# Apunte · App móvil (Android/iOS) — plan y contexto
+# AxoNote · App móvil (Android/iOS) — plan y contexto
 
 > Documento de traspaso para una sesión nueva de Claude Code que **crea** el repo `zabaletac3/notify_mobile`.
 > Actualizado: 2026-10-08. Todavía no existe código móvil. Léelo entero antes de empezar.
 > Copia este archivo al repo nuevo como `docs/handoff.md` y deriva de él su `CLAUDE.md`.
 
-## 1. Qué es Apunte y qué ya existe
+## 1. Qué es AxoNote y qué ya existe
 
 App de notas **offline-first con cifrado de extremo a extremo**: Markdown, carpetas, búsqueda local,
 papelera, enlaces públicos de solo lectura, varios dispositivos por cuenta. El servidor **nunca
@@ -20,7 +20,7 @@ descifra**: guarda metadatos y dos textos cifrados por elemento. UI en **españo
 Lee en `notify_web`: `docs/api/openapi.yaml` (contrato), `docs/adr/0004-sincronizacion.md`,
 `docs/adr/0005-cifrado-extremo-a-extremo.md`, `docs/plans/0005-cifrado-extremo-a-extremo.md`, y el código
 de `src/lib/core/crypto/`, `src/lib/data/crypto/`, `src/lib/data/local/local-sync-repository.ts`,
-`src/lib/data/remote/`. Diseño: Figma «Apunte – App de notas» (incluye vistas móviles, claro y oscuro).
+`src/lib/data/remote/`. Diseño: Figma «AxoNote – App de notas» (incluye vistas móviles, claro y oscuro).
 
 ## 2. Decisión previa (pendiente de la persona)
 
@@ -91,7 +91,7 @@ verifícalo con los vectores de M0:
 | **M4 · Cuenta**                                 | Registro, código por correo, clave de recuperación (mostrar una vez, confirmar), login (`prelogin` → KDF → `login`), olvidé mi contraseña con clave, dispositivos, `device-revoked`                                                                                                                                   | Flujo completo contra QA                     |
 | **M5 · Notas**                                  | Lista, carpetas, búsqueda local, papelera, **editor Markdown** (prototipo con `super_editor` / `appflowy_editor` / `flutter_quill` que guarde los vectores Markdown sin cambios antes de elegir)                                                                                                                      | Paridad con la web                           |
 | **M6 · Resto**                                  | Compartir con enlace, ajustes, uso de espacio, importar Markdown, accesibilidad (TalkBack/VoiceOver), modo oscuro                                                                                                                                                                                                     | Paridad con la web                           |
-| **M7 · Sistema**                                | App Links / Universal Links para enlaces de restablecer y compartidos (la web publica `assetlinks.json` y `apple-app-site-association`); menú «compartir con Apunte»                                                                                                                                                  | Abre los enlaces del correo en la app        |
+| **M7 · Sistema**                                | App Links / Universal Links para enlaces de restablecer y compartidos (la web publica `assetlinks.json` y `apple-app-site-association`); menú «compartir con AxoNote»                                                                                                                                                 | Abre los enlaces del correo en la app        |
 | **M8 · Publicación**                            | Play Store (25 USD único), App Store (99 USD/año, necesita macOS), ficha de privacidad, capturas, firma, lanzamiento escalonado                                                                                                                                                                                       | En las tiendas                               |
 
 ## 6. Cambios necesarios en otros repos

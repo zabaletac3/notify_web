@@ -7,14 +7,14 @@ export const terms: LegalDocument = {
 	version: 'borrador-1',
 	effectiveDate: null,
 	status: LEGAL_DRAFT ? 'borrador' : 'vigente',
-	intro: `Estos términos regulan el uso de Apunte, un servicio de notas con cifrado de extremo a extremo ofrecido por ${R.name} (NIT ${R.nit}), de ${R.city}, ${R.country}. Al crear una cuenta o usar Apunte aceptas estos términos y la Política de privacidad.`,
+	intro: `Estos términos regulan el uso de AxoNote, un servicio de notas con cifrado de extremo a extremo ofrecido por ${R.name} (NIT ${R.nit}), de ${R.city}, ${R.country}. Al crear una cuenta o usar AxoNote aceptas estos términos y la Política de privacidad.`,
 	sections: [
 		{
 			id: 'servicio',
 			title: '1. El servicio',
 			blocks: [
 				{
-					p: 'Apunte te permite escribir notas en Markdown, organizarlas en carpetas, buscarlas, sincronizarlas entre tus dispositivos, compartirlas mediante enlaces públicos de solo lectura y recuperarlas desde la papelera. Funciona sin conexión y sincroniza cuando hay red.'
+					p: 'AxoNote te permite escribir notas en Markdown, organizarlas en carpetas, buscarlas, sincronizarlas entre tus dispositivos, compartirlas mediante enlaces públicos de solo lectura y recuperarlas desde la papelera. Funciona sin conexión y sincroniza cuando hay red.'
 				}
 			]
 		},
@@ -62,7 +62,7 @@ export const terms: LegalDocument = {
 			id: 'uso-aceptable',
 			title: '5. Uso aceptable',
 			blocks: [
-				{ p: 'No puedes usar Apunte para:' },
+				{ p: 'No puedes usar AxoNote para:' },
 				{
 					ul: [
 						'Actividades ilegales o que vulneren derechos de terceros, incluido compartir contenido ilícito mediante enlaces públicos.',
@@ -126,7 +126,7 @@ export const terms: LegalDocument = {
 			title: '11. Cambios a los términos',
 			blocks: [
 				{
-					p: 'Podemos actualizar estos términos. Si el cambio es sustancial te avisaremos en la app o por correo antes de que aplique; si sigues usando Apunte después, se entiende que lo aceptas. La versión vigente y su fecha aparecen al inicio de esta página.'
+					p: 'Podemos actualizar estos términos. Si el cambio es sustancial te avisaremos en la app o por correo antes de que aplique; si sigues usando AxoNote después, se entiende que lo aceptas. La versión vigente y su fecha aparecen al inicio de esta página.'
 				}
 			]
 		},

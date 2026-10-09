@@ -30,10 +30,10 @@
 	const remaining = $derived(MAX_UNLOCK_ATTEMPTS - auth.unlockFailures);
 </script>
 
-<svelte:head><title>Desbloquear · Apunte</title></svelte:head>
+<svelte:head><title>Desbloquear · AxoNote</title></svelte:head>
 
 <AuthCard
-	title="Desbloquea Apunte"
+	title="Desbloquea AxoNote"
 	subtitle={auth.user
 		? `Ingresa tu contraseña para leer tus notas, ${auth.user.fullName}.`
 		: 'Ingresa tu contraseña para leer tus notas.'}

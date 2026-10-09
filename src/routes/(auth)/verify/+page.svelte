@@ -37,7 +37,7 @@
 	}
 </script>
 
-<svelte:head><title>Verifica tu correo · Apunte</title></svelte:head>
+<svelte:head><title>Verifica tu correo · AxoNote</title></svelte:head>
 
 <AuthCard
 	title="Verifica tu correo"

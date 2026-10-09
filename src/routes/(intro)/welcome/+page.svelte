@@ -3,7 +3,7 @@
 	import { Button } from '#lib/components/ui/button/index.js';
 </script>
 
-<svelte:head><title>Bienvenido · Apunte</title></svelte:head>
+<svelte:head><title>Bienvenido · AxoNote</title></svelte:head>
 
 <main class="flex min-h-dvh flex-col bg-background md:flex-row">
 	<!-- Panel de marca (≥ 768 px) -->
@@ -28,7 +28,7 @@
 			class="grid size-24 place-content-center rounded-3xl bg-primary text-5xl font-bold text-primary-foreground"
 			aria-hidden="true">A</span
 		>
-		<h1 class="text-[34px] font-bold">Apunte</h1>
+		<h1 class="text-[34px] font-bold">AxoNote</h1>
 		<p class="text-center text-base leading-6 text-muted-foreground">
 			Tus notas, claras y siempre contigo.
 		</p>
@@ -37,7 +37,7 @@
 	<section class="flex flex-col items-center justify-center px-6 pb-6 md:flex-1 md:px-24 md:pb-0">
 		<div class="flex w-full max-w-95 flex-col gap-3 md:gap-3.5">
 			<div class="hidden flex-col gap-3.5 md:flex">
-				<h1 class="text-3xl font-bold">Bienvenido a Apunte</h1>
+				<h1 class="text-3xl font-bold">Bienvenido a AxoNote</h1>
 				<p class="text-body leading-[22px] text-muted-foreground">
 					Crea una cuenta para sincronizar tus notas o inicia sesión si ya tienes una.
 				</p>

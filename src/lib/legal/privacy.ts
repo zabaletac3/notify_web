@@ -12,7 +12,7 @@ export const privacy: LegalDocument = {
 	effectiveDate: null,
 	status: LEGAL_DRAFT ? 'borrador' : 'vigente',
 	intro:
-		'Esta política explica qué datos personales trata Apunte, para qué, por cuánto tiempo y cómo puedes ejercer tus derechos conforme a la Ley 1581 de 2012 y sus normas reglamentarias (Colombia).',
+		'Esta política explica qué datos personales trata AxoNote, para qué, por cuánto tiempo y cómo puedes ejercer tus derechos conforme a la Ley 1581 de 2012 y sus normas reglamentarias (Colombia).',
 	sections: [
 		{
 			id: 'responsable',
@@ -205,7 +205,7 @@ export const privacy: LegalDocument = {
 			title: '11. Almacenamiento en tu dispositivo y cookies',
 			blocks: [
 				{
-					p: 'Apunte guarda en tu navegador o dispositivo una copia local cifrada de tus notas, tu sesión y tus preferencias (tema, tamaño del texto). Esto es necesario para funcionar sin conexión. No usamos cookies de publicidad ni de seguimiento. [[REVISAR: confirmar que no se añadirá analítica de terceros; si se añade, declararla aquí.]]'
+					p: 'AxoNote guarda en tu navegador o dispositivo una copia local cifrada de tus notas, tu sesión y tus preferencias (tema, tamaño del texto). Esto es necesario para funcionar sin conexión. No usamos cookies de publicidad ni de seguimiento. [[REVISAR: confirmar que no se añadirá analítica de terceros; si se añade, declararla aquí.]]'
 				}
 			]
 		},
@@ -214,7 +214,7 @@ export const privacy: LegalDocument = {
 			title: '12. Menores de edad',
 			blocks: [
 				{
-					p: 'Apunte está dirigido a personas mayores de 18 años. No tratamos conscientemente datos de menores de edad; si detectamos una cuenta de un menor sin autorización de su representante legal, la eliminaremos. [[REVISAR: confirmar la edad mínima.]]'
+					p: 'AxoNote está dirigido a personas mayores de 18 años. No tratamos conscientemente datos de menores de edad; si detectamos una cuenta de un menor sin autorización de su representante legal, la eliminaremos. [[REVISAR: confirmar la edad mínima.]]'
 				}
 			]
 		},

@@ -9,7 +9,7 @@ import type { SessionMarker, TokenStore } from './token-store.js';
 export type SessionMode = 'cookie' | 'body';
 
 /** Cabecera que activa el modo cookie en el servidor (login, verify-email, refresh y logout). */
-export const SESSION_HEADER = 'X-Apunte-Session';
+export const SESSION_HEADER = 'X-AxoNote-Session';
 
 export interface HttpClientOptions {
 	/** Origen de la API, sin barra final (p. ej. `https://api.apunte.app`). */
@@ -33,7 +33,7 @@ export interface RequestOptions {
 	 * falla sin él ni renueva (logout en modo cookie); `false` es una ruta pública.
 	 */
 	auth?: boolean | 'optional';
-	/** Añade `X-Apunte-Session: cookie` en modo cookie (login, verify-email y logout). */
+	/** Añade `X-AxoNote-Session: cookie` en modo cookie (login, verify-email y logout). */
 	session?: boolean;
 }
 

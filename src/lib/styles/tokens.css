@@ -1,9 +1,9 @@
 /*
- * Design tokens de Apunte.
+ * Design tokens de AxoNote.
  *
  * Fuente de verdad: colecciones de variables en Figma
- *   - "Apunte / Color"          -> :root
- *   - "Apunte / Color oscuro"   -> .dark
+ *   - "AxoNote / Color"          -> :root
+ *   - "AxoNote / Color oscuro"   -> .dark
  * Mapa completo Figma -> variable CSS en docs/design-tokens.md.
  *
  * Reglas:

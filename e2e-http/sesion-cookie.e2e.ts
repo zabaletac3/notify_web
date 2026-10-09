@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, request, test, type BrowserContext, type Page } from '@playwright/test';
 
 /**
- * Sesión web por cookie `HttpOnly` contra la API REAL (modo cookie, `X-Apunte-Session: cookie`):
+ * Sesión web por cookie `HttpOnly` contra la API REAL (modo cookie, `X-AxoNote-Session: cookie`):
  * el token de renovación nunca toca JavaScript ni `localStorage`; recargar mantiene la sesión;
  * varias pestañas renuevan a la vez; logout borra la cookie; reutilizar una cookie vieja la revoca.
  */
@@ -10,7 +10,7 @@ const LOG = 'e2e-http/.api.log';
 const PASSWORD = 'Secret123!';
 const API = 'http://localhost:18080';
 const WEB = 'http://localhost:4174';
-const COOKIE_HEADER = 'X-Apunte-Session';
+const COOKIE_HEADER = 'X-AxoNote-Session';
 
 /** Última línea del registro de la API con un correo "enviado" a esa persona (en dev el correo va al log). */
 async function mailFor(to: string, subject: string, timeoutMs = 15_000): Promise<string> {
@@ -62,8 +62,8 @@ async function register(page: Page, email: string, name: string): Promise<void> 
 }
 
 async function refreshCookie(ctx: BrowserContext): Promise<string> {
-	const cookie = (await ctx.cookies()).find((c) => c.name === 'apunte_rt');
-	expect(cookie, 'debe existir la cookie apunte_rt').toBeTruthy();
+	const cookie = (await ctx.cookies()).find((c) => c.name === 'axonote_rt');
+	expect(cookie, 'debe existir la cookie axonote_rt').toBeTruthy();
 	return cookie!.value;
 }
 
@@ -85,14 +85,14 @@ test('la sesión va por cookie HttpOnly, sin tokens en JS/localStorage, y sobrev
 	await register(page, 'cookie-atributos@correo.com', 'Carla Cookie');
 
 	// La cookie de renovación existe con los atributos de D15.
-	const cookie = (await ctx.cookies()).find((c) => c.name === 'apunte_rt');
+	const cookie = (await ctx.cookies()).find((c) => c.name === 'axonote_rt');
 	expect(cookie).toBeTruthy();
 	expect(cookie!.httpOnly).toBe(true);
 	expect(cookie!.sameSite).toBe('Strict');
 	expect(cookie!.path).toBe('/v1/auth');
 
 	// `document.cookie` no la ve (HttpOnly) y en localStorage no hay tokens.
-	expect(await page.evaluate(() => document.cookie)).not.toContain('apunte_rt');
+	expect(await page.evaluate(() => document.cookie)).not.toContain('axonote_rt');
 	const dump = await page.evaluate(() => {
 		const out: { key: string; value: string }[] = [];
 		for (let i = 0; i < localStorage.length; i++) {
@@ -150,7 +150,7 @@ test('cerrar sesión borra la cookie y al recargar queda anónimo', async ({ bro
 	if (await syncAndExit.isVisible({ timeout: 1500 }).catch(() => false)) await syncAndExit.click();
 	await expect(page).toHaveURL(/\/welcome$/);
 
-	expect((await ctx.cookies()).some((c) => c.name === 'apunte_rt')).toBe(false);
+	expect((await ctx.cookies()).some((c) => c.name === 'axonote_rt')).toBe(false);
 
 	// Al recargar ya no hay sesión: no vuelve a pedir login, pero es una persona anónima.
 	await page.reload();
@@ -174,13 +174,13 @@ test('reutilizar una cookie rotada devuelve 401 y revoca la familia', async ({ b
 	expect(newCookie).not.toBe(oldCookie);
 
 	const api = await request.newContext();
-	const headers = { Cookie: `apunte_rt=${oldCookie}`, [COOKIE_HEADER]: 'cookie', Origin: WEB };
+	const headers = { Cookie: `axonote_rt=${oldCookie}`, [COOKIE_HEADER]: 'cookie', Origin: WEB };
 	const reuse = await api.post(`${API}/v1/auth/refresh`, { headers });
 	expect(reuse.status()).toBe(401);
 
 	// La familia entera queda revocada: la cookie vigente de la página tampoco renueva.
 	const after = await api.post(`${API}/v1/auth/refresh`, {
-		headers: { Cookie: `apunte_rt=${newCookie}`, [COOKIE_HEADER]: 'cookie', Origin: WEB }
+		headers: { Cookie: `axonote_rt=${newCookie}`, [COOKIE_HEADER]: 'cookie', Origin: WEB }
 	});
 	expect(after.status()).toBe(401);
 	await api.dispose();

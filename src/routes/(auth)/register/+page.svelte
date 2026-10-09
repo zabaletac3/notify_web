@@ -20,7 +20,7 @@
 	}
 </script>
 
-<svelte:head><title>Crear cuenta · Apunte</title></svelte:head>
+<svelte:head><title>Crear cuenta · AxoNote</title></svelte:head>
 
 <AuthCard
 	title="Crea tu cuenta"
@@ -88,7 +88,7 @@
 							class="font-semibold text-primary underline underline-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 							>Política de privacidad</a
 						>
-						de Apunte.
+						de AxoNote.
 					</label>
 				</div>
 				{#if auth.fieldErrors.acceptedTerms}

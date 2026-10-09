@@ -3,10 +3,10 @@
 </script>
 
 <svelte:head>
-	<title>Licencias de código abierto · Apunte</title>
+	<title>Licencias de código abierto · AxoNote</title>
 	<meta
 		name="description"
-		content="Librerías de código abierto que usa Apunte, con su versión y licencia."
+		content="Librerías de código abierto que usa AxoNote, con su versión y licencia."
 	/>
 </svelte:head>
 
@@ -14,7 +14,7 @@
 	<header class="flex flex-col gap-2">
 		<h1 class="text-title font-bold">Licencias de código abierto</h1>
 		<p class="text-body text-muted-foreground">
-			Apunte se apoya en estas librerías. Gracias a quienes las mantienen.
+			AxoNote se apoya en estas librerías. Gracias a quienes las mantienen.
 		</p>
 	</header>
 

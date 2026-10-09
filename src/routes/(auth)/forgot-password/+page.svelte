@@ -17,7 +17,7 @@
 	}
 </script>
 
-<svelte:head><title>Recuperar contraseña · Apunte</title></svelte:head>
+<svelte:head><title>Recuperar contraseña · AxoNote</title></svelte:head>
 
 {#if sent}
 	<AuthCard title="Revisa tu correo">

@@ -28,12 +28,12 @@
 	}
 </script>
 
-<svelte:head><title>Clave de recuperación · Apunte</title></svelte:head>
+<svelte:head><title>Clave de recuperación · AxoNote</title></svelte:head>
 
 {#if auth.pendingRecoveryKey}
 	<AuthCard
 		title="Guarda tu clave de recuperación"
-		subtitle="Si olvidas tu contraseña, es la única forma de recuperar tus notas. Nadie más la tiene, ni siquiera Apunte."
+		subtitle="Si olvidas tu contraseña, es la única forma de recuperar tus notas. Nadie más la tiene, ni siquiera AxoNote."
 	>
 		{#snippet mark()}
 			<span class="grid size-18 place-content-center rounded-full bg-accent text-accent-foreground">

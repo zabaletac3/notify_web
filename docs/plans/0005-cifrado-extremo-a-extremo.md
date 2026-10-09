@@ -136,7 +136,7 @@ docs/adr/0005-cifrado-extremo-a-extremo.md
 
 Modificados (principales): `domain/sync-protocol.ts`, `domain/note.ts` (sin cambios de forma; ver §5),
 `domain/settings.ts`, `domain/errors.ts`, `domain/auth.ts`, `data/contracts.ts`,
-`data/local/{apunte-db,outbox,local-note-repository,local-folder-repository,local-sync-repository,create-local-backend}.ts`,
+`data/local/{axonote-db,outbox,local-note-repository,local-folder-repository,local-sync-repository,create-local-backend}.ts`,
 `data/mock/{mock-database,mock-sync-server,mock-auth-repository,mock-misc-repositories,create-mock-repositories}.ts`,
 `app/create-app.svelte.ts`, `features/auth/state/auth.svelte.ts`, rutas de `(auth)`, `settings/privacy`,
 `settings/account`, diálogo de compartir, `docs/api/openapi.yaml`, `docs/api/decisions.md`,
@@ -152,7 +152,7 @@ solo `VaultState` (estado y acciones con `ActionResult`).
 Commit: `Base local por cuenta, limpieza al revocar y cierre de sesión sin red`.
 
 1. **Base por cuenta.** `createLocalBackend` deja de abrir la base en la creación: expone
-   `local.open(userId)` y `local.close()`. `ApunteDb(name)` se crea con `apunte-${userId}`.
+   `local.open(userId)` y `local.close()`. `AxoNoteDb(name)` se crea con `apunte-${userId}`.
    Mientras no hay base abierta, los repositorios locales lanzan `fail.sessionExpired()`
    (no deben devolver datos de otra cuenta). Guardar `meta.userId`; si al abrir no coincide → `db.delete()` y recrear.
 2. **Orden de arranque** en `createApp`: `auth.bootstrap()` → si hay usuario, `local.open(user.id)` → `loadData()`.
@@ -460,7 +460,7 @@ los tipos con `authKey` son internos de `data` (definirlos en `domain/crypto.ts`
    Guardar `rk` **solo en memoria** de `AuthState` (`pendingRecoveryKey`) para mostrarla tras verificar.
 2. **Verificación del correo:** tras `verifyEmail` correcto → navegar a `/recovery-key` (en lugar de
    `/onboarding`). Esa pantalla muestra la RK formateada, botones «Copiar» y «Descargar .txt»
-   (archivo `apunte-clave-de-recuperacion.txt` con la clave, el correo y una frase de aviso), casilla
+   (archivo `axonote-clave-de-recuperacion.txt` con la clave, el correo y una frase de aviso), casilla
    obligatoria «La guardé en un lugar seguro» y «Continuar» → borra `pendingRecoveryKey` → `/onboarding`.
    Si se recarga la página y ya no hay RK en memoria → ofrecer «Generar una nueva» (`rotateRecoveryKey`).
 3. **Inicio de sesión:** `prelogin(email)` → `derive` (mostrar «Desbloqueando…» en el botón; puede
@@ -522,7 +522,7 @@ Pruebas (`auth-keys.spec.ts`, estado con `testApp({ persistence: 'indexeddb' })`
 
 Commit: `Notas y carpetas cifradas en IndexedDB y en la sincronización`.
 
-1. **Dexie `version(2)`** en `ApunteDb`: `notes` guarda `EncryptedNote & { syncStatus }`; `folders`
+1. **Dexie `version(2)`** en `AxoNoteDb`: `notes` guarda `EncryptedNote & { syncStatus }`; `folders`
    guarda `EncryptedFolder`; `outbox.data` guarda `EncryptedNoteFields | EncryptedFolderFields`;
    `conflicts.remote` guarda `EncryptedNote`. Índices iguales. `upgrade()`: borrar todas las tablas
    (no hay datos reales). `meta.keysBundle` guarda el `KeyBundle` para desbloquear sin red.
@@ -615,15 +615,15 @@ Todas en español, con tokens y componentes existentes (`AuthCard`, `AuthField`,
 `SettingRow`, `ResponsiveDialog`, `AppIcon`). Añadir a `docs/components.md` → «Pendientes con Figma»:
 `/unlock`, `/recovery-key`, `RecoveryKeyPanel`, sección de RK en `/reset-password`, fila de Privacidad.
 
-| Lugar                        | Textos                                                                                                                                                                                                                                   |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Botón de inicio de sesión    | «Iniciar sesión» → mientras deriva: «Desbloqueando…»                                                                                                                                                                                     |
-| `/recovery-key`              | Título «Guarda tu clave de recuperación» · «Si olvidas tu contraseña, es la única forma de recuperar tus notas. Nadie más la tiene, ni siquiera Apunte.» · «Copiar» · «Descargar» · casilla «La guardé en un lugar seguro» · «Continuar» |
-| `/unlock`                    | «Desbloquea Apunte» · «Ingresa tu contraseña para leer tus notas.» · «Desbloquear» · «Cerrar sesión»                                                                                                                                     |
-| `/reset-password`            | «¿Tienes tu clave de recuperación?» · «Sí, la tengo» / «No la tengo» · aviso de borrado · «Entiendo que se borrarán mis notas»                                                                                                           |
-| Privacidad                   | «Cifrado de extremo a extremo» · «Activo. Solo tú puedes leer tus notas.» · «Clave de recuperación» · «Generar una clave nueva»                                                                                                          |
-| Cerrar sesión con pendientes | «Tienes {n} cambios sin sincronizar. Si cierras sesión ahora se perderán.» · «Sincronizar y salir» · «Salir igualmente»                                                                                                                  |
-| Nota ilegible                | Título «Nota ilegible» · banner en el editor «No se pudo descifrar esta nota.»                                                                                                                                                           |
+| Lugar                        | Textos                                                                                                                                                                                                                                    |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Botón de inicio de sesión    | «Iniciar sesión» → mientras deriva: «Desbloqueando…»                                                                                                                                                                                      |
+| `/recovery-key`              | Título «Guarda tu clave de recuperación» · «Si olvidas tu contraseña, es la única forma de recuperar tus notas. Nadie más la tiene, ni siquiera AxoNote.» · «Copiar» · «Descargar» · casilla «La guardé en un lugar seguro» · «Continuar» |
+| `/unlock`                    | «Desbloquea AxoNote» · «Ingresa tu contraseña para leer tus notas.» · «Desbloquear» · «Cerrar sesión»                                                                                                                                     |
+| `/reset-password`            | «¿Tienes tu clave de recuperación?» · «Sí, la tengo» / «No la tengo» · aviso de borrado · «Entiendo que se borrarán mis notas»                                                                                                            |
+| Privacidad                   | «Cifrado de extremo a extremo» · «Activo. Solo tú puedes leer tus notas.» · «Clave de recuperación» · «Generar una clave nueva»                                                                                                           |
+| Cerrar sesión con pendientes | «Tienes {n} cambios sin sincronizar. Si cierras sesión ahora se perderán.» · «Sincronizar y salir» · «Salir igualmente»                                                                                                                   |
+| Nota ilegible                | Título «Nota ilegible» · banner en el editor «No se pudo descifrar esta nota.»                                                                                                                                                            |
 
 Accesibilidad: la RK en `<output>` con `aria-live="polite"` al copiar («Copiada»); fuente
 monoespaciada (token existente; si no hay, usar `font-mono` de Tailwind y anotarlo); el campo de RK

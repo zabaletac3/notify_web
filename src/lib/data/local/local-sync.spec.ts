@@ -5,7 +5,7 @@ import { TRASH_RETENTION_DAYS, type Note } from '#lib/domain/index.js';
 import { decryptNote } from '../crypto/index.js';
 import { createDemoVault } from '../mock/demo-vault.js';
 import { DEMO_USER_ID, MockDatabase } from '../mock/mock-database.js';
-import { ApunteDb } from './apunte-db.js';
+import { AxoNoteDb } from './axonote-db.js';
 import { createLocalBackend, type LocalBackend } from './create-local-backend.js';
 
 let seq = 0;
@@ -554,7 +554,7 @@ describe('cifrado', () => {
 		]);
 		old.close();
 
-		const db = new ApunteDb(name);
+		const db = new AxoNoteDb(name);
 		expect(await db.notes.count()).toBe(0);
 		expect(await db.getMeta('cursor')).toBeUndefined();
 		expect(await db.getMeta('lastSyncedAt')).toBeUndefined();

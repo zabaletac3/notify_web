@@ -1,4 +1,4 @@
-# Apunte · web
+# AxoNote · web
 
 App de notas **original** (cálida, tipo "papel", acento azul) para web, escritorio (Tauri 2) y, por separado, móvil (Flutter).
 Este repositorio contiene la **web** y es la base de la app de escritorio.
@@ -55,7 +55,7 @@ src/
 └─ lib/
    ├─ components/
    │  ├─ ui/         shadcn-svelte (código propio, generado)
-   │  └─ app/        componentes compuestos de Apunte (NoteCard, SidebarItem…)
+   │  └─ app/        componentes compuestos de AxoNote (NoteCard, SidebarItem…)
    ├─ app/           raíz de composición (createApp) y contexto (getApp)
    ├─ features/      notes · folders · search · trash · settings · auth · sync · share (estado con runes)
    ├─ data/          contratos (repositorios) + implementaciones: mock (hecho) · local · remote

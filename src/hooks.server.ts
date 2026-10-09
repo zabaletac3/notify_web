@@ -10,7 +10,7 @@ export const SECURITY_HEADERS: Record<string, string> = {
 	// Las URLs de enlaces compartidos llevan la clave en el fragmento, pero aun así no se filtra el origen.
 	'Referrer-Policy': 'no-referrer',
 	'X-Content-Type-Options': 'nosniff',
-	// Apunte no usa cámara, micrófono ni ubicación; el portapapeles (copiar enlaces y claves) sí.
+	// AxoNote no usa cámara, micrófono ni ubicación; el portapapeles (copiar enlaces y claves) sí.
 	'Permissions-Policy':
 		'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
 	// Permite ventanas emergentes (el acceso con Google las usará) pero aísla el resto.

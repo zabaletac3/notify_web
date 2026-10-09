@@ -9,7 +9,7 @@
 	const values = $derived(settings.values);
 </script>
 
-<svelte:head><title>Privacidad y seguridad · Apunte</title></svelte:head>
+<svelte:head><title>Privacidad y seguridad · AxoNote</title></svelte:head>
 
 <h1 class="text-page font-bold max-md:sr-only">Privacidad y seguridad</h1>
 
@@ -62,7 +62,7 @@
 <SettingsGroup title="Cifrado">
 	<SettingRow
 		label="Cifrado de extremo a extremo"
-		description="Activo. Solo tú puedes leer tus notas: ni el servidor ni Apunte tienen tu clave."
+		description="Activo. Solo tú puedes leer tus notas: ni el servidor ni AxoNote tienen tu clave."
 	/>
 	<SettingRow
 		label="Clave de recuperación"

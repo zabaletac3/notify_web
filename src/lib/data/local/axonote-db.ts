@@ -48,7 +48,7 @@ export interface MetaRow {
 }
 
 /** Base de datos local (IndexedDB): la copia de trabajo de la app. */
-export class ApunteDb extends Dexie {
+export class AxoNoteDb extends Dexie {
 	notes!: Table<NoteRow, Id>;
 	folders!: Table<FolderRow, Id>;
 	outbox!: Table<OutboxEntry, number>;

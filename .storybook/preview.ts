@@ -1,7 +1,7 @@
 import type { Preview } from '@storybook/sveltekit';
 import '../src/routes/layout.css';
 
-/** Aplica el tema claro/oscuro de Apunte (clase `.dark`, igual que mode-watcher). */
+/** Aplica el tema claro/oscuro de AxoNote (clase `.dark`, igual que mode-watcher). */
 const applyTheme = (theme: string) => {
 	document.documentElement.classList.toggle('dark', theme === 'dark');
 };

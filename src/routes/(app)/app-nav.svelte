@@ -33,7 +33,7 @@
 			class="grid size-7 place-content-center rounded-lg bg-primary text-heading font-bold text-primary-foreground"
 			>a</span
 		>
-		<span class="flex-1 text-xl font-bold">Apunte</span>
+		<span class="flex-1 text-xl font-bold">AxoNote</span>
 		<a
 			href="/settings"
 			aria-label="Ajustes"

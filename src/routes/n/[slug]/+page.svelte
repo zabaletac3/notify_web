@@ -38,7 +38,7 @@
 </script>
 
 <svelte:head>
-	<title>{content?.title || 'Nota compartida'} · Apunte</title>
+	<title>{content?.title || 'Nota compartida'} · AxoNote</title>
 	<meta name="referrer" content="no-referrer" />
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
@@ -53,7 +53,7 @@
 				<h1 class="text-title font-bold">{content.title || 'Sin título'}</h1>
 				<MarkdownView source={content.content} />
 			</article>
-			<p class="text-caption text-muted-foreground">Nota compartida con Apunte · solo lectura</p>
+			<p class="text-caption text-muted-foreground">Nota compartida con AxoNote · solo lectura</p>
 		{:else}
 			<div class="flex flex-col items-center gap-3 py-16 text-center" role="alert">
 				<span

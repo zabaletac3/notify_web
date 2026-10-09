@@ -4,10 +4,10 @@
 </script>
 
 <svelte:head>
-	<title>Política de privacidad · Apunte</title>
+	<title>Política de privacidad · AxoNote</title>
 	<meta
 		name="description"
-		content="Qué datos personales trata Apunte, para qué, cuánto tiempo los conserva y cómo ejercer tus derechos."
+		content="Qué datos personales trata AxoNote, para qué, cuánto tiempo los conserva y cómo ejercer tus derechos."
 	/>
 </svelte:head>
 

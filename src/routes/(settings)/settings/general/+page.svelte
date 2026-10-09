@@ -14,7 +14,7 @@
 	}
 </script>
 
-<svelte:head><title>Ajustes generales · Apunte</title></svelte:head>
+<svelte:head><title>Ajustes generales · AxoNote</title></svelte:head>
 
 <h1 class="text-page font-bold max-md:sr-only">Ajustes generales</h1>
 

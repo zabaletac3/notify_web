@@ -31,5 +31,5 @@ export WEB_BASE_URL=http://localhost:4174 ALLOWED_ORIGINS=http://localhost:4174
 export DATABASE_URL="$(DB_URL apunte_api:a)"
 export JWT_SECRET="e2e-jwt-secret-0123456789abcdef0123456789abcdef"
 export PEPPER="e2e-pepper-0123456789abcdef0123456789abcdef-xyz"
-export MAIL_PROVIDER=log MAIL_FROM="Apunte E2E <no-reply@localhost>"
+export MAIL_PROVIDER=log MAIL_FROM="AxoNote E2E <no-reply@localhost>"
 exec "$ROOT/e2e-http/.api" >> "$LOG" 2>&1

@@ -14,7 +14,7 @@ const stripExtension = (name: string) => name.replace(/\.(md|markdown|txt)$/i, '
 
 /**
  * Convierte el texto de un archivo Markdown en una nota. Si empieza con un título `# …` (como lo escribe
- * la exportación de Apunte) ese título pasa a ser el de la nota y se quita del texto; si no, el título es
+ * la exportación de AxoNote) ese título pasa a ser el de la nota y se quita del texto; si no, el título es
  * el nombre del archivo. Quita el BOM y unifica los saltos de línea.
  */
 export function parseMarkdownNote(fileName: string, text: string): ImportedNote {

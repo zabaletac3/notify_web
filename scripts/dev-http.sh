@@ -52,7 +52,7 @@ APP_ENV=dev PORT="$API_PORT" LOG_LEVEL=info TRUST_PROXY=false \
 	DATABASE_URL="$(URL apunte_api:a)" \
 	JWT_SECRET='dev-jwt-secret-0123456789abcdef0123456789abcdef' \
 	PEPPER='dev-pepper-0123456789abcdef0123456789abcdef-xyz' \
-	MAIL_PROVIDER=log MAIL_FROM='Apunte <no-reply@localhost>' \
+	MAIL_PROVIDER=log MAIL_FROM='AxoNote <no-reply@localhost>' \
 	"$WEB_DIR/.dev-api" >> "$LOG" 2>&1 &
 API_PID=$!
 tail -n +1 -F "$LOG" 2>/dev/null | sed -u 's/^/[api] /' &

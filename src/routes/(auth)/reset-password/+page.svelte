@@ -33,7 +33,7 @@
 	}
 </script>
 
-<svelte:head><title>Nueva contraseña · Apunte</title></svelte:head>
+<svelte:head><title>Nueva contraseña · AxoNote</title></svelte:head>
 
 <AuthCard
 	title="Crea una nueva contraseña"
