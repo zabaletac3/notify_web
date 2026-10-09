@@ -40,6 +40,14 @@ Estado de la **Fase 2** (la parte que no requiere el MCP de Figma). Catálogo vi
 - **Skeleton:** `bg-hover`.
 - Se eliminaron los marcadores de estilo del CLI de shadcn que no aplican (`cn-menu-*`, `cn-font-heading`, `cn-rtl-flip`).
 
+### Logo de Google (única excepción a «solo tokens»)
+
+`GoogleButton` (`components/app`) dibuja el logo oficial de Google como **SVG en línea** con sus cuatro
+colores de marca (`#4285F4`, `#34A853`, `#FBBC05`, `#EA4335`). Es la **única** excepción a la regla de
+no usar colores arbitrarios: son colores de marca obligatorios y no pueden salir de los tokens. No se
+carga ningún script de Google (el flujo OAuth es por redirección completa). Con `PUBLIC_GOOGLE_AUTH`
+distinto de `true`, el botón no se muestra.
+
 ## Contraste (resultado de `tokens.spec.ts`)
 
 Cumplen AA (≥ 4.5): texto principal y secundario sobre fondos, botón primario, enlaces, peligro, éxito. Por debajo, **por decisión del diseño actual**, a revisar con Figma:
@@ -88,6 +96,16 @@ Pantallas y piezas construidas con componentes existentes; hay que diseñarlas e
 - Reset de contraseña: elección «Sí, la tengo» / «No la tengo», campo de clave y aviso de borrado.
 - Privacidad: filas «Cifrado de extremo a extremo» (informativa) y «Clave de recuperación» (reemplazan al interruptor «Cifrar notas en este dispositivo»).
 - Cerrar sesión con cambios sin sincronizar (diálogo de tres botones).
+
+### Verificación en dos pasos y acceso con Google (sin diseño en Figma todavía)
+
+Construidas con componentes existentes; pendientes de diseñar en Figma y reconciliar medidas y textos:
+
+- `/two-factor` (login en dos pasos): reutiliza `input-otp` (como `/verify`) y un campo de texto para el modo «código de respaldo» (alterna con un enlace).
+- `/settings/two-factor`: activa/desactiva y regenera códigos. Usa `QrCode` (SVG, generado en el cliente con `uqr`; **nunca** una imagen remota) y `RecoveryCodesPanel` (mismos botones Copiar y Descargar y casilla «Guardé los códigos…» que la clave de recuperación).
+- `/auth/google` (retorno de Google): cuatro estados (procesando, vincular con contraseña, crear cuenta con nombre/contraseña/términos y error).
+- `GoogleButton`: logo oficial en SVG en línea (única excepción a «solo tokens», ver arriba); se oculta si `PUBLIC_GOOGLE_AUTH` no es `true`. El flujo es por redirección completa, sin scripts de Google.
+- Cerrar sesión con dispositivo de confianza: diálogo con «Cerrar sesión» y «Cerrar sesión y olvidar este dispositivo».
 
 ## Barra lateral recogible (escritorio)
 

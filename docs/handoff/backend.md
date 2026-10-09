@@ -1,7 +1,7 @@
 # AxoNote · Backend (Go + PostgreSQL) — estado y pendientes
 
 > Documento de traspaso para una sesión nueva de Claude Code en el repo **`zabaletac3/notify_backend`**.
-> Actualizado: 2026-10-08. Léelo entero antes de tocar código; después lee el `CLAUDE.md` del repo.
+> Actualizado: 2026-10-09. Léelo entero antes de tocar código; después lee el `CLAUDE.md` del repo.
 
 ## 1. Qué es AxoNote
 
@@ -12,12 +12,12 @@ Argon2id + HKDF y lo envía en su lugar.
 
 Repos del proyecto (una sola persona, `zabaletac3`):
 
-| Repo             | Qué                     | Estado                                                   |
-| ---------------- | ----------------------- | -------------------------------------------------------- |
-| `notify_backend` | API Go + PostgreSQL     | **este documento**: fases 0–11 hechas                    |
-| `notify_web`     | SvelteKit (web)         | completa con datos simulados y con la API real           |
-| `notify_desktop` | Tauri 2 (Linux/Windows) | por crear (`docs/handoff/escritorio.md` en `notify_web`) |
-| `notify_mobile`  | Android/iOS             | por crear (`docs/handoff/movil.md` en `notify_web`)      |
+| Repo             | Qué                     | Estado                                                                   |
+| ---------------- | ----------------------- | ------------------------------------------------------------------------ |
+| `notify_backend` | API Go + PostgreSQL     | **este documento**: fases 0–11 + MFA, Google y dispositivos de confianza |
+| `notify_web`     | SvelteKit (web)         | completa con datos simulados y con la API real                           |
+| `notify_desktop` | Tauri 2 (Linux/Windows) | por crear (`docs/handoff/escritorio.md` en `notify_web`)                 |
+| `notify_mobile`  | Android/iOS             | por crear (`docs/handoff/movil.md` en `notify_web`)                      |
 
 Fuentes de verdad que viven en **`notify_web`** (no en este repo):
 
@@ -38,12 +38,13 @@ cmd/migrate    migraciones (MIGRATE_DATABASE_URL, rol dueño)
 cmd/purge      limpieza diaria (PURGE_DATABASE_URL, rol de mantenimiento)
 internal/platform/  apperrors, response, config (+dotenv), database, httpserver, security,
                     ratelimit, mailer (log|resend|memory), observability, testdb
-internal/modules/   auth (cuenta, sesión, claves, recuperación, perfil, cambio de correo),
+internal/modules/   auth (cuenta, sesión, claves, recuperación, perfil, cambio de correo,
+                    MFA en dos pasos y acceso con Google, dispositivos de confianza),
                     notesync (/sync), share (enlaces públicos), account (ajustes, uso)
 internal/jobs/purge
 internal/testutil   monta la API completa para pruebas de integración
 internal/hardening  pruebas de abuso (logs sin secretos, cadenas/cuerpos hostiles, cabeceras)
-migrations/         00001_init … 00007_maintenance
+migrations/         00001_init … 00011_trusted_devices
 deploy/             compose base + qa/prod, Caddy, scripts y timers systemd
 docs/               deploy.md, operations.md, security.md
 ```
@@ -57,17 +58,20 @@ contraseñas, `authKey`, tokens, códigos ni textos de personas.
 Cuerpos sin envoltorio. Errores: `{kind, code?, fields?, entity?, retryAfterSec?}` con
 `kind ∈ validation | unauthorized | forbidden | not-found | conflict | rate-limited | session-expired | device-revoked | server`.
 
-| Grupo        | Rutas                                                                                                                                                   |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Salud        | `GET /health`, `GET /ready` (fuera de `/v1`)                                                                                                            |
-| Cuenta       | `POST /auth/prelogin`, `/auth/register`, `/auth/verify-email`, `/auth/resend-code`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `GET /auth/session` |
-| Recuperación | `POST /auth/password/forgot`, `/auth/password/reset/bundle`, `/auth/password/reset` (`keep` con clave de recuperación o `wipe`)                         |
-| Claves       | `GET /keys`, `PUT /keys/recovery`, `POST /me/password`                                                                                                  |
-| Perfil       | `GET/PATCH /me`, `DELETE /me`, `POST /me/email-change`, `POST /me/email-change/confirm`                                                                 |
-| Dispositivos | `GET /devices`, `DELETE /devices/{deviceId}`                                                                                                            |
-| Sync         | `POST /sync` (paginado: `hasMore`), `GET /notes`, `GET /notes/{id}`, `GET /folders`                                                                     |
-| Compartir    | `GET/PUT/DELETE /notes/{id}/share`, `PUT /notes/{id}/share/payload`, `GET /public/notes/{slug}`                                                         |
-| Ajustes      | `GET/PATCH /settings`, `GET /storage/usage`                                                                                                             |
+| Grupo        | Rutas                                                                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Salud        | `GET /health`, `GET /ready` (fuera de `/v1`)                                                                                                                       |
+| Cuenta       | `POST /auth/prelogin`, `/auth/register`, `/auth/verify-email`, `/auth/resend-code`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `GET /auth/session`            |
+| Recuperación | `POST /auth/password/forgot`, `/auth/password/reset/bundle`, `/auth/password/reset` (`keep` con clave de recuperación o `wipe`)                                    |
+| Claves       | `GET /keys`, `PUT /keys/recovery`, `POST /me/password`                                                                                                             |
+| Perfil       | `GET/PATCH /me`, `DELETE /me`, `POST /me/email-change`, `POST /me/email-change/confirm`                                                                            |
+| Dispositivos | `GET /devices`, `DELETE /devices/{deviceId}`                                                                                                                       |
+| Sync         | `POST /sync` (paginado: `hasMore`), `GET /notes`, `GET /notes/{id}`, `GET /folders`                                                                                |
+| Compartir    | `GET/PUT/DELETE /notes/{id}/share`, `PUT /notes/{id}/share/payload`, `GET /public/notes/{slug}`                                                                    |
+| Ajustes      | `GET/PATCH /settings`, `GET /storage/usage`                                                                                                                        |
+| MFA          | `POST /auth/login/mfa`, `GET /mfa`, `POST /mfa/totp/setup`, `/mfa/totp/enable`, `/mfa/totp/disable`, `POST /mfa/recovery-codes`                                    |
+| Google       | `POST /auth/google/start`, `GET /auth/google/callback`, `POST /auth/google/exchange`, `/auth/google/link`, `/auth/google/register`, `DELETE /me/identities/google` |
+| Confianza    | `GET/POST /trusted-devices`, `GET/DELETE /trusted-devices/{id}`                                                                                                    |
 
 Seguridad ya implementada: anti-enumeración (register/resend/forgot/prelogin/email-change responden igual;
 correo en segundo plano), hash ficticio para cuentas inexistentes, límites en PostgreSQL con bloqueos
@@ -134,8 +138,7 @@ Verificado en local: `caddy validate` (Caddy 2.10), `docker compose config` de q
    El móvil nativo no necesita CORS.
 6. **Endurecimiento pendiente**: fijar las acciones de GitHub por SHA; revisar que `DELETE /me` pida la
    prueba de la contraseña (hoy no la pide porque el contrato no la incluye: cambiar contrato + web).
-7. **Verificación en dos pasos (2FA)** (decisión D12): hoy `twoFactor: true` se rechaza a propósito.
-   Diseñar (TOTP + códigos de respaldo), contrato, migración, UI en la web.
+7. **Verificación en dos pasos y Google**: **hechos** (ADR 0006): TOTP + códigos de respaldo, login en dos pasos, OAuth de Google y dispositivos de confianza. Pendiente solo la revisión de seguridad del conjunto (fase 7 del plan `plan-google-mfa.md`).
 8. **Observabilidad**: métricas básicas y alertas (hoy solo logs JSON, `/ready` y latidos).
 9. **Política de privacidad** (Ley 1581): correo y metadatos son datos personales; el contenido está cifrado.
 
@@ -145,6 +148,7 @@ Verificado en local: `caddy validate` (Caddy 2.10), `docker compose config` de q
   cliente `src/lib/data/remote`.
 - Prueba e2e de la web contra esta API: en `notify_web`, `pnpm e2e:http` (necesita este repo al lado y un
   Postgres; ver `e2e-http/api.sh`). Cubre registro, dos dispositivos, conflicto, recuperación, enlace
-  público y dispositivo revocado.
+  público, dispositivo revocado, **verificación en dos pasos** (TOTP generado en la prueba) y **Google**
+  (con `GOOGLE_PROVIDER=fake`, que `e2e-http/api.sh` activa solo en dev).
 - Las migraciones nuevas: solo hacia adelante, compatibles con la versión anterior; si añaden datos de
   personas, decidir su purga y su política RLS para `apunte_maint`.
