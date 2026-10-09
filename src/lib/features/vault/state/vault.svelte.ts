@@ -55,10 +55,21 @@ export class VaultState {
 		return true;
 	}
 
-	/** Olvida la clave maestra de la memoria (la guardada en el dispositivo se conserva). */
-	lock(): void {
+	/**
+	 * Olvida la clave maestra de la memoria y **borra la clave guardada en el dispositivo**: un bloqueo
+	 * (por inactividad, al ocultar la pestaña o manual) no debe poder saltarse recargando. Al desbloquear
+	 * con la contraseña se vuelve a guardar si `rememberDevice()` lo permite.
+	 */
+	async lock(): Promise<void> {
+		const userId = this.vault?.userId;
 		this.vault?.lock();
 		this.status = 'locked';
+		if (userId) await this.store.remove(userId);
+	}
+
+	/** Borra la clave guardada en este dispositivo sin tocar la memoria. */
+	async forgetDevice(userId: Id): Promise<void> {
+		await this.store.remove(userId);
 	}
 
 	/** Activa o desactiva el recuerdo de la clave en este dispositivo. */
@@ -70,9 +81,7 @@ export class VaultState {
 
 	/** Cierra la sesión: olvida la clave de la memoria y la guardada en el dispositivo. */
 	async signOut(): Promise<void> {
-		const userId = this.vault?.userId;
-		this.lock();
+		await this.lock();
 		this.vault = null;
-		if (userId) await this.store.remove(userId);
 	}
 }

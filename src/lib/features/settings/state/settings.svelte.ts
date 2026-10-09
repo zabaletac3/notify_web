@@ -17,14 +17,17 @@ export class SettingsState {
 	lastError = $state<AppError | null>(null);
 
 	private readonly repo: SettingsRepository;
+	/** Cuenta cuyas preferencias del dispositivo se están usando (para guardarlas por cuenta). */
+	private userId: string | undefined;
 
 	constructor(repo: SettingsRepository) {
 		this.repo = repo;
 	}
 
-	async load(): Promise<ActionResult> {
+	async load(userId?: string): Promise<ActionResult> {
+		if (userId) this.userId = userId;
 		this.status = 'loading';
-		const result = await attempt(() => this.repo.get());
+		const result = await attempt(() => this.repo.get(this.userId));
 		if (!result.ok) {
 			this.status = 'error';
 			return result;
@@ -34,11 +37,19 @@ export class SettingsState {
 		return succeed();
 	}
 
+	/** Olvida la cuenta y vuelve a los valores por defecto (al cerrar sesión o borrar la cuenta). */
+	reset(): void {
+		this.userId = undefined;
+		this.values = { ...DEFAULT_SETTINGS };
+		this.status = 'idle';
+		this.lastError = null;
+	}
+
 	async update(patch: Partial<AppSettings>): Promise<ActionResult> {
 		const before = this.values;
 		this.values = { ...this.values, ...patch };
 		this.lastError = null;
-		const result = await attempt(() => this.repo.update(patch));
+		const result = await attempt(() => this.repo.update(patch, this.userId));
 		if (!result.ok) {
 			this.values = before;
 			this.lastError = result.error;

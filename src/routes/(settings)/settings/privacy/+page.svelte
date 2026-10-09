@@ -23,10 +23,10 @@
 			/>
 		{/snippet}
 	</SettingRow>
-	<SettingRow label="Bloquear al salir de la app">
+	<SettingRow label="Pedir contraseña al recargar o cerrar la pestaña">
 		{#snippet control()}
 			<Switch
-				aria-label="Bloquear al salir de la app"
+				aria-label="Pedir contraseña al recargar o cerrar la pestaña"
 				checked={values.lockOnExit}
 				onCheckedChange={(lockOnExit) => {
 					void settings.update({ lockOnExit });
@@ -43,10 +43,20 @@
 			{ value: 'immediately', label: 'Inmediatamente' },
 			{ value: '1m', label: '1 minuto' },
 			{ value: '5m', label: '5 minutos' },
-			{ value: '15m', label: '15 minutos' }
+			{ value: '15m', label: '15 minutos' },
+			{ value: 'never', label: 'Nunca' }
 		]}
 		onchange={(lockTimeout) => settings.update({ lockTimeout })}
 	/>
+	<p class="px-4 py-2.5 text-label text-muted-foreground">
+		{#if values.lockTimeout === 'never'}
+			La app no se bloqueará por inactividad.
+		{:else if values.lockTimeout === 'immediately'}
+			La app se bloquea al cambiar de pestaña o al cerrarla.
+		{:else}
+			Se bloquea tras ese tiempo sin actividad con la app abierta.
+		{/if}
+	</p>
 </SettingsGroup>
 
 <SettingsGroup title="Cifrado">

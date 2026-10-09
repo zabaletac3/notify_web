@@ -212,12 +212,12 @@
 		<AlertDialog.Description class="leading-[21px]">
 			“{note?.title}” se conservará 30 días en la papelera. Puedes restaurarla cuando quieras.
 		</AlertDialog.Description>
-		<div class="flex gap-3 *:flex-1 md:justify-end md:*:flex-none">
+		<AlertDialog.Footer>
 			<AlertDialog.Cancel>Cancelar</AlertDialog.Cancel>
 			<AlertDialog.Action variant="destructive" onclick={trash}>
 				Mover a la papelera
 			</AlertDialog.Action>
-		</div>
+		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>
 

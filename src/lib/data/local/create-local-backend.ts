@@ -14,6 +14,7 @@ import type { MockDatabase, MockDatabaseOptions } from '../mock/mock-database.js
 import { ApunteDb } from './apunte-db.js';
 import type { DataGate } from './gate.js';
 import { Mutex } from './gate.js';
+import { DevicePrefs } from './device-prefs.js';
 import { LocalCodec } from './local-codec.js';
 import { LocalFolderRepository } from './local-folder-repository.js';
 import { LocalNoteRepository } from './local-note-repository.js';
@@ -42,6 +43,8 @@ export interface LocalBackendOptions extends MockDatabaseOptions {
 	server?: MockDatabase;
 	/** Este dispositivo (por defecto, el "actual" del simulador). */
 	device?: { id: string; name: string };
+	/** Preferencias del dispositivo (bloqueo). Si no se pasa, se crea una. */
+	devicePrefs?: DevicePrefs;
 }
 
 export interface LocalBackend extends MockBackend {
@@ -110,6 +113,7 @@ export function createLocalBackend(options: LocalBackendOptions): LocalBackend {
 	};
 	const server = new MockSyncServer(serverDb);
 
+	const devicePrefs = options.devicePrefs ?? new DevicePrefs();
 	const notes = new LocalNoteRepository(deps);
 	const sync = new LocalSyncRepository({
 		get db() {
@@ -156,7 +160,7 @@ export function createLocalBackend(options: LocalBackendOptions): LocalBackend {
 				: {}),
 			notes,
 			folders: new LocalFolderRepository(deps),
-			settings: new LocalSettingsRepository(deps),
+			settings: new LocalSettingsRepository(deps, devicePrefs),
 			sync
 		},
 		local: {

@@ -1,9 +1,11 @@
 import { untrack } from 'svelte';
 import { DEFAULT_KDF, LIGHT_KDF, importMasterKeyRaw } from '#lib/core/crypto/index.js';
+import { LOCK_TIMEOUT_MS, lockTimeoutExceeded } from '#lib/domain/index.js';
 import {
 	DEMO_MASTER_KEY_RAW,
 	DEMO_USER_ID,
 	DeviceKeyStore,
+	DevicePrefs,
 	createLocalBackend,
 	createSessionChannel,
 	HttpAuthRepository,
@@ -103,6 +105,9 @@ export function createApp(options: AppOptions = {}): App {
 	const vault = new VaultState(
 		new DeviceKeyStore(options.dbName ? `${options.dbName}-keys` : 'apunte-keys')
 	);
+	// Preferencias que viven en este dispositivo y no se sincronizan (bloqueo). Fuera de la base local:
+	// cerrar sesión no las borra; borrar la cuenta sí.
+	const devicePrefs = new DevicePrefs();
 	const backend: MockBackend | LocalBackend =
 		options.backend ??
 		(persistence === 'indexeddb'
@@ -111,6 +116,7 @@ export function createApp(options: AppOptions = {}): App {
 					now,
 					startAuthenticated,
 					dbName: options.dbName,
+					devicePrefs,
 					// Las notas se cifran con la clave de la sesión: bloqueada, no se puede leer ni escribir.
 					vault: () => vault.current
 				})
@@ -138,25 +144,47 @@ export function createApp(options: AppOptions = {}): App {
 	const auth = new AuthState(repos.auth, now, {
 		vault,
 		kdf: options.kdf ?? (import.meta.env.PROD ? DEFAULT_KDF : LIGHT_KDF),
+		// Las preferencias del dispositivo se cargan antes de desbloquear: `rememberDevice` las necesita.
+		beforeUnlock: async (userId) => {
+			await settings.load(userId);
+		},
 		// Con "bloquear al salir" activado la clave no se guarda en el dispositivo.
 		rememberDevice: () => !settings.values.lockOnExit,
 		restoreVault: async (userId) => {
-			if (await vault.restore(userId)) return true;
+			// En el arranque también se cargan las preferencias en cuanto se conoce la cuenta.
+			await settings.load(userId);
+			// Si se cerró la pestaña y pasó el tiempo de bloqueo, no se restaura (y se borra la clave).
+			if (
+				lockTimeoutExceeded(
+					settings.values.lockTimeout,
+					devicePrefs.readActiveAt(userId),
+					now().getTime()
+				)
+			) {
+				await vault.forgetDevice(userId);
+			} else if (await vault.restore(userId)) {
+				return true;
+			}
 			// La sesión de ejemplo del simulador arranca ya desbloqueada (tiene la clave maestra de ejemplo).
 			if (!startAuthenticated || userId !== DEMO_USER_ID) return false;
 			await vault.unlock(userId, await importMasterKeyRaw(DEMO_MASTER_KEY_RAW), false);
 			return true;
 		},
-		// Al salir, la copia local se borra (los datos siguen en el servidor).
-		onSignedOut: async () => {
-			const userId = local?.userId ?? null;
+		// Al salir, la copia local se borra (los datos siguen en el servidor). Las preferencias del
+		// dispositivo (bloqueo) no: solo se borran al eliminar la cuenta. La marca de actividad sí se
+		// borra (es por sesión) y los ajustes en memoria vuelven a los valores por defecto.
+		onSignedOut: async (signedOutUserId) => {
+			const userId = signedOutUserId ?? local?.userId ?? null;
+			if (userId) devicePrefs.removeActiveAt(userId);
+			settings.reset();
 			// Primero se vacía lo que la pantalla tiene en memoria; después se borra la base.
 			notes.reset();
 			folders.reset();
 			await local?.destroy();
 			void sync.refresh();
 			if (!applyingRemote) channel?.post({ type: 'signed-out', userId });
-		}
+		},
+		onAccountDeleted: (userId) => devicePrefs.remove(userId)
 	});
 	const notes = new NotesState(repos.notes, now, refreshPending, (note) => share.republish(note));
 	const folders = new FoldersState(repos.folders, () => notes.refresh(), refreshPending);
@@ -189,8 +217,12 @@ export function createApp(options: AppOptions = {}): App {
 		if (local && auth.user) await local.open(auth.user.id);
 		await sync.refresh();
 		if (local && !local.userId) return;
+		// Los ajustes no se cifran: se cargan aunque el cofre esté bloqueado.
+		await settings.load(auth.user?.id);
+		// Bloqueado no se puede descifrar: ni notas ni carpetas ni sincronización (quedarían en error).
+		if (auth.isLocked) return;
 		if (local && auth.isAuthenticated && !sync.snapshot.lastSyncedAt) await sync.syncNow();
-		await Promise.all([settings.load(), folders.load(), notes.load()]);
+		await Promise.all([folders.load(), notes.load()]);
 	}
 
 	async function bootstrap() {
@@ -220,23 +252,58 @@ export function createApp(options: AppOptions = {}): App {
 	}
 
 	// Bloqueo automático: tras un rato sin actividad, o al ocultar la pestaña si se eligió "inmediatamente".
-	const LOCK_AFTER_MS = { immediately: 0, '1m': 60_000, '5m': 300_000, '15m': 900_000 } as const;
+	// `never` y `immediately` no arman temporizador: el primero no bloquea nunca y el segundo lo gestiona
+	// `onVisibility` (al ocultar la pestaña).
 	let lockTimer: ReturnType<typeof setTimeout> | undefined;
 	const armLock = () => {
 		clearTimeout(lockTimer);
-		const after = LOCK_AFTER_MS[settings.values.lockTimeout];
-		if (!auth.isAuthenticated || vault.status !== 'unlocked' || after === 0) return;
-		lockTimer = setTimeout(() => vault.lock(), after);
+		const after = LOCK_TIMEOUT_MS[settings.values.lockTimeout];
+		if (!auth.isAuthenticated || vault.status !== 'unlocked' || typeof after !== 'number') return;
+		lockTimer = setTimeout(() => void vault.lock(), after);
 	};
-	const onActivity = () => armLock();
+
+	// Última actividad en el dispositivo, para saber al recargar si ya pasó el tiempo de bloqueo.
+	// Se escribe como mucho cada 15 s para no castigar `localStorage` con cada tecla.
+	const ACTIVITY_PERSIST_MS = 15_000;
+	let lastActivitySavedAt = 0;
+	/** Última actividad real, en memoria; `null` si aún no hubo ninguna que guardar. */
+	let lastActivityAt: number | null = null;
+	/** Anota que hay actividad ahora y la guarda si ya pasó el límite de escritura. */
+	const saveActivity = () => {
+		const userId = vault.userId;
+		if (!userId) return;
+		const t = now().getTime();
+		lastActivityAt = t;
+		if (t - lastActivitySavedAt < ACTIVITY_PERSIST_MS) return;
+		lastActivitySavedAt = t;
+		devicePrefs.writeActiveAt(userId, t);
+	};
+	/**
+	 * Al ocultar o cerrar la pestaña se guarda la última actividad real (no el instante de ocultar:
+	 * eso alargaría el plazo), sin esperar al límite de escritura, para que al recargar el dato sea exacto.
+	 */
+	const flushActivity = () => {
+		const userId = vault.userId;
+		if (!userId || lastActivityAt === null) return;
+		lastActivitySavedAt = lastActivityAt;
+		devicePrefs.writeActiveAt(userId, lastActivityAt);
+	};
+
+	const onActivity = () => {
+		saveActivity();
+		armLock();
+	};
 	const onVisibility = () => {
-		if (document.hidden && settings.values.lockTimeout === 'immediately' && auth.isAuthenticated)
-			vault.lock();
+		if (!document.hidden) return;
+		flushActivity();
+		if (settings.values.lockTimeout === 'immediately' && auth.isAuthenticated) vault.lock();
 	};
+	const onPageHide = () => flushActivity();
 	const ACTIVITY = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
 	if (options.autoLock && typeof window !== 'undefined') {
 		for (const type of ACTIVITY) window.addEventListener(type, onActivity, { passive: true });
 		document.addEventListener('visibilitychange', onVisibility);
+		window.addEventListener('pagehide', onPageHide);
 	}
 
 	const stop = $effect.root(() => {
@@ -269,8 +336,11 @@ export function createApp(options: AppOptions = {}): App {
 					folders.reset();
 					void sync.refresh();
 				}
-				if (!wasUnlocked && unlocked && auth.isAuthenticated && notes.status === 'idle')
-					void loadData();
+				if (!wasUnlocked && unlocked && auth.isAuthenticated) {
+					// Queda constancia de que hay actividad reciente (para el bloqueo al recargar).
+					saveActivity();
+					if (notes.status !== 'ready') void loadData();
+				}
 				wasUnlocked = unlocked;
 			});
 		});
@@ -280,7 +350,12 @@ export function createApp(options: AppOptions = {}): App {
 		$effect(() => {
 			const authenticated = auth.isAuthenticated;
 			untrack(() => {
-				if (authenticated && !wasAuthenticated) void loadData();
+				if (authenticated && !wasAuthenticated) {
+					// El cofre ya está desbloqueado cuando la sesión pasa a autenticada: queda constancia
+					// de la actividad para el bloqueo al recargar.
+					saveActivity();
+					void loadData();
+				}
 				wasAuthenticated = authenticated;
 			});
 		});
@@ -320,6 +395,7 @@ export function createApp(options: AppOptions = {}): App {
 			if (options.autoLock && typeof window !== 'undefined') {
 				for (const type of ACTIVITY) window.removeEventListener(type, onActivity);
 				document.removeEventListener('visibilitychange', onVisibility);
+				window.removeEventListener('pagehide', onPageHide);
 			}
 			if (local && typeof window !== 'undefined') window.removeEventListener('online', onOnline);
 			channel?.close();

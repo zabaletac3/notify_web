@@ -103,8 +103,12 @@ export interface DeviceRepository {
 }
 
 export interface SettingsRepository {
-	get(): Promise<AppSettings>;
-	update(patch: Partial<AppSettings>): Promise<AppSettings>;
+	/**
+	 * Preferencias del dispositivo. `userId` solo lo usan las implementaciones que las guardan por
+	 * cuenta (las locales); el resto lo ignora.
+	 */
+	get(userId?: string): Promise<AppSettings>;
+	update(patch: Partial<AppSettings>, userId?: string): Promise<AppSettings>;
 }
 
 export interface SyncRepository {

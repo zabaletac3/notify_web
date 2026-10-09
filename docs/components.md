@@ -31,6 +31,7 @@ Estado de la **Fase 2** (la parte que no requiere el MCP de Figma). Catálogo vi
 
 - **Button:** primario azul, `outline` = botón secundario del diseño (borde, sin relleno), `destructive` sólido y `destructive-soft` tintado. Alturas 46 (`default`) y 54 (`lg`) como en Figma (`h-11.5`, `h-13.5`).
 - **Input / Textarea:** rellenos (`bg-input-fill`), sin borde, foco con borde azul de 2 px; error con borde `destructive`.
+- **AuthField (contraseñas):** botón de ojo dentro del campo que alterna entre `password` y `text`, con `aria-label` «Mostrar/Ocultar contraseña», `aria-pressed` y área táctil de 44 px.
 - **Checkbox:** circular (las tareas del diseño tienen check redondo). **Radio:** mismo estilo de borde.
 - **Switch:** 44×26 con 3 px de margen; apagado en `tertiary`.
 - **Input OTP:** casillas separadas y rellenas, foco azul (como la pantalla de verificación).

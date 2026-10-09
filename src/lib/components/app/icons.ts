@@ -6,6 +6,8 @@ import {
 	Copy,
 	Download,
 	Ellipsis,
+	Eye,
+	EyeOff,
 	FileText,
 	Folder,
 	FolderPlus,
@@ -66,6 +68,8 @@ export const icons = {
 	menu: Menu,
 	undo: Undo2,
 	// Necesarios para las pantallas (aún sin componente en Figma)
+	eye: Eye,
+	'eye-off': EyeOff,
 	plus: Plus,
 	check: Check,
 	lock: Lock,
