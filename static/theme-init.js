@@ -11,6 +11,12 @@
 		root.style.colorScheme = light ? 'light' : 'dark';
 		var size = localStorage.getItem('apunte-text-size');
 		if (size === 'small' || size === 'large') root.dataset.textSize = size;
+		// Barra lateral recogida (solo pantallas grandes): evita que se pinte abierta al recargar.
+		if (
+			localStorage.getItem('axonote-sidebar-collapsed') === '1' &&
+			window.matchMedia('(min-width: 1024px)').matches
+		)
+			root.dataset.sidebar = 'collapsed';
 	} catch {
 		// Sin almacenamiento disponible: queda el tema por defecto.
 	}

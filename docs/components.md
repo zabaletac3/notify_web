@@ -89,6 +89,13 @@ Pantallas y piezas construidas con componentes existentes; hay que diseñarlas e
 - Privacidad: filas «Cifrado de extremo a extremo» (informativa) y «Clave de recuperación» (reemplazan al interruptor «Cifrar notas en este dispositivo»).
 - Cerrar sesión con cambios sin sincronizar (diálogo de tres botones).
 
+## Barra lateral recogible (escritorio)
+
+- Solo a partir de `lg` (≥ 1024 px) la barra lateral fija puede quedar **recogida** (64 px, `w-16`) mostrando solo iconos centrados. En pantallas pequeñas el cajón sigue expandido y no hay botón de recoger.
+- El estado es `shell.sidebarCollapsed` (`src/routes/(app)/shell.svelte.ts`) y se recuerda en `localStorage` con la clave `axonote-sidebar-collapsed` (`'1'` recogida; `'0'` o ausente, abierta), tolerante a almacenamiento bloqueado. `static/theme-init.js` lo aplica antes de pintar (`data-sidebar="collapsed"` en `<html>`) y el layout lo mantiene al día; el ancho anima 200 ms (`transition-[width]`) y no anima con `prefers-reduced-motion`.
+- Botón en la cabecera (icono `sidebar`) con `aria-expanded`, `aria-controls` y etiqueta «Recoger/Expandir la barra lateral»; atajo `Ctrl+B` / `Cmd+B` dentro de `(app)`, ignorado al escribir (input, textarea o `contenteditable`, donde ya es negrita).
+- Recogida: marca «a» y botón apilados, títulos de sección como línea de 24×1 px, y `SidebarItem collapsed` con solo el icono y tooltip a la derecha («Etiqueta · contador»). El nombre accesible incluye etiqueta y contador (`aria-label`) y el activo conserva `aria-current`. Es una vista previa aprobada; Figma aún no tiene el estado recogido.
+
 ## Tamaño del texto y accesibilidad automática
 
 - **Tamaño del texto** (Ajustes → General): `data-text-size` en `<html>` fija `--text-scale` (0,9 · 1 · 1,15, en `tokens.css`) y **todos** los tamaños de letra lo multiplican (`theme.css`: escala de AxoNote y las `text-sm`, `text-xl`… de Tailwind; `prose.css`: el editor). Solo crece la letra, no los espacios ni los anchos. Se recuerda en `localStorage` (`apunte-text-size`) y `static/theme-init.js` lo aplica antes de pintar. Un tamaño nuevo se escribe siempre en `rem` y dentro de `calc(… * var(--text-scale))`.
