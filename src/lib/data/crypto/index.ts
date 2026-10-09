@@ -10,6 +10,7 @@ export {
 	unreadableNote
 } from './note-codec.js';
 export { DeviceKeyStore } from './device-keys.js';
+export { TrustedDeviceStore, trustedDeviceAad, type LocalTrust } from './trusted-device-keys.js';
 export {
 	changePasswordKeys,
 	createAccountKeys,

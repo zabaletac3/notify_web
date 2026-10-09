@@ -1,13 +1,19 @@
 import { attempt, type LoadStatus } from '#lib/core/index.js';
-import type { DeviceRepository, SettingsRepository } from '#lib/data/index.js';
+import type {
+	DeviceRepository,
+	SettingsRepository,
+	TrustedDeviceRepository
+} from '#lib/data/index.js';
 import {
 	DEFAULT_SETTINGS,
 	succeed,
 	type ActionResult,
 	type AppError,
 	type AppSettings,
+	type AppSettingsPatch,
 	type Device,
-	type Id
+	type Id,
+	type TrustedDevice
 } from '#lib/domain/index.js';
 
 /** Preferencias de la app. Los cambios se ven al instante y se revierten si el guardado falla. */
@@ -45,7 +51,7 @@ export class SettingsState {
 		this.lastError = null;
 	}
 
-	async update(patch: Partial<AppSettings>): Promise<ActionResult> {
+	async update(patch: AppSettingsPatch): Promise<ActionResult> {
 		const before = this.values;
 		this.values = { ...this.values, ...patch };
 		this.lastError = null;
@@ -76,6 +82,45 @@ export class DevicesState {
 
 	current = $derived.by(() => this.list.find((d) => d.current) ?? null);
 	others = $derived.by(() => this.list.filter((d) => !d.current));
+
+	async load(): Promise<ActionResult> {
+		this.status = 'loading';
+		this.error = null;
+		const result = await attempt(() => this.repo.list());
+		if (!result.ok) return this.fail(result.error, result);
+		this.list = result.value;
+		this.status = 'ready';
+		return succeed();
+	}
+
+	async remove(id: Id): Promise<ActionResult> {
+		const result = await attempt(() => this.repo.remove(id));
+		if (!result.ok) return this.fail(result.error, result);
+		this.list = this.list.filter((d) => d.id !== id);
+		return succeed();
+	}
+
+	private fail<R extends { ok: false; error: AppError }>(error: AppError, result: R): R {
+		this.error = error;
+		this.status = 'error';
+		if (error.kind === 'session-expired') this.onSessionExpired();
+		return result;
+	}
+}
+
+/** Dispositivos de confianza (entrar con Google sin contraseña). Se listan junto a las sesiones. */
+export class TrustedDevicesState {
+	list = $state<TrustedDevice[]>([]);
+	status = $state<LoadStatus>('idle');
+	error = $state<AppError | null>(null);
+
+	private readonly repo: TrustedDeviceRepository;
+	private readonly onSessionExpired: () => void;
+
+	constructor(repo: TrustedDeviceRepository, onSessionExpired: () => void = () => {}) {
+		this.repo = repo;
+		this.onSessionExpired = onSessionExpired;
+	}
 
 	async load(): Promise<ActionResult> {
 		this.status = 'loading';

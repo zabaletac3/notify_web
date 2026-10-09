@@ -10,6 +10,7 @@ import {
 	MockSyncRepository
 } from './mock-misc-repositories.js';
 import { MockNoteRepository } from './mock-note-repository.js';
+import { MockTrustedDeviceRepository } from './mock-trusted-device-repository.js';
 
 export interface MockBackend {
 	repos: Repositories;
@@ -31,6 +32,7 @@ export function createMockBackend(
 			folders: new MockFolderRepository(db),
 			auth: new MockAuthRepository(db),
 			devices: new MockDeviceRepository(db),
+			trustedDevices: new MockTrustedDeviceRepository(db),
 			settings: new MockSettingsRepository(db),
 			sync: new MockSyncRepository(db),
 			share: new MockShareRepository(db),

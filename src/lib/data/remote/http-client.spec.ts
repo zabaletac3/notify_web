@@ -285,6 +285,7 @@ describe('HttpAuthRepository', () => {
 		expect(JSON.stringify(out)).not.toContain('"R"');
 		expect(out).not.toHaveProperty('accessToken');
 		expect(out).not.toHaveProperty('refreshToken');
+		if ('mfaRequired' in out) throw new Error('challenge MFA inesperado');
 		expect(out.keys).toEqual({ wrappedMasterKey: 'k' });
 		expect(JSON.parse(String(calls[0].init.body))).toEqual({
 			email: 'a@b.com',

@@ -46,6 +46,18 @@ interface WireError {
 	retryAfterSec?: number;
 }
 
+/** Códigos de `forbidden` que la UI distingue (el resto se trata como un 403 genérico). */
+const FORBIDDEN_CODES = [
+	'email-not-verified',
+	'google-disabled',
+	'google-email-unverified',
+	'account-deleted'
+] as const;
+
+function isForbiddenCode(code: string | undefined): code is (typeof FORBIDDEN_CODES)[number] {
+	return (FORBIDDEN_CODES as readonly string[]).includes(code ?? '');
+}
+
 /** Convierte la respuesta de error de la API (forma `AppError`) en un `AppFailure`. */
 export function toFailure(
 	status: number,
@@ -66,7 +78,7 @@ export function toFailure(
 		case 'forbidden':
 			error = {
 				kind: 'forbidden',
-				code: b.code === 'email-not-verified' ? 'email-not-verified' : undefined
+				code: isForbiddenCode(b.code) ? b.code : undefined
 			};
 			break;
 		case 'session-expired':
@@ -82,7 +94,7 @@ export function toFailure(
 			error = { kind: 'validation', fields: b.fields ?? {} };
 			break;
 		case 'conflict':
-			error = { kind: 'conflict', noteId: b.noteId ?? '' };
+			error = { kind: 'conflict', noteId: b.noteId, code: b.code };
 			break;
 		case 'rate-limited':
 			error = { kind: 'rate-limited', retryAfterSec: retry };

@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { getApp } from '#lib/app/index.js';
-	import { DEMO_USER_EMAIL, DEMO_USER_PASSWORD, type Dataset } from '#lib/data/index.js';
+	import {
+		DEMO_USER_EMAIL,
+		DEMO_USER_PASSWORD,
+		type Dataset,
+		type GoogleScenario
+	} from '#lib/data/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Switch } from '#lib/components/ui/switch/index.js';
 	import { Label } from '#lib/components/ui/label/index.js';
@@ -29,6 +34,11 @@
 			key: 'injectConflict',
 			label: 'Conflicto en la próxima sincronización',
 			hint: 'Luego pulsa "Sincronizar ahora"'
+		},
+		{
+			key: 'mfaEnabled',
+			label: 'Cuenta con verificación en dos pasos',
+			hint: 'El login pide el código 123456 o un código de respaldo'
 		}
 	] as const;
 
@@ -37,6 +47,13 @@
 		{ value: 'normal', label: 'Normal (48 notas, 5 carpetas)' },
 		{ value: 'first-time', label: 'Primera vez (cuenta vacía)' },
 		{ value: 'large', label: 'Grande (2.000 notas)' }
+	];
+	const googleScenarios: { value: GoogleScenario; label: string }[] = [
+		{ value: 'off', label: 'Desactivado' },
+		{ value: 'new', label: 'Google: cuenta nueva' },
+		{ value: 'unlinked', label: 'Google: cuenta existente sin vincular' },
+		{ value: 'linked', label: 'Google: cuenta vinculada' },
+		{ value: 'with-mfa', label: 'Google: con dos pasos' }
 	];
 </script>
 
@@ -76,6 +93,19 @@
 			>
 				{#each datasets as d (d.value)}
 					<option value={d.value}>{d.label}</option>
+				{/each}
+			</select>
+		</div>
+
+		<div class="flex flex-col gap-1.5">
+			<Label for="sim-google">Identidad de Google simulada</Label>
+			<select
+				id="sim-google"
+				class="h-11 rounded-lg bg-input-fill px-3 text-body"
+				bind:value={scenario.googleScenario}
+			>
+				{#each googleScenarios as g (g.value)}
+					<option value={g.value}>{g.label}</option>
 				{/each}
 			</select>
 		</div>
@@ -122,6 +152,7 @@
 			<code>{DEMO_USER_PASSWORD}</code></span
 		>
 		<span>Código de verificación de correo: <code>123456</code></span>
+		<span>Código de verificación en dos pasos: <code>123456</code> (o un código de respaldo)</span>
 		<span>Token de recuperación de contraseña: <code>token-de-prueba</code></span>
 	</section>
 </div>

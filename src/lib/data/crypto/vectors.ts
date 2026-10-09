@@ -29,6 +29,7 @@ import {
 	type NotePayload
 } from './note-codec.js';
 import { openSharedNote, shareContentAad, shareKeyAad, shareUrl } from './share-codec.js';
+import { trustedDeviceAad } from './trusted-device-keys.js';
 import { Vault } from './vault.js';
 
 /**
@@ -48,6 +49,7 @@ const NOTE_ID: Id = '018f6f9a-7b1c-7c3e-8c9d-000000000101';
 const NOTE_ID_2: Id = '018f6f9a-7b1c-7c3e-8c9d-000000000102';
 const FOLDER_ID: Id = '018f6f9a-7b1c-7c3e-8c9d-000000000201';
 const SHARE_ID: Id = '018f6f9a-7b1c-7c3e-8c9d-000000000301';
+const TRUST_ID: Id = '018f6f9a-7b1c-7c3e-8c9d-000000000401';
 
 const NOTE_TITLE = 'Receta secreta';
 const NOTE_CONTENT = '# Ingredientes\n\n- 2 huevos\n- 100 g de azúcar';
@@ -81,6 +83,7 @@ const RECOVERY_KEY_BYTES = pattern(5, 32);
 const SALT_LIGHT = pattern(6, 16);
 const SALT_DEFAULT = pattern(7, 16);
 const SLUG = toB64u(pattern(8, 16)); // 16 bytes → 22 caracteres base64url
+const TRUSTED_KEY = pattern(24, 32); // clave fija del dispositivo de confianza (solo vectores)
 
 const IV = {
 	kdf: pattern(11, 12),
@@ -95,7 +98,8 @@ const IV = {
 	shareKey: pattern(20, 12),
 	sharePayload: pattern(21, 12),
 	note2Key: pattern(22, 12),
-	note2Data: pattern(23, 12)
+	note2Data: pattern(23, 12),
+	trusted: pattern(25, 12)
 } as const;
 
 const importAes = (bytes: Uint8Array<ArrayBuffer>, usages: KeyUsage[] = ['encrypt', 'decrypt']) =>
@@ -297,6 +301,34 @@ async function buildWrap(): Promise<Record<string, unknown>> {
 				)
 			}
 		]
+	};
+}
+
+// ── trusted-device.json ─────────────────────────────────────────────────────────────────────
+/**
+ * Dispositivo de confianza (D16): la clave maestra va cifrada con una clave propia del navegador y
+ * los datos asociados nuevos `apunte/v1/mk/<userId>/trusted/<trustId>`. La clave del dispositivo
+ * (`TRUSTED_KEY`) es fija **solo** para el vector: en la app es AES-GCM no exportable.
+ */
+async function buildTrustedDevice(): Promise<Record<string, unknown>> {
+	const deviceKey = await importAes(TRUSTED_KEY);
+	const aad = trustedDeviceAad(USER_ID, TRUST_ID);
+	const sealed = await sealWithIvForVectors(deviceKey, MASTER_KEY, aad, IV.trusted);
+	return {
+		version: 1,
+		description:
+			'Clave maestra envuelta con la clave de un dispositivo de confianza. El AAD liga la envoltura a la cuenta y al dispositivo; sin la clave local (no exportable en el navegador) no se puede abrir.',
+		userId: USER_ID,
+		trustId: TRUST_ID,
+		case: {
+			name: 'dispositivo-de-confianza',
+			wrapping: 'clave del dispositivo',
+			deviceKey: toB64u(TRUSTED_KEY),
+			aad,
+			iv: toB64u(IV.trusted),
+			plaintextKey: toB64u(MASTER_KEY),
+			sealed
+		}
 	};
 }
 
@@ -680,6 +712,9 @@ móvil) y la web comprueben que leen y escriben **exactamente los mismos bytes**
 - **wrap.json.** Deriva/importa la clave de envoltura (contraseña, clave de recuperación o maestra),
   abre \`sealed\` con \`aad\` y compara con \`plaintextKey\`. \`keyBundle\` + \`password\` debe abrir la
   maestra (\`unlockWithPassword\`).
+- **trusted-device.json.** Dispositivo de confianza (D16): abre \`case.sealed\` con \`case.deviceKey\`,
+  \`case.aad\` y el IV y compara con \`case.plaintextKey\`. El AAD es
+  \`apunte/v1/mk/<userId>/trusted/<trustId>\`.
 - **recovery-key.json.** \`format\` de bytes → texto; \`tolerant\` → los mismos bytes; \`invalid\` → error.
 - **padding.json.** Comprueba \`lengths\` y \`unpad\`.
 - **note-payload.json.** Descifra \`wrappedKey\` con la maestra y \`payload\` con la clave del elemento
@@ -696,6 +731,7 @@ export async function buildVectors(): Promise<Record<string, Record<string, unkn
 		'kdf.json': await buildKdf(),
 		'sealed.json': await buildSealed(),
 		'wrap.json': await buildWrap(),
+		'trusted-device.json': await buildTrustedDevice(),
 		'recovery-key.json': buildRecoveryKey(),
 		'padding.json': buildPadding(),
 		'note-payload.json': await buildNotePayload(),

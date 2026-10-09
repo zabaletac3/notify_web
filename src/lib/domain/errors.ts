@@ -11,8 +11,17 @@ export type AppError =
 	| { kind: 'server'; status?: number }
 	/** Credenciales incorrectas. Mismo error para correo inexistente y contraseña errónea. */
 	| { kind: 'unauthorized'; code?: 'invalid-credentials' }
-	/** Acción no permitida; p. ej. iniciar sesión con el correo sin verificar. */
-	| { kind: 'forbidden'; code?: 'email-not-verified' }
+	/** Acción no permitida; p. ej. iniciar sesión con el correo sin verificar o el acceso con Google apagado. */
+	| {
+			kind: 'forbidden';
+			code?:
+				| 'email-not-verified'
+				| 'google-disabled'
+				| 'google-email-unverified'
+				| 'account-deleted'
+				| 'google-not-linked'
+				| 'limit-reached';
+	  }
 	/** La sesión expiró (diálogo "sesión expirada"). */
 	| { kind: 'session-expired' }
 	/** La app está bloqueada: hace falta la contraseña para leer las notas. */
@@ -25,7 +34,7 @@ export type AppError =
 	/** Datos inválidos: campo → código de validación (ver `ValidationCode`). */
 	| { kind: 'validation'; fields: Record<string, string> }
 	/** La nota cambió en otro dispositivo (pantalla de conflicto). */
-	| { kind: 'conflict'; noteId: Id }
+	| { kind: 'conflict'; noteId?: Id; code?: string }
 	| { kind: 'rate-limited'; retryAfterSec?: number }
 	| { kind: 'unknown'; message?: string };
 
@@ -48,6 +57,16 @@ export const fail = {
 	server: (status = 500) => new AppFailure({ kind: 'server', status }),
 	invalidCredentials: () => new AppFailure({ kind: 'unauthorized', code: 'invalid-credentials' }),
 	emailNotVerified: () => new AppFailure({ kind: 'forbidden', code: 'email-not-verified' }),
+	/** Acción no permitida con un código concreto (p. ej. `google-disabled`, `account-deleted`). */
+	forbidden: (
+		code?:
+			| 'email-not-verified'
+			| 'google-disabled'
+			| 'google-email-unverified'
+			| 'account-deleted'
+			| 'google-not-linked'
+			| 'limit-reached'
+	) => new AppFailure({ kind: 'forbidden', code }),
 	sessionExpired: () => new AppFailure({ kind: 'session-expired' }),
 	locked: () => new AppFailure({ kind: 'locked' }),
 	decrypt: () => new AppFailure({ kind: 'decrypt' }),
@@ -55,6 +74,8 @@ export const fail = {
 	notFound: (entity?: string) => new AppFailure({ kind: 'not-found', entity }),
 	validation: (fields: Record<string, string>) => new AppFailure({ kind: 'validation', fields }),
 	conflict: (noteId: Id) => new AppFailure({ kind: 'conflict', noteId }),
+	/** Conflicto de la verificación en dos pasos (`mfa-already-enabled`, `mfa-not-pending`, `mfa-not-enabled`). */
+	mfaConflict: (code: string) => new AppFailure({ kind: 'conflict', code }),
 	rateLimited: (retryAfterSec = 900) => new AppFailure({ kind: 'rate-limited', retryAfterSec })
 };
 

@@ -256,7 +256,9 @@ describe('cuentas', () => {
 	async function logIn(repos: Repos, email: string, password: string) {
 		const { kdf } = await repos.auth.prelogin(email);
 		const { authKey } = await deriveFromPassword(password, kdf);
-		return repos.auth.login({ email, authKey });
+		const result = await repos.auth.login({ email, authKey });
+		if ('mfaRequired' in result) throw new Error('challenge MFA inesperado');
+		return result;
 	}
 
 	it('registro → verificación → sesión iniciada', async () => {
@@ -510,9 +512,9 @@ describe('escenarios del simulador', () => {
 		expect((await errorOf(repos.sync.syncNow())).kind).toBe('session-expired');
 		const { kdf } = await repos.auth.prelogin(DEMO_USER_EMAIL);
 		const { authKey } = await deriveFromPassword(DEMO_USER_PASSWORD, kdf);
-		expect((await repos.auth.login({ email: DEMO_USER_EMAIL, authKey })).user.email).toBe(
-			DEMO_USER_EMAIL
-		);
+		const result = await repos.auth.login({ email: DEMO_USER_EMAIL, authKey });
+		if ('mfaRequired' in result) throw new Error('challenge MFA inesperado');
+		expect(result.user.email).toBe(DEMO_USER_EMAIL);
 	});
 
 	it('la latencia retrasa las llamadas', async () => {

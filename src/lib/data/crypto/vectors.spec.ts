@@ -115,6 +115,21 @@ describe('wrap.json', () => {
 	});
 });
 
+describe('trusted-device.json', () => {
+	it('la clave maestra se abre con la clave del dispositivo y el AAD nuevo', async () => {
+		const file = load('trusted-device.json');
+		const deviceKey = await importAes(fromB64u(file.case.deviceKey));
+		expect(file.case.aad).toBe(`apunte/v1/mk/${file.userId}/trusted/${file.trustId}`);
+		expect(toB64u(await open(deviceKey, file.case.sealed, file.case.aad))).toBe(
+			file.case.plaintextKey
+		);
+		// Otra clave o otro AAD no lo abre.
+		await expect(
+			open(await importAes(fromB64u(file.case.deviceKey)), file.case.sealed, 'otro')
+		).rejects.toThrow(DecryptError);
+	});
+});
+
 describe('recovery-key.json', () => {
 	it('formatea, tolera variantes y rechaza lo inválido', () => {
 		const file = load('recovery-key.json');

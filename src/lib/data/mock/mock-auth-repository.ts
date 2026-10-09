@@ -1,10 +1,16 @@
-import { toB64u, utf8 } from '#lib/core/crypto/index.js';
+import { fromB64u, fromUtf8, toB64u, utf8 } from '#lib/core/crypto/index.js';
 import {
 	fail,
 	isValidEmail,
+	type GoogleOutcome,
+	type GoogleRegisterInput,
 	type KdfParams,
 	type KeyBundle,
 	type LoginResult,
+	type MfaChallenge,
+	type MfaRecoveryCodes,
+	type MfaSetupResult,
+	type MfaStatus,
 	type PasswordChangeRequest,
 	type PasswordResetBundle,
 	type PasswordResetRequest,
@@ -15,10 +21,77 @@ import {
 } from '#lib/domain/index.js';
 import type { AuthRepository } from '../contracts.js';
 import { DEMO_KEYS } from './fixtures/demo-keys.js';
-import { RESET_TOKEN, type MockDatabase } from './mock-database.js';
+import {
+	DEMO_USER_ID,
+	RESET_TOKEN,
+	type MockDatabase,
+	type StoredMfa,
+	type StoredUser
+} from './mock-database.js';
+import { isGoogleScenario, type GoogleScenario } from './scenario.svelte.js';
 
 const MAX_FAILED_LOGINS = 5;
 const norm = (email: string) => email.trim().toLowerCase();
+
+/**
+ * Verificación en dos pasos del simulado. El código TOTP válido es siempre `123456`; los códigos de
+ * respaldo se generan al activar y se consumen de uno en uno. Nada de esto es criptografía real: solo
+ * reproduce el flujo y los estados de la interfaz.
+ */
+const MOCK_TOTP_CODE = '123456';
+const MFA_TICKET_TTL_MS = 5 * 60 * 1000;
+const MAX_MFA_ATTEMPTS = 5;
+const RECOVERY_ALPHABET = 'ABCDEFGHJKMNPQRSTVWXYZ23456789';
+/** Códigos del escenario «cuenta con verificación en dos pasos» (deterministas, para las pruebas). */
+const DEMO_RECOVERY_CODES = [
+	'ABCDE-FGHJK',
+	'MNPQR-STVWX',
+	'YZ234-56789',
+	'AB2CD-3EFGH',
+	'JKLMN-PQRST',
+	'VWXYZ-23456',
+	'789AB-CDEFG',
+	'HJKLM-NPQRS',
+	'TVWXY-Z2345',
+	'6789A-BCDEF'
+];
+/** Secreto de ejemplo del escenario (no se verifica; el código válido es `123456`). */
+const DEMO_TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
+
+/** Secreto base32 sin relleno, ~160 bits. */
+function generateBase32Secret(bytes = 20): string {
+	const raw = crypto.getRandomValues(new Uint8Array(bytes));
+	const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+	let bits = 0;
+	let value = 0;
+	let out = '';
+	for (const byte of raw) {
+		value = (value << 8) | byte;
+		bits += 8;
+		while (bits >= 5) {
+			out += alphabet[(value >>> (bits - 5)) & 31];
+			bits -= 5;
+		}
+	}
+	if (bits > 0) out += alphabet[(value << (5 - bits)) & 31];
+	return out;
+}
+
+/** 10 códigos `XXXXX-XXXXX` con un alfabeto sin caracteres ambiguos. */
+function generateRecoveryCodes(n: number): string[] {
+	const values = crypto.getRandomValues(new Uint32Array(n * 2));
+	const code = (offset: number) => {
+		let out = '';
+		for (let i = 0; i < 5; i++) {
+			const v = values[offset + i >= values.length ? (offset + i) % values.length : offset + i];
+			out += RECOVERY_ALPHABET[v % RECOVERY_ALPHABET.length];
+		}
+		return out;
+	};
+	return Array.from({ length: n }, (_, i) => `${code(i * 2)}-${code(i * 2 + 1)}`);
+}
+
+const normalizeRecovery = (code: string) => code.toUpperCase().replace(/[^A-Z2-9]/g, '');
 
 /** El servidor real guarda Argon2id del valor recibido; aquí basta un hash. */
 const hashOf = async (value: string) =>
@@ -29,6 +102,33 @@ export class MockAuthRepository implements AuthRepository {
 
 	private findByEmail(email: string) {
 		return this.db.users.find((u) => u.user.email === norm(email));
+	}
+
+	/**
+	 * MFA efectiva de una cuenta: si nunca se tocó (`undefined`) y el escenario lo pide, se activa la
+	 * del ejemplo (y se fija, para que los códigos se consuman de verdad). `null` = desactivada.
+	 */
+	private effectiveMfa(stored: StoredUser): StoredMfa | null {
+		if (stored.mfa !== undefined) return stored.mfa;
+		if (this.db.scenario.mfaEnabled && stored.user.id === DEMO_USER_ID) {
+			stored.mfa = {
+				secret: DEMO_TOTP_SECRET,
+				enabledAt: this.db.now().toISOString(),
+				recoveryCodes: [...DEMO_RECOVERY_CODES]
+			};
+			return stored.mfa;
+		}
+		return null;
+	}
+
+	/** Comprueba el código TOTP fijo o un código de respaldo, y consume este último. */
+	private consumeCode(mfa: StoredMfa, code: string): boolean {
+		if (code.trim() === MOCK_TOTP_CODE) return true;
+		const normalized = normalizeRecovery(code);
+		const index = mfa.recoveryCodes.findIndex((c) => normalizeRecovery(c) === normalized);
+		if (index === -1) return false;
+		mfa.recoveryCodes.splice(index, 1);
+		return true;
 	}
 
 	private startSession(user: User): Session {
@@ -62,6 +162,7 @@ export class MockAuthRepository implements AuthRepository {
 				email,
 				fullName: input.fullName.trim(),
 				emailVerified: false,
+				hasGoogle: false,
 				createdAt: this.db.now().toISOString()
 			}
 		});
@@ -136,9 +237,11 @@ export class MockAuthRepository implements AuthRepository {
 			throw fail.validation({ currentPassword: 'wrong-password' });
 		stored.authKeyHash = await hashOf(input.newAuthKey);
 		stored.keys = { ...structuredClone(input.keys), keysVersion: stored.keys.keysVersion + 1 };
+		// Cambiar la contraseña revoca los dispositivos de confianza: cada uno vuelve a darse de alta.
+		this.db.revokeTrustedDevices(stored.user.id, this.db.now().toISOString());
 	}
 
-	async login(input: { email: string; authKey: string }): Promise<LoginResult> {
+	async login(input: { email: string; authKey: string }): Promise<LoginResult | MfaChallenge> {
 		// Iniciar sesión funciona aunque la sesión anterior haya vencido.
 		await this.db.remote({ ignoreExpired: true });
 		const email = norm(input.email);
@@ -151,7 +254,219 @@ export class MockAuthRepository implements AuthRepository {
 		}
 		if (!stored.user.emailVerified) throw fail.emailNotVerified();
 		this.db.failedLogins.delete(email);
+		// Con MFA activa, el primer paso no abre sesión: devuelve un reto y un ticket de un solo uso.
+		const mfa = this.effectiveMfa(stored);
+		if (mfa?.enabledAt) return { mfaRequired: true, ...this.newMfaTicket(stored.user.id) };
 		return { ...this.startSession(stored.user), keys: structuredClone(stored.keys) };
+	}
+
+	async loginMfa(mfaToken: string, code: string): Promise<LoginResult> {
+		await this.db.remote({ ignoreExpired: true });
+		const ticket = this.db.mfaTickets.get(mfaToken);
+		const valid =
+			ticket &&
+			!ticket.consumed &&
+			ticket.attempts < MAX_MFA_ATTEMPTS &&
+			new Date(ticket.expiresAt).getTime() > this.db.now().getTime();
+		if (!valid) throw fail.validation({ mfaToken: 'invalid-token' });
+		const stored = this.db.users.find((u) => u.user.id === ticket.userId);
+		if (!stored || !stored.user.emailVerified) throw fail.validation({ mfaToken: 'invalid-token' });
+		const mfa = this.effectiveMfa(stored);
+		if (!mfa?.enabledAt) throw fail.validation({ mfaToken: 'invalid-token' });
+		if (!this.consumeCode(mfa, code)) {
+			ticket.attempts += 1;
+			throw fail.validation({ code: 'invalid-code' });
+		}
+		ticket.consumed = true;
+		return { ...this.startSession(stored.user), keys: structuredClone(stored.keys) };
+	}
+
+	async mfaStatus(): Promise<MfaStatus> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		const mfa = this.effectiveMfa(stored);
+		return {
+			enabled: !!mfa?.enabledAt,
+			enabledAt: mfa?.enabledAt ?? null,
+			recoveryCodesLeft: mfa?.enabledAt ? mfa.recoveryCodes.length : 0
+		};
+	}
+
+	async mfaSetup(authKey: string): Promise<MfaSetupResult> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		if (stored.authKeyHash !== (await hashOf(authKey)))
+			throw fail.validation({ password: 'wrong-password' });
+		if (this.effectiveMfa(stored)?.enabledAt) throw fail.mfaConflict('mfa-already-enabled');
+		const secret = generateBase32Secret();
+		// Un setup repetido sustituye la configuración pendiente.
+		stored.mfa = { secret, enabledAt: null, recoveryCodes: [] };
+		const account = encodeURIComponent(stored.user.email);
+		const otpauthUri = `otpauth://totp/AxoNote:${account}?secret=${secret}&issuer=AxoNote&algorithm=SHA1&digits=6&period=30`;
+		return { secret, otpauthUri };
+	}
+
+	async mfaEnable(code: string): Promise<MfaRecoveryCodes> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		const mfa = stored.mfa;
+		if (!mfa || mfa.enabledAt) throw fail.mfaConflict('mfa-not-pending');
+		if (code.trim() !== MOCK_TOTP_CODE) throw fail.validation({ code: 'invalid-code' });
+		mfa.enabledAt = this.db.now().toISOString();
+		mfa.recoveryCodes = generateRecoveryCodes(10);
+		return { recoveryCodes: [...mfa.recoveryCodes] };
+	}
+
+	async mfaDisable(authKey: string, code: string): Promise<void> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		if (stored.authKeyHash !== (await hashOf(authKey)))
+			throw fail.validation({ password: 'wrong-password' });
+		const mfa = this.effectiveMfa(stored);
+		if (!mfa?.enabledAt) throw fail.mfaConflict('mfa-not-enabled');
+		if (!this.consumeCode(mfa, code)) throw fail.validation({ code: 'invalid-code' });
+		stored.mfa = null;
+	}
+
+	async mfaRegenerateCodes(authKey: string, code: string): Promise<MfaRecoveryCodes> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		if (stored.authKeyHash !== (await hashOf(authKey)))
+			throw fail.validation({ password: 'wrong-password' });
+		const mfa = this.effectiveMfa(stored);
+		if (!mfa?.enabledAt) throw fail.mfaConflict('mfa-not-enabled');
+		if (!this.consumeCode(mfa, code)) throw fail.validation({ code: 'invalid-code' });
+		mfa.recoveryCodes = generateRecoveryCodes(10);
+		return { recoveryCodes: [...mfa.recoveryCodes] };
+	}
+
+	// ─── Acceso con Google (simulado) ──────────────────────────────────────────
+	// El simulador no navega a Google: `googleStart` devuelve una URL de la propia web con un `code`
+	// que lleva el escenario elegido, para que sobreviva a la recarga. La identidad se elige en
+	// `/dev/simulator` (o con `localStorage['apunte-google-scenario']` en las pruebas e2e).
+
+	private googleScenario(): GoogleScenario {
+		return this.db.scenario.googleScenario;
+	}
+
+	private googleScenarioFromCode(code: string): GoogleScenario | null {
+		try {
+			const parsed = JSON.parse(fromUtf8(fromB64u(code))) as { google?: unknown };
+			return isGoogleScenario(parsed.google) ? parsed.google : null;
+		} catch {
+			return null;
+		}
+	}
+
+	/** Crea un reto de segundo paso y lo registra; lo comparte el login, el vínculo y Google. */
+	private newMfaTicket(userId: string) {
+		const mfaToken = toB64u(crypto.getRandomValues(new Uint8Array(32)));
+		const expiresAt = new Date(this.db.now().getTime() + MFA_TICKET_TTL_MS).toISOString();
+		this.db.mfaTickets.set(mfaToken, { userId, expiresAt, attempts: 0, consumed: false });
+		return { mfaToken, expiresAt };
+	}
+
+	async googleStart(challenge: string): Promise<{ url: string }> {
+		await this.db.remote({ ignoreExpired: true });
+		if (!/^[A-Za-z0-9_-]{43}$/.test(challenge))
+			throw fail.validation({ challenge: 'invalid-payload' });
+		const scenario = this.googleScenario();
+		if (scenario === 'off') throw fail.forbidden('google-disabled');
+		const code = toB64u(utf8(JSON.stringify({ google: scenario })));
+		const origin = typeof location !== 'undefined' ? location.origin : '';
+		return { url: `${origin}/auth/google#code=${encodeURIComponent(code)}` };
+	}
+
+	async googleExchange(code: string): Promise<GoogleOutcome> {
+		await this.db.remote({ ignoreExpired: true });
+		const scenario = this.googleScenarioFromCode(code) ?? this.googleScenario();
+		if (scenario === 'off') throw fail.forbidden('google-disabled');
+		const demo = this.db.users.find((u) => u.user.id === DEMO_USER_ID);
+		if (!demo) throw fail.server();
+
+		switch (scenario) {
+			case 'new': {
+				const email = 'nueva.persona@gmail.com';
+				const fullName = 'Nueva Persona';
+				const signupToken = toB64u(crypto.getRandomValues(new Uint8Array(24)));
+				this.db.googleSignups.set(signupToken, { email, fullName });
+				return { status: 'signup-required', signupToken, email, fullName };
+			}
+			case 'unlinked': {
+				const linkToken = toB64u(crypto.getRandomValues(new Uint8Array(24)));
+				this.db.googleLinks.set(linkToken, { userId: demo.user.id });
+				return {
+					status: 'link-required',
+					linkToken,
+					email: demo.user.email,
+					kdf: structuredClone(demo.keys.kdf)
+				};
+			}
+			case 'linked':
+				demo.user.hasGoogle = true;
+				return {
+					status: 'authenticated',
+					session: { ...this.startSession(demo.user), keys: structuredClone(demo.keys) }
+				};
+			case 'with-mfa':
+				demo.user.hasGoogle = true;
+				if (!demo.mfa?.enabledAt) {
+					demo.mfa = {
+						secret: DEMO_TOTP_SECRET,
+						enabledAt: this.db.now().toISOString(),
+						recoveryCodes: [...DEMO_RECOVERY_CODES]
+					};
+				}
+				return { status: 'mfa-required', ...this.newMfaTicket(demo.user.id) };
+		}
+	}
+
+	async googleLink(linkToken: string, authKey: string): Promise<LoginResult | MfaChallenge> {
+		await this.db.remote({ ignoreExpired: true });
+		const pending = this.db.googleLinks.get(linkToken);
+		const stored = pending ? this.db.users.find((u) => u.user.id === pending.userId) : undefined;
+		if (!stored) throw fail.validation({ linkToken: 'invalid-token' });
+		if (stored.authKeyHash !== (await hashOf(authKey))) throw fail.invalidCredentials();
+		stored.user.hasGoogle = true;
+		this.db.googleLinks.delete(linkToken);
+		this.refreshSession(stored.user);
+		if (this.effectiveMfa(stored)?.enabledAt)
+			return { mfaRequired: true, ...this.newMfaTicket(stored.user.id) };
+		return { ...this.startSession(stored.user), keys: structuredClone(stored.keys) };
+	}
+
+	async googleRegister(input: GoogleRegisterInput): Promise<LoginResult> {
+		await this.db.remote({ ignoreExpired: true });
+		const pending = this.db.googleSignups.get(input.signupToken);
+		if (!pending) throw fail.validation({ signupToken: 'invalid-token' });
+		if (this.findByEmail(pending.email)) throw fail.validation({ email: 'email-taken' });
+		const stored: StoredUser = {
+			authKeyHash: await hashOf(input.authKey),
+			recoveryAuthHash: await hashOf(input.recoveryAuth),
+			keys: structuredClone(input.keys),
+			user: {
+				id: input.userId,
+				email: pending.email,
+				fullName: input.fullName.trim(),
+				emailVerified: true,
+				hasGoogle: true,
+				createdAt: this.db.now().toISOString()
+			}
+		};
+		this.db.users.push(stored);
+		this.db.googleSignups.delete(input.signupToken);
+		return { ...this.startSession(stored.user), keys: structuredClone(stored.keys) };
+	}
+
+	async unlinkGoogle(authKey: string): Promise<void> {
+		await this.db.remote();
+		const stored = this.requireUser();
+		if (stored.authKeyHash !== (await hashOf(authKey)))
+			throw fail.validation({ password: 'wrong-password' });
+		stored.user.hasGoogle = false;
+		this.refreshSession(stored.user);
+		// Sin Google ya no hay acceso por dispositivo de confianza.
+		this.db.revokeTrustedDevices(stored.user.id, this.db.now().toISOString());
 	}
 
 	async keys(): Promise<KeyBundle> {
@@ -194,7 +509,8 @@ export class MockAuthRepository implements AuthRepository {
 		return {
 			userId: stored.user.id,
 			recoveryWrappedMasterKey: stored.keys.recoveryWrappedMasterKey,
-			kdf: structuredClone(stored.keys.kdf)
+			kdf: structuredClone(stored.keys.kdf),
+			mfaEnabled: !!this.effectiveMfa(stored)?.enabledAt
 		};
 	}
 
@@ -208,11 +524,21 @@ export class MockAuthRepository implements AuthRepository {
 	async resetPassword(input: PasswordResetRequest): Promise<void> {
 		await this.db.remote({ ignoreExpired: true });
 		const stored = this.userForToken(input.token);
+		const mfa = this.effectiveMfa(stored);
 		if (input.mode === 'keep') {
 			// Conservar las notas exige la prueba de la clave de recuperación vigente.
 			if (stored.recoveryAuthHash !== (await hashOf(input.recoveryAuth)))
 				throw fail.validation({ recoveryKey: 'invalid-recovery-key' });
+			// Con MFA activa se puede desactivar a petición (M5, modo keep).
+			if (input.disableMfa) stored.mfa = null;
 		} else {
+			if (input.disableMfa) throw fail.validation({ disableMfa: 'invalid-payload' });
+			// Con MFA activa, `wipe` exige un código y no borra nada si falta o es incorrecto.
+			if (mfa?.enabledAt) {
+				if (!input.mfaCode) throw fail.validation({ mfaCode: 'required' });
+				if (!this.consumeCode(mfa, input.mfaCode))
+					throw fail.validation({ mfaCode: 'invalid-code' });
+			}
 			// Empezar de cero: las notas cifradas con la clave anterior ya no se podrían leer.
 			this.db.wipeAccount(stored.user.id);
 			stored.recoveryAuthHash = await hashOf(input.recoveryAuth);
@@ -221,6 +547,8 @@ export class MockAuthRepository implements AuthRepository {
 		stored.keys = { ...structuredClone(input.keys), keysVersion: stored.keys.keysVersion + 1 };
 		this.db.resetTokens.delete(input.token);
 		this.db.failedLogins.delete(stored.user.email);
+		// Restablecer la contraseña revoca los dispositivos de confianza vigentes.
+		this.db.revokeTrustedDevices(stored.user.id, this.db.now().toISOString());
 	}
 
 	async rotateRecoveryKey(input: RecoveryKeyRotation): Promise<void> {

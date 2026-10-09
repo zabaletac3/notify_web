@@ -3,15 +3,22 @@ import type {
 	DeviceRepository,
 	ShareRepository,
 	StorageRepository,
-	SyncTransport
+	SyncTransport,
+	TrustedDeviceRepository
 } from '../contracts.js';
 import type {
 	Device,
 	EncryptedSyncRequest,
 	EncryptedSyncResponse,
+	GoogleOutcome,
+	GoogleRegisterInput,
 	KdfParams,
 	KeyBundle,
 	LoginResult,
+	MfaChallenge,
+	MfaRecoveryCodes,
+	MfaSetupResult,
+	MfaStatus,
 	PasswordChangeRequest,
 	PasswordResetBundle,
 	PasswordResetRequest,
@@ -22,6 +29,8 @@ import type {
 	SharedNote,
 	ShareInput,
 	StorageUsage,
+	TrustedDevice,
+	TrustedDeviceInput,
 	User
 } from '#lib/domain/index.js';
 import type { HttpClient } from './http-client.js';
@@ -30,6 +39,25 @@ interface WireSession extends Session {
 	accessToken?: string;
 	refreshToken?: string;
 }
+
+/** `/auth/login` responde una sesión con `keys` o un reto de segundo paso (`mfaRequired`). */
+interface WireLoginResponse extends WireSession {
+	keys?: KeyBundle;
+	mfaRequired?: boolean;
+	mfaToken?: string;
+}
+
+/** Sesión de Google con los tokens que el cliente guarda y las claves cifradas. */
+interface WireGoogleSession extends WireSession {
+	keys: KeyBundle;
+}
+
+/** `/auth/google/exchange` responde una unión discriminada por `status`. */
+type WireGoogleOutcome =
+	| { status: 'authenticated'; session: WireGoogleSession }
+	| { status: 'mfa-required'; mfaToken: string; expiresAt: string }
+	| { status: 'link-required'; linkToken: string; email: string; kdf: KdfParams }
+	| { status: 'signup-required'; signupToken: string; email: string; fullName: string };
 
 /** Nombre legible de este navegador para la lista de dispositivos ("Chrome en Linux"). */
 export function describeDevice(
@@ -90,8 +118,103 @@ export class HttpAuthRepository implements AuthRepository {
 		await this.http.request('POST', '/auth/resend-code', { auth: false, body: { email } });
 	}
 
-	async login(input: { email: string; authKey: string }): Promise<LoginResult> {
-		const s = await this.http.request<WireSession & { keys: KeyBundle }>('POST', '/auth/login', {
+	async login(input: { email: string; authKey: string }): Promise<LoginResult | MfaChallenge> {
+		const s = await this.http.request<WireLoginResponse>('POST', '/auth/login', {
+			auth: false,
+			session: true,
+			body: { ...input, device: { name: this.deviceName(), platform: 'web' } }
+		});
+		// Con reto de segundo paso no hay sesión, tokens, claves ni cookie que guardar.
+		if (s.mfaRequired) {
+			return { mfaRequired: true, mfaToken: s.mfaToken ?? '', expiresAt: s.expiresAt };
+		}
+		this.http.saveTokens({
+			accessToken: s.accessToken,
+			refreshToken: s.refreshToken,
+			expiresAt: s.expiresAt
+		});
+		return { ...session(s), keys: s.keys as KeyBundle };
+	}
+
+	async loginMfa(mfaToken: string, code: string): Promise<LoginResult> {
+		const s = await this.http.request<WireSession & { keys: KeyBundle }>(
+			'POST',
+			'/auth/login/mfa',
+			{
+				auth: false,
+				session: true,
+				body: { mfaToken, code }
+			}
+		);
+		this.http.saveTokens({
+			accessToken: s.accessToken,
+			refreshToken: s.refreshToken,
+			expiresAt: s.expiresAt
+		});
+		return { ...session(s), keys: s.keys };
+	}
+
+	mfaStatus(): Promise<MfaStatus> {
+		return this.http.request('GET', '/mfa');
+	}
+
+	mfaSetup(authKey: string): Promise<MfaSetupResult> {
+		return this.http.request('POST', '/mfa/totp/setup', { body: { authKey } });
+	}
+
+	mfaEnable(code: string): Promise<MfaRecoveryCodes> {
+		return this.http.request('POST', '/mfa/totp/enable', { body: { code } });
+	}
+
+	async mfaDisable(authKey: string, code: string): Promise<void> {
+		await this.http.request('POST', '/mfa/totp/disable', { body: { authKey, code } });
+	}
+
+	mfaRegenerateCodes(authKey: string, code: string): Promise<MfaRecoveryCodes> {
+		return this.http.request('POST', '/mfa/recovery-codes', { body: { authKey, code } });
+	}
+
+	googleStart(challenge: string): Promise<{ url: string }> {
+		return this.http.request('POST', '/auth/google/start', { auth: false, body: { challenge } });
+	}
+
+	async googleExchange(code: string, verifier: string): Promise<GoogleOutcome> {
+		const outcome = await this.http.request<WireGoogleOutcome>('POST', '/auth/google/exchange', {
+			auth: false,
+			session: true,
+			body: { code, verifier, device: { name: this.deviceName(), platform: 'web' } }
+		});
+		// Solo el estado `authenticated` trae sesión y tokens: los demás no deben guardar nada.
+		if (outcome.status !== 'authenticated') return outcome;
+		this.http.saveTokens({
+			accessToken: outcome.session.accessToken,
+			refreshToken: outcome.session.refreshToken,
+			expiresAt: outcome.session.expiresAt
+		});
+		return {
+			status: 'authenticated',
+			session: { ...session(outcome.session), keys: outcome.session.keys }
+		};
+	}
+
+	async googleLink(linkToken: string, authKey: string): Promise<LoginResult | MfaChallenge> {
+		const s = await this.http.request<WireLoginResponse>('POST', '/auth/google/link', {
+			auth: false,
+			session: true,
+			body: { linkToken, authKey, device: { name: this.deviceName(), platform: 'web' } }
+		});
+		if (s.mfaRequired)
+			return { mfaRequired: true, mfaToken: s.mfaToken ?? '', expiresAt: s.expiresAt };
+		this.http.saveTokens({
+			accessToken: s.accessToken,
+			refreshToken: s.refreshToken,
+			expiresAt: s.expiresAt
+		});
+		return { ...session(s), keys: s.keys as KeyBundle };
+	}
+
+	async googleRegister(input: GoogleRegisterInput): Promise<LoginResult> {
+		const s = await this.http.request<WireGoogleSession>('POST', '/auth/google/register', {
 			auth: false,
 			session: true,
 			body: { ...input, device: { name: this.deviceName(), platform: 'web' } }
@@ -102,6 +225,10 @@ export class HttpAuthRepository implements AuthRepository {
 			expiresAt: s.expiresAt
 		});
 		return { ...session(s), keys: s.keys };
+	}
+
+	async unlinkGoogle(authKey: string): Promise<void> {
+		await this.http.request('DELETE', '/me/identities/google', { body: { authKey } });
 	}
 
 	keys(): Promise<KeyBundle> {
@@ -177,6 +304,22 @@ export class HttpDeviceRepository implements DeviceRepository {
 	}
 	async remove(id: string): Promise<void> {
 		await this.http.request('DELETE', `/devices/${encodeURIComponent(id)}`);
+	}
+}
+
+export class HttpTrustedDeviceRepository implements TrustedDeviceRepository {
+	constructor(private http: HttpClient) {}
+	list(): Promise<TrustedDevice[]> {
+		return this.http.request('GET', '/trusted-devices');
+	}
+	async add(input: TrustedDeviceInput): Promise<void> {
+		await this.http.request('POST', '/trusted-devices', { body: input });
+	}
+	get(id: string): Promise<{ wrappedMasterKey: string }> {
+		return this.http.request('GET', `/trusted-devices/${encodeURIComponent(id)}`);
+	}
+	async remove(id: string): Promise<void> {
+		await this.http.request('DELETE', `/trusted-devices/${encodeURIComponent(id)}`);
 	}
 }
 
