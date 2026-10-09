@@ -14,7 +14,10 @@
 	const isHub = $derived(page.url.pathname === '/settings/menu');
 	const current = $derived(settingsSections.find((s) => s.href === page.url.pathname));
 
-	onMount(() => void app.devices.load());
+	onMount(() => {
+		void app.devices.load();
+		void app.trustedDevices.load();
+	});
 </script>
 
 <div class="flex h-dvh bg-background text-foreground">

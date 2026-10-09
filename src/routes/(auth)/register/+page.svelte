@@ -26,7 +26,7 @@
 	title="Crea tu cuenta"
 	subtitle="Guarda tus notas y sincronízalas en todos tus dispositivos."
 >
-	<GoogleButton label="Registrarse con Google" />
+	<GoogleButton label="Registrarse con Google" onclick={() => void auth.startGoogle()} />
 
 	<div class="flex items-center gap-3 text-micro font-semibold text-tertiary" aria-hidden="true">
 		<span class="h-px flex-1 bg-border"></span>O<span class="h-px flex-1 bg-border"></span>

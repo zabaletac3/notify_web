@@ -13,17 +13,21 @@
 	async function submit(e: SubmitEvent) {
 		e.preventDefault();
 		const result = await auth.login({ email, password });
-		if (result.ok)
-			return void goto(auth.pendingRecoveryKey ? '/recovery-key?next=/notes' : '/notes');
-		if (result.error.kind === 'forbidden' && result.error.code === 'email-not-verified')
-			await goto('/verify');
+		if (!result.ok) {
+			if (result.error.kind === 'forbidden' && result.error.code === 'email-not-verified')
+				await goto('/verify');
+			return;
+		}
+		// Con MFA activa el primer paso no abre sesión: se pide el código.
+		if (auth.mfaPending) return void goto('/two-factor');
+		return void goto(auth.pendingRecoveryKey ? '/recovery-key?next=/notes' : '/notes');
 	}
 </script>
 
 <svelte:head><title>Iniciar sesión · AxoNote</title></svelte:head>
 
 <AuthCard title="Bienvenido de vuelta">
-	<GoogleButton label="Continuar con Google" />
+	<GoogleButton label="Continuar con Google" onclick={() => void auth.startGoogle()} />
 
 	<div class="flex items-center gap-3 text-micro font-semibold text-tertiary" aria-hidden="true">
 		<span class="h-px flex-1 bg-border"></span>O<span class="h-px flex-1 bg-border"></span>
@@ -55,7 +59,9 @@
 			<p class="rounded-xl bg-accent px-3.5 py-3 text-label text-foreground" role="status">
 				{auth.notice === 'device-revoked'
 					? errorMessage({ kind: 'device-revoked' })
-					: 'Cerraste sesión en otra pestaña.'}
+					: auth.notice === 'mfa-expired'
+						? 'El código tardó demasiado. Ingresa tu contraseña otra vez.'
+						: 'Cerraste sesión en otra pestaña.'}
 			</p>
 		{/if}
 

@@ -13,7 +13,8 @@ export const SECURITY_HEADERS: Record<string, string> = {
 	// AxoNote no usa cámara, micrófono ni ubicación; el portapapeles (copiar enlaces y claves) sí.
 	'Permissions-Policy':
 		'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
-	// Permite ventanas emergentes (el acceso con Google las usará) pero aísla el resto.
+	// `same-origin-allow-popups` se dejó pensando en la ventana emergente de Google, que finalmente no
+	// se usa (el flujo es una redirección completa y no carga scripts de Google): se mantiene sin cambios.
 	'Cross-Origin-Opener-Policy': 'same-origin-allow-popups'
 };
 

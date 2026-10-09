@@ -7,7 +7,9 @@
 		ResponsiveDialog,
 		SettingRow,
 		SettingsGroup,
-		StrengthMeter
+		StrengthMeter,
+		dialogButtons,
+		dialogButtonsStacked
 	} from '#lib/components/app/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import * as Dialog from '#lib/components/ui/dialog/index.js';
@@ -25,8 +27,8 @@
 			.join('')
 	);
 
-	async function logout() {
-		const result = await auth.logout();
+	async function logout(forgetDevice: boolean) {
+		const result = await auth.logout({ forgetDevice });
 		if (result.ok) await goto('/welcome');
 	}
 
@@ -34,13 +36,23 @@
 	let leaving = $state(false);
 	let syncingBeforeLeave = $state(false);
 	let leaveError = $state(false);
+	// Con confianza en este dispositivo, se elige entre conservarla o «olvidar este dispositivo» (T4).
+	const canForget = $derived(auth.trustedHere && !!auth.user?.hasGoogle);
+	let choosingForget = $state(false);
+
+	/** Decide si hay que preguntar por la confianza o si se puede salir directamente. */
+	function proceedLogout() {
+		if (canForget) choosingForget = true;
+		else void logout(false);
+	}
+
 	async function requestLogout() {
 		// Lo último que se escribió puede estar todavía en cola: se cuenta antes de decidir.
 		await sync.refresh();
 		if (sync.pendingCount > 0) {
 			leaveError = false;
 			leaving = true;
-		} else void logout();
+		} else proceedLogout();
 	}
 	async function syncAndLogout() {
 		syncingBeforeLeave = true;
@@ -49,12 +61,12 @@
 		if (sync.pendingCount > 0) leaveError = true;
 		else {
 			leaving = false;
-			await logout();
+			proceedLogout();
 		}
 	}
 
 	// ── Diálogos de edición ───────────────────────────────────────────
-	type Kind = 'name' | 'email' | 'password';
+	type Kind = 'name' | 'email' | 'password' | 'google';
 	let dialog = $state<Kind | null>(null);
 	let name = $state('');
 	let newEmail = $state('');
@@ -63,12 +75,14 @@
 	let currentPassword = $state('');
 	let newPassword = $state('');
 	let confirmation = $state('');
+	let unlinkPassword = $state('');
 
 	function open(kind: Kind) {
 		auth.clearErrors();
 		auth.pendingEmailChange = null;
 		name = user?.fullName ?? '';
 		newEmail = emailPassword = code = currentPassword = newPassword = confirmation = '';
+		unlinkPassword = '';
 		dialog = kind;
 	}
 
@@ -109,7 +123,16 @@
 		}
 	}
 
-	const buttons = 'flex gap-3 *:flex-1 md:justify-end md:*:flex-none';
+	async function unlinkGoogle(e: SubmitEvent) {
+		e.preventDefault();
+		if ((await auth.unlinkGoogle(unlinkPassword)).ok) {
+			close();
+			toast.success('Google desvinculado');
+		}
+	}
+
+	const buttons = dialogButtons;
+	const stackedButtons = dialogButtonsStacked;
 	const generalError = $derived(
 		auth.error && auth.error.kind !== 'validation' ? errorMessage(auth.error) : undefined
 	);
@@ -139,6 +162,15 @@
 		onclick={() => open('email')}
 	/>
 	<SettingRow label="Contraseña" action="Cambiar" onclick={() => open('password')} />
+</SettingsGroup>
+
+<SettingsGroup title="Acceso">
+	<SettingRow
+		label="Google"
+		value={user?.hasGoogle ? 'Vinculada' : 'No vinculada'}
+		action={user?.hasGoogle ? 'Desvincular' : undefined}
+		onclick={user?.hasGoogle ? () => open('google') : undefined}
+	/>
 </SettingsGroup>
 
 <SettingsGroup>
@@ -172,11 +204,37 @@
 			disabled={syncingBeforeLeave}
 			onclick={() => {
 				leaving = false;
-				void logout();
+				proceedLogout();
 			}}>Salir igualmente</Button
 		>
 		<Button type="button" disabled={syncingBeforeLeave} onclick={syncAndLogout}
 			>Sincronizar y salir</Button
+		>
+	</div>
+</ResponsiveDialog>
+
+<ResponsiveDialog open={choosingForget} onOpenChange={(isOpen) => (choosingForget = isOpen)}>
+	<Dialog.Title class="text-xl">Cerrar sesión</Dialog.Title>
+	<p class="text-sm leading-5 text-muted-foreground">
+		En este dispositivo puedes volver a entrar con el botón de Google sin escribir tu contraseña. Si
+		lo compartes con alguien, elige olvidarlo.
+	</p>
+	<div class={stackedButtons}>
+		<Button
+			type="button"
+			variant="outline"
+			onclick={() => {
+				choosingForget = false;
+				void logout(false);
+			}}>Cerrar sesión</Button
+		>
+		<Button
+			type="button"
+			variant="destructive"
+			onclick={() => {
+				choosingForget = false;
+				void logout(true);
+			}}>Cerrar sesión y olvidar este dispositivo</Button
 		>
 	</div>
 </ResponsiveDialog>
@@ -283,6 +341,28 @@
 		<div class={buttons}>
 			<Button type="button" variant="outline" onclick={close}>Cancelar</Button>
 			<Button type="submit" disabled={auth.busy}>Guardar</Button>
+		</div>
+	</form>
+</ResponsiveDialog>
+
+<ResponsiveDialog open={dialog === 'google'} onOpenChange={closing('google')}>
+	<Dialog.Title class="text-xl">Desvincular Google</Dialog.Title>
+	<p class="text-sm leading-5 text-muted-foreground">
+		Dejarás de poder entrar con el botón de Google. Tus notas y tu contraseña de AxoNote no cambian.
+	</p>
+	<form class="flex flex-col gap-4" onsubmit={unlinkGoogle} novalidate>
+		<AuthField
+			id="unlink-password"
+			label="Contraseña"
+			type="password"
+			autocomplete="current-password"
+			bind:value={unlinkPassword}
+			error={validationMessage(auth.fieldErrors.password)}
+		/>
+		{@render failure()}
+		<div class={buttons}>
+			<Button type="button" variant="outline" onclick={close}>Cancelar</Button>
+			<Button type="submit" variant="destructive" disabled={auth.busy}>Desvincular</Button>
 		</div>
 	</form>
 </ResponsiveDialog>
