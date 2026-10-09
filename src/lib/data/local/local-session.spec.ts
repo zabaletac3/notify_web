@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApp, type App } from '#lib/app/index.js';
+import { DEFAULT_SETTINGS } from '#lib/domain/index.js';
 import { createDemoVault } from '../mock/demo-vault.js';
 import { createLocalBackend } from './create-local-backend.js';
 
@@ -24,9 +25,8 @@ describe('base local por cuenta', () => {
 		await expect(b.repos.notes.list()).rejects.toMatchObject({
 			error: { kind: 'session-expired' }
 		});
-		await expect(b.repos.settings.get()).rejects.toMatchObject({
-			error: { kind: 'session-expired' }
-		});
+		// Los ajustes son preferencias del dispositivo, no de la base: sin sesión devuelven los valores por defecto.
+		expect(await b.repos.settings.get()).toEqual(DEFAULT_SETTINGS);
 		const snap = await b.repos.sync.snapshot();
 		expect(snap.pendingCount).toBe(0);
 	});

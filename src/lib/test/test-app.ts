@@ -21,12 +21,17 @@ export async function testApp(
 		startAuthenticated?: boolean;
 		now?: () => Date;
 		load?: boolean;
+		/** `indexeddb` permite reproducir bloqueo y persistencia reales; por defecto `memory`. */
+		persistence?: 'memory' | 'indexeddb';
+		dbName?: string;
 	} = {}
 ): Promise<App> {
 	const app = createApp({
 		now: options.now ?? (() => TEST_NOW),
 		latencyMs: 0,
-		startAuthenticated: options.startAuthenticated ?? true
+		startAuthenticated: options.startAuthenticated ?? true,
+		persistence: options.persistence,
+		dbName: options.dbName
 	});
 	if (options.dataset && options.dataset !== 'normal') app.scenario.dataset = options.dataset;
 	app.backend.db.reset();

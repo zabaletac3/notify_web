@@ -80,10 +80,12 @@ export class AuthState {
 
 	private readonly repo: AuthRepository;
 	private readonly clock: () => Date;
-	private readonly onSignedOut: () => void | Promise<void>;
+	private readonly onSignedOut: (userId: string | null) => void | Promise<void>;
+	private readonly onAccountDeleted: (userId: string) => void | Promise<void>;
 	private readonly vault: VaultState;
 	private readonly kdf: KdfBase;
 	private readonly rememberDevice: () => boolean;
+	private readonly beforeUnlock: (userId: string) => void | Promise<void>;
 	private readonly restoreVault: (userId: string) => Promise<boolean>;
 	/** Claves cifradas de la cuenta (no son secretas). Se piden al servidor si hace falta. */
 	private keyBundle: KeyBundle | null = null;
@@ -93,10 +95,12 @@ export class AuthState {
 	private deferredRecovery: { userId: string; recoveryKey: string } | null = null;
 
 	/**
-	 * @param hooks.onSignedOut se llama al cerrar sesión o borrar la cuenta (para limpiar la copia local)
+	 * @param hooks.onSignedOut se llama al cerrar sesión o borrar la cuenta (para limpiar la copia local); recibe el `userId`
+	 * @param hooks.onAccountDeleted se llama además al borrar la cuenta (para borrar las preferencias del dispositivo)
 	 * @param hooks.vault cofre de claves (se desbloquea al iniciar sesión)
 	 * @param hooks.kdf parámetros de Argon2id para las cuentas y contraseñas nuevas
 	 * @param hooks.rememberDevice si la clave maestra se recuerda cifrada en este dispositivo
+	 * @param hooks.beforeUnlock se llama justo antes de desbloquear el cofre, ya conocido el `userId`
 	 * @param hooks.restoreVault intenta desbloquear al arrancar sin pedir la contraseña
 	 */
 	constructor(
@@ -104,19 +108,23 @@ export class AuthState {
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- fábrica del reloj, no es estado
 		clock: () => Date = () => new Date(),
 		hooks: {
-			onSignedOut?: () => void | Promise<void>;
+			onSignedOut?: (userId: string | null) => void | Promise<void>;
+			onAccountDeleted?: (userId: string) => void | Promise<void>;
 			vault?: VaultState;
 			kdf?: KdfBase;
 			rememberDevice?: () => boolean;
+			beforeUnlock?: (userId: string) => void | Promise<void>;
 			restoreVault?: (userId: string) => Promise<boolean>;
 		} = {}
 	) {
 		this.repo = repo;
 		this.clock = clock;
 		this.onSignedOut = hooks.onSignedOut ?? (() => {});
+		this.onAccountDeleted = hooks.onAccountDeleted ?? (() => {});
 		this.vault = hooks.vault ?? new VaultState();
 		this.kdf = hooks.kdf ?? DEFAULT_KDF;
 		this.rememberDevice = hooks.rememberDevice ?? (() => false);
+		this.beforeUnlock = hooks.beforeUnlock ?? (() => {});
 		this.restoreVault = hooks.restoreVault ?? ((userId) => this.vault.restore(userId));
 	}
 
@@ -180,10 +188,11 @@ export class AuthState {
 	 * cerró sesión en otra pestaña. Limpia la copia local y deja la sesión cerrada.
 	 */
 	async endSession(reason: 'device-revoked' | 'signed-out-elsewhere') {
+		const userId = this.user?.id ?? null;
 		this.forgetSession();
 		this.notice = reason;
 		await this.vault.signOut();
-		await this.onSignedOut();
+		await this.onSignedOut(userId);
 	}
 
 	/** Olvida todo lo de la sesión que vive en memoria. */
@@ -243,6 +252,7 @@ export class AuthState {
 				// Recién registrado: la app queda desbloqueada y se enseña la clave de recuperación.
 				this.pendingSetup = null;
 				this.pendingRecoveryKey = setup.recoveryKey;
+				await this.beforeUnlock(user.id);
 				await this.vault.unlock(user.id, setup.masterKey, this.rememberDevice());
 			}
 			this.user = user;
@@ -284,6 +294,7 @@ export class AuthState {
 			this.keyBundle = session.keys;
 			this.unlockFailures = 0;
 			this.notice = null;
+			await this.beforeUnlock(session.user.id);
 			await this.vault.unlock(session.user.id, masterKey, this.rememberDevice());
 			if (this.deferredRecovery?.userId === session.user.id) {
 				this.pendingRecoveryKey = this.deferredRecovery.recoveryKey;
@@ -322,6 +333,7 @@ export class AuthState {
 				throw e;
 			}
 			this.unlockFailures = 0;
+			await this.beforeUnlock(user.id);
 			await this.vault.unlock(user.id, masterKey, this.rememberDevice());
 		});
 		if (!result.ok && this.fieldErrors.password === 'wrong-password') {
@@ -334,10 +346,11 @@ export class AuthState {
 	async logout(): Promise<ActionResult> {
 		return this.act({ valid: true }, async () => {
 			// Primero se borra lo local: sin red también se puede salir (el token caduca solo).
+			const userId = this.user?.id ?? null;
 			this.forgetSession();
 			this.notice = null;
 			await this.vault.signOut();
-			await this.onSignedOut();
+			await this.onSignedOut(userId);
 			try {
 				await this.repo.logout();
 			} catch {
@@ -352,11 +365,14 @@ export class AuthState {
 			: { valid: false, errors: { password: 'required' } };
 		return this.act(validation, async () => {
 			const authKey = await deriveAuthKey(password, (await this.bundle()).kdf);
+			const userId = this.requireUser().id;
 			await this.repo.deleteAccount(authKey);
 			this.forgetSession();
 			this.notice = null;
 			await this.vault.signOut();
-			await this.onSignedOut();
+			await this.onSignedOut(userId);
+			// Borrar la cuenta sí borra las preferencias del dispositivo.
+			await this.onAccountDeleted(userId);
 		});
 	}
 

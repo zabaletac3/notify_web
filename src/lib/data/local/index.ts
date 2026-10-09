@@ -6,6 +6,14 @@ export {
 } from './create-local-backend.js';
 export { ApunteDb } from './apunte-db.js';
 export {
+	DevicePrefs,
+	devicePrefsKey,
+	deviceActiveAtKey,
+	DEVICE_PREFS_PREFIX,
+	DEVICE_ACTIVE_PREFIX,
+	type PrefsStorage
+} from './device-prefs.js';
+export {
 	createSessionChannel,
 	type SessionChannel,
 	type SessionMessage

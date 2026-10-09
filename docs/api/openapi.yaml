@@ -1172,7 +1172,7 @@ components:
         wifiOnly: { type: boolean }
         biometricLock: { type: boolean }
         lockOnExit: { type: boolean }
-        lockTimeout: { type: string, enum: [immediately, 1m, 5m, 15m] }
+        lockTimeout: { type: string, enum: [immediately, 1m, 5m, 15m, never] }
         twoFactor: { type: boolean }
     AppSettingsPatch:
       type: object
@@ -1190,7 +1190,7 @@ components:
         wifiOnly: { type: boolean }
         biometricLock: { type: boolean }
         lockOnExit: { type: boolean }
-        lockTimeout: { type: string, enum: [immediately, 1m, 5m, 15m] }
+        lockTimeout: { type: string, enum: [immediately, 1m, 5m, 15m, never] }
         twoFactor: { type: boolean }
     StorageUsage:
       type: object

@@ -88,10 +88,15 @@ datos de ejemplo se generan ya cifrados.
    antes de cifrar (JSON admite espacios finales), para no revelar el tamaño exacto.
 9. **Base local por cuenta:** `apunte-{userId}`. En `meta`: `userId`, `schema`. La base de claves es
    `apunte-keys` (una tabla `deviceKeys` con clave `userId`).
-10. **Bloqueo en web:** si `settings.lockOnExit` es `true`, la MK **no** se guarda en local: al
+10. **Bloqueo en web** (`lockOnExit` es `false` por defecto, ver §17.1): si `settings.lockOnExit` es `true`, la MK **no** se guarda en local: al
     recargar se pide la contraseña (pantalla `/unlock`). Si es `false`, se guarda envuelta con la DK.
-    `lockTimeout` bloquea tras inactividad. **El ajuste `encryptLocal` desaparece** (el cifrado local
-    es siempre obligatorio); su fila en Privacidad se sustituye por una fila informativa.
+    `lockTimeout` bloquea tras inactividad. Al **bloquear** (por inactividad, al ocultar la pestaña o
+    manualmente) se **borra la clave guardada** del dispositivo, para que el bloqueo no se pueda saltar
+    recargando. Al cerrar la pestaña se guarda la última actividad (`lastActiveAt`, con permisos de
+    escritura limitados a uno cada 15 s): si al volver a abrir pasó más que `lockTimeout`, no se
+    restaura la clave y se pide la contraseña (con `never` se restaura siempre). **El ajuste
+    `encryptLocal` desaparece** (el cifrado local es siempre obligatorio); su fila en Privacidad se
+    sustituye por una fila informativa.
 11. **Restablecer contraseña por correo:**
     - Con la RK → se conservan las notas (la MK se re-envuelve con la nueva contraseña).
     - Sin la RK → se **borran** todas las notas y carpetas del servidor y se crea una MK nueva.
@@ -681,7 +686,7 @@ el resto, un commit por fase. Push a `main` al final de cada fase con las línea
 
 ## 17. Preguntas que el usuario puede querer revisar (hay valor por defecto; no bloquean)
 
-1. **Bloquear al recargar en web** (`lockOnExit: true` por defecto): más seguro, pero pide la contraseña en cada apertura. Alternativa: `false` por defecto.
+1. **Bloquear al recargar en web** (`lockOnExit`). **Decidido (2026-10-09): `false` por defecto.** La clave se recuerda en el dispositivo y `lockTimeout` decide cuándo se vuelve a pedir la contraseña (también con la pestaña cerrada). `true` es el modo estricto, opcional: pide la contraseña en cada recarga y la MK nunca queda en disco.
 2. **Restablecer sin RK borra las notas.** Alternativa: no permitirlo (solo con RK).
 3. **Parámetros Argon2id** 64 MiB / 3 iteraciones: en móviles antiguos puede tardar 1–2 s.
 
