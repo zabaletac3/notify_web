@@ -6,6 +6,7 @@
 	import { AppIcon, SidebarItem, ThemeToggle } from '#lib/components/app/index.js';
 	import * as Tooltip from '#lib/components/ui/tooltip/index.js';
 	import type { NotesFilter } from '#lib/domain/index.js';
+	import { cn } from '#lib/utils.js';
 	import { dialogs } from './dialogs.svelte.js';
 	import { shell } from './shell.svelte.js';
 
@@ -101,12 +102,16 @@
 				class="grid size-7 place-content-center rounded-lg bg-primary text-heading font-bold text-primary-foreground"
 				>a</span
 			>
-			{#if onToggle}{@render toggleButton()}{/if}
 			<span class="flex-1 text-xl font-bold">AxoNote</span>
-			<a href="/settings" aria-label="Ajustes" class={iconButton}>
-				<AppIcon name="settings" size={18} />
-			</a>
-			<ThemeToggle />
+			{#if onToggle}
+				{@render toggleButton()}
+			{:else}
+				<!-- Cajón móvil: sin botón de recoger; Ajustes y el tema siguen en la cabecera. -->
+				<a href="/settings" aria-label="Ajustes" class={iconButton}>
+					<AppIcon name="settings" size={18} />
+				</a>
+				<ThemeToggle />
+			{/if}
 		</div>
 	{/if}
 
@@ -176,11 +181,27 @@
 		{@render folderButton({})}
 	{/if}
 
-	{#if collapsed}
-		<div class="flex flex-col items-center gap-1 pt-1">
-			<a href="/settings" aria-label="Ajustes" class={iconButton}>
-				<AppIcon name="settings" size={18} />
-			</a>
+	{#if onToggle}
+		<!-- Barra de escritorio: Ajustes y el tema van al pie (la cabecera queda como en el diseño). -->
+		<div
+			class={cn(
+				'mt-1 flex border-t pt-2',
+				collapsed ? 'flex-col items-center gap-1' : 'items-center gap-1'
+			)}
+		>
+			{#if collapsed}
+				<a href="/settings" aria-label="Ajustes" title="Ajustes" class={iconButton}>
+					<AppIcon name="settings" size={18} />
+				</a>
+			{:else}
+				<a
+					href="/settings"
+					class="flex h-8.5 min-w-0 flex-1 items-center gap-2.5 rounded-sm px-2.5 text-sm font-medium text-foreground outline-none hover:bg-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+				>
+					<AppIcon name="settings" size={18} class="text-muted-foreground" />
+					<span class="truncate">Ajustes</span>
+				</a>
+			{/if}
 			<ThemeToggle />
 		</div>
 	{/if}
