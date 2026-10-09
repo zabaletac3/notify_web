@@ -2,7 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
-import adapter from '@sveltejs/adapter-auto';
+import adapter from '@sveltejs/adapter-cloudflare';
 import { sveltekit } from '@sveltejs/kit/vite';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
@@ -114,9 +114,8 @@ export default defineConfig(({ command, mode }) => ({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-			// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-			// See https://svelte.dev/docs/kit/adapters for more information about adapters.
+			// Cloudflare Workers (con activos estáticos): ver wrangler.jsonc. Si se empaqueta como archivos
+			// estáticos (Tauri), la parte `(app)` ya es SPA (`ssr = false`) y admite adapter-static.
 			adapter: adapter(),
 			csp: { mode: 'auto', directives: cspDirectives(command === 'serve', apiOrigin(mode)) }
 		})
