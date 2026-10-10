@@ -22,6 +22,7 @@ import type {
 } from '#lib/domain/index.js';
 import { masterKeyAad } from './account-keys.js';
 import { buildMarkdownVector } from './markdown-vectors.js';
+import { buildSyncBehaviorVector } from './sync-behavior-vectors.js';
 import {
 	decryptFolder,
 	decryptNote,
@@ -727,6 +728,9 @@ móvil) y la web comprueben que leen y escriben **exactamente los mismos bytes**
 - **markdown.json.** Casos de Markdown: \`canonical = serializar(analizar(input))\` con el mismo editor
   (TipTap 3) sin interfaz. \`canonical\` es idempotente. Con \`supported: false\` el bloque queda fuera del
   conjunto que edita el móvil y debe conservarse intacto (bloque opaco).
+- **sync-behavior.json.** Escenarios del motor de sincronización (outbox + repositorio local + servidor
+  simulado) con reloj e ids fijos. Cada escenario trae \`steps\` (con \`device\` a/b) y \`expected\`, el estado
+  lógico del dispositivo \`a\` tras cada paso (id, título, texto, revisión, estado, cola, conflictos, cursor).
 `;
 
 /** Vectores en memoria. Deterministas: el mismo resultado en cada ejecución. */
@@ -741,7 +745,8 @@ export async function buildVectors(): Promise<Record<string, Record<string, unkn
 		'note-payload.json': await buildNotePayload(),
 		'share.json': await buildShare(),
 		'sync.json': await buildSync(),
-		'markdown.json': buildMarkdownVector()
+		'markdown.json': buildMarkdownVector(),
+		'sync-behavior.json': await buildSyncBehaviorVector()
 	};
 }
 
