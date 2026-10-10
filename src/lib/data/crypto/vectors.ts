@@ -726,11 +726,19 @@ móvil) y la web comprueben que leen y escriben **exactamente los mismos bytes**
 - **sync.json.** Estructura de \`EncryptedSyncRequest\`/\`EncryptedSyncResponse\`; las notas y carpetas
   llevan \`wrappedKey\`/\`payload\` y se descifran con \`masterKey\`.
 - **markdown.json.** Casos de Markdown: \`canonical = serializar(analizar(input))\` con el mismo editor
-  (TipTap 3) sin interfaz. \`canonical\` es idempotente. Con \`supported: false\` el bloque queda fuera del
-  conjunto que edita el móvil y debe conservarse intacto (bloque opaco).
+  (TipTap 3) sin interfaz. \`canonical\` es idempotente salvo que \`supported: false\`, donde el bloque
+  queda fuera del conjunto que edita el móvil (bloque opaco) o la relectura no es estable (ver
+  \`docs/api/decisions.md\`). \`serialize\` fija el sentido contrario, documento ya editado a Markdown:
+  cada caso trae \`doc\` (JSON de TipTap, escrito a mano como lo dejaría el editor), \`markdown =
+  serializar(doc)\` y \`reparses\` (si \`analizar(markdown)\` vuelve a dar \`doc\`, comparado por estructura).
 - **sync-behavior.json.** Escenarios del motor de sincronización (outbox + repositorio local + servidor
   simulado) con reloj e ids fijos. Cada escenario trae \`steps\` (con \`device\` a/b) y \`expected\`, el estado
   lógico del dispositivo \`a\` tras cada paso (id, título, texto, revisión, estado, cola, conflictos, cursor).
+  Cada paso \`sync\` de \`a\` lleva además \`exchanges[]\`: una entrada por página \`POST /sync\`, con su
+  \`request\` (\`cursor\`, \`changes[{entity, id, op, baseRevision}]\`) y \`response\`
+  (\`cursor\`, \`hasMore\`, \`applied\`, \`conflicts\`, \`remoteChanges\`) en campos lógicos, para reproducir el
+  protocolo con un transporte guionizado sin servidor. \`editDuringSync\` indica el índice de \`exchanges\`
+  en el que ocurrió la edición en vuelo.
 `;
 
 /** Vectores en memoria. Deterministas: el mismo resultado en cada ejecución. */

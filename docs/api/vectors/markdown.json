@@ -211,6 +211,144 @@
       "supported": false
     },
     {
+      "canonical": "- uno\n- dos",
+      "input": "* uno\n* dos",
+      "name": "vineta-con-asterisco",
+      "supported": true
+    },
+    {
+      "canonical": "- uno\n- dos",
+      "input": "+ uno\n+ dos",
+      "name": "vineta-con-mas",
+      "supported": true
+    },
+    {
+      "canonical": "*cursiva*",
+      "input": "_cursiva_",
+      "name": "cursiva-con-guion-bajo",
+      "supported": true
+    },
+    {
+      "canonical": "**negrita**",
+      "input": "__negrita__",
+      "name": "negrita-con-guion-bajo",
+      "supported": true
+    },
+    {
+      "canonical": "# Título",
+      "input": "Título\n======",
+      "name": "titulo-con-subrayado-1",
+      "supported": true
+    },
+    {
+      "canonical": "## Título",
+      "input": "Título\n------",
+      "name": "titulo-con-subrayado-2",
+      "supported": true
+    },
+    {
+      "canonical": "- uno\n  continua",
+      "input": "- uno\n    continua",
+      "name": "sangria-de-4-espacios",
+      "supported": false
+    },
+    {
+      "canonical": "- uno\n  continua",
+      "input": "- uno\n\tcontinua",
+      "name": "sangria-con-tabulador",
+      "supported": false
+    },
+    {
+      "canonical": "1. uno\n2. dos",
+      "input": "1) uno\n2) dos",
+      "name": "numerada-con-parentesis",
+      "supported": true
+    },
+    {
+      "canonical": "---",
+      "input": "***",
+      "name": "separador-con-asteriscos",
+      "supported": true
+    },
+    {
+      "canonical": "---",
+      "input": "___",
+      "name": "separador-con-guion-bajo",
+      "supported": true
+    },
+    {
+      "canonical": "a\nb",
+      "input": "a\r\nb",
+      "name": "salto-de-linea-crlf",
+      "supported": true
+    },
+    {
+      "canonical": "a",
+      "input": "a\n",
+      "name": "salto-final-eliminado",
+      "supported": true
+    },
+    {
+      "canonical": "[https://apunte.app](https://apunte.app)",
+      "input": "https://apunte.app",
+      "name": "url-suelta",
+      "supported": true
+    },
+    {
+      "canonical": "linea uno  \nlinea dos",
+      "input": "linea uno\\\nlinea dos",
+      "name": "salto-duro-con-backslash",
+      "supported": true
+    },
+    {
+      "canonical": "[https://apunte.app](https://apunte.app)",
+      "input": "<https://apunte.app>",
+      "name": "autolink",
+      "supported": true
+    },
+    {
+      "canonical": "&amp;copy; 2026",
+      "input": "&copy; 2026",
+      "name": "entidad-copy",
+      "supported": true
+    },
+    {
+      "canonical": "a&amp;nbsp;b",
+      "input": "a&nbsp;b",
+      "name": "entidad-nbsp",
+      "supported": true
+    },
+    {
+      "canonical": "Texto\\[^1\\]\n\n\\[^1\\]: Nota al pie.",
+      "input": "Texto[^1]\n\n[^1]: Nota al pie.",
+      "name": "nota-al-pie",
+      "supported": false
+    },
+    {
+      "canonical": "&lt;div&gt;\n&lt;p&gt;hola&lt;/p&gt;\n&lt;/div&gt;",
+      "input": "<div>\n<p>hola</p>\n</div>",
+      "name": "html-de-bloque",
+      "supported": false
+    },
+    {
+      "canonical": "texto alt texto",
+      "input": "texto ![alt](https://example.com/x.png) texto",
+      "name": "imagen-en-linea",
+      "supported": false
+    },
+    {
+      "canonical": "Después de la tabla.",
+      "input": "| a | b |\n| - | - |\n| 1 | 2 |\n\nDespués de la tabla.",
+      "name": "tabla-seguida-de-texto",
+      "supported": false
+    },
+    {
+      "canonical": "# Título principal\n\nUn párrafo con **negrita**, *cursiva*, ~~tachado~~, ++subrayado++, `código` y un [enlace](https://apunte.app \"título\").\n\n## Subtítulo\n\n- viñeta uno\n- viñeta dos\n  - anidada\n\n1. numerada uno\n2. numerada dos\n\n- [ ] tarea pendiente\n- [x] tarea hecha\n  - [ ] subtarea\n\n> Una cita con **negrita**.\n\n```js\nconst saludo = 'hola';\n```\n\n---\n\nLínea con salto duro  \nsiguiente línea.",
+      "input": "# Título principal\n\nUn párrafo con **negrita**, *cursiva*, ~~tachado~~, ++subrayado++, `código` y un [enlace](https://apunte.app \"título\").\n\n## Subtítulo\n\n- viñeta uno\n- viñeta dos\n  - anidada\n\n1. numerada uno\n2. numerada dos\n\n- [ ] tarea pendiente\n- [x] tarea hecha\n  - [ ] subtarea\n\n> Una cita con **negrita**.\n\n```js\nconst saludo = 'hola';\n```\n\n---\n\nLínea con salto duro  \nsiguiente línea.",
+      "name": "documento-largo",
+      "supported": true
+    },
+    {
       "canonical": "Entregables: prototipo en Figma, app en Tauri, API en Go y documentación.\n\n## Fechas\n\n- [x] Prototipo en Figma\n- [ ] App web con SvelteKit\n- [ ] Backend con Go y MongoDB\n- [ ] Sustentación",
       "input": "Entregables: prototipo en Figma, app en Tauri, API en Go y documentación.\n\n## Fechas\n\n- [x] Prototipo en Figma\n- [ ] App web con SvelteKit\n- [ ] Backend con Go y MongoDB\n- [ ] Sustentación",
       "name": "fixture:Plan del proyecto final",
@@ -355,6 +493,1819 @@
       "supported": true
     }
   ],
-  "description": "Casos de Markdown de AxoNote. `canonical = serializar(analizar(input))` con el mismo `MarkdownManager` (TipTap 3) que usa el editor, sin interfaz. `supported` indica si el móvil edita ese caso o lo trata como bloque opaco (se conserva intacto).",
+  "description": "Casos de Markdown de AxoNote. `canonical = serializar(analizar(input))` con el mismo `MarkdownManager` (TipTap 3) que usa el editor, sin interfaz. `supported` indica si el móvil edita ese caso o lo trata como bloque opaco (se conserva intacto). `serialize` fija, al revés, lo que emite el serializador sobre un documento ya editado (`doc`, JSON de TipTap): `markdown = serializar(doc)` y `reparses` indica si `analizar(markdown)` vuelve a dar `doc`.",
+  "serialize": [
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          },
+          {
+            "content": [],
+            "type": "paragraph"
+          },
+          {
+            "content": [
+              {
+                "text": "b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a\n\n\n\nb",
+      "name": "parrafo-vacio-entre-dos-parrafos",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          },
+          {
+            "content": [],
+            "type": "paragraph"
+          },
+          {
+            "content": [],
+            "type": "paragraph"
+          },
+          {
+            "content": [
+              {
+                "text": "b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a\n\n\n\n&nbsp;\n\nb",
+      "name": "dos-parrafos-vacios-seguidos",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          },
+          {
+            "content": [],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a\n\n",
+      "name": "parrafo-vacio-al-final",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [],
+            "type": "paragraph"
+          },
+          {
+            "content": [
+              {
+                "text": "a",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "\n\na",
+      "name": "parrafo-vacio-al-inicio",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "  hola  ",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "  hola  ",
+      "name": "espacios-al-inicio-y-al-final",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "línea uno",
+                "type": "text"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "text": "línea dos",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "línea uno  \nlínea dos",
+      "name": "salto-duro-simple",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a",
+                "type": "text"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "type": "hardBreak"
+              },
+              {
+                "text": "b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a  \n  \nb",
+      "name": "salto-duro-doble",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "hola ",
+                "type": "text"
+              },
+              {
+                "text": "mundo",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "**hola** mundo",
+      "name": "marca-con-espacio-final",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "code"
+                  }
+                ],
+                "text": "a `b` c",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "``a `b` c``",
+      "name": "codigo-con-comillas-dentro",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "attrs": {
+                      "href": "https://apunte.app",
+                      "title": null
+                    },
+                    "type": "link"
+                  }
+                ],
+                "text": "AxoNote",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "[AxoNote](https://apunte.app)",
+      "name": "enlace-simple",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "attrs": {
+                      "href": "https://apunte.app",
+                      "title": "La web"
+                    },
+                    "type": "link"
+                  }
+                ],
+                "text": "AxoNote",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "[AxoNote](https://apunte.app \"La web\")",
+      "name": "enlace-con-titulo",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "attrs": {
+                      "href": "https://apunte.app",
+                      "title": null
+                    },
+                    "type": "link"
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "AxoNote",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "[**AxoNote**](https://apunte.app)",
+      "name": "enlace-con-marcas",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [],
+                    "type": "paragraph"
+                  }
+                ],
+                "type": "listItem"
+              }
+            ],
+            "type": "bulletList"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "- ",
+      "name": "elemento-vinieta-vacio",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "attrs": {
+                  "checked": false
+                },
+                "content": [
+                  {
+                    "content": [],
+                    "type": "paragraph"
+                  }
+                ],
+                "type": "taskItem"
+              }
+            ],
+            "type": "taskList"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "- [ ] ",
+      "name": "elemento-tarea-vacio",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "attrs": {
+              "level": 2
+            },
+            "content": [],
+            "type": "heading"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "## ",
+      "name": "titulo-vacio",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "attrs": {
+              "language": null
+            },
+            "content": [],
+            "type": "codeBlock"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "```\n\n```",
+      "name": "bloque-codigo-vacio",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "a",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  }
+                ],
+                "type": "listItem"
+              }
+            ],
+            "type": "bulletList"
+          },
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "b",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  }
+                ],
+                "type": "listItem"
+              }
+            ],
+            "type": "bulletList"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "- a\n\n- b",
+      "name": "vinietas-contiguas",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "a",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  }
+                ],
+                "type": "listItem"
+              }
+            ],
+            "type": "bulletList"
+          },
+          {
+            "content": [
+              {
+                "attrs": {
+                  "checked": false
+                },
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "b",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  }
+                ],
+                "type": "taskItem"
+              }
+            ],
+            "type": "taskList"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "- a\n\n- [ ] b",
+      "name": "vinietas-y-tareas-contiguas",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "attrs": {
+              "start": 1
+            },
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "a",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  }
+                ],
+                "type": "listItem"
+              }
+            ],
+            "type": "orderedList"
+          },
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "b",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  }
+                ],
+                "type": "listItem"
+              }
+            ],
+            "type": "bulletList"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "1. a\n\n- b",
+      "name": "numerada-y-vinietas-contiguas",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "uno",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  },
+                  {
+                    "content": [
+                      {
+                        "text": "dos",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  }
+                ],
+                "type": "listItem"
+              }
+            ],
+            "type": "bulletList"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "- uno\n\n  dos",
+      "name": "elemento-con-dos-parrafos",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "uno",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  },
+                  {
+                    "attrs": {
+                      "language": null
+                    },
+                    "content": [
+                      {
+                        "text": "x = 1",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "codeBlock"
+                  }
+                ],
+                "type": "listItem"
+              }
+            ],
+            "type": "bulletList"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "- uno\n  ```\n  x = 1\n  ```",
+      "name": "elemento-con-bloque-de-codigo",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "uno",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  },
+                  {
+                    "content": [
+                      {
+                        "content": [
+                          {
+                            "text": "cita",
+                            "type": "text"
+                          }
+                        ],
+                        "type": "paragraph"
+                      }
+                    ],
+                    "type": "blockquote"
+                  }
+                ],
+                "type": "listItem"
+              }
+            ],
+            "type": "bulletList"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "- uno\n  > cita",
+      "name": "elemento-con-cita",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "content": [
+                          {
+                            "text": "uno",
+                            "type": "text"
+                          }
+                        ],
+                        "type": "paragraph"
+                      }
+                    ],
+                    "type": "listItem"
+                  }
+                ],
+                "type": "bulletList"
+              }
+            ],
+            "type": "blockquote"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "> - uno",
+      "name": "cita-con-lista",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "text": "uno",
+                    "type": "text"
+                  }
+                ],
+                "type": "paragraph"
+              },
+              {
+                "content": [
+                  {
+                    "text": "dos",
+                    "type": "text"
+                  }
+                ],
+                "type": "paragraph"
+              }
+            ],
+            "type": "blockquote"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "> uno\n>\n> dos",
+      "name": "cita-con-varios-parrafos",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "a",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  },
+                  {
+                    "attrs": {
+                      "start": 1
+                    },
+                    "content": [
+                      {
+                        "content": [
+                          {
+                            "content": [
+                              {
+                                "text": "a.1",
+                                "type": "text"
+                              }
+                            ],
+                            "type": "paragraph"
+                          }
+                        ],
+                        "type": "listItem"
+                      }
+                    ],
+                    "type": "orderedList"
+                  }
+                ],
+                "type": "listItem"
+              }
+            ],
+            "type": "bulletList"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "- a\n  1. a.1",
+      "name": "numerada-dentro-de-vinietas",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "attrs": {
+              "start": 1
+            },
+            "content": [
+              {
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "a",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  },
+                  {
+                    "content": [
+                      {
+                        "content": [
+                          {
+                            "content": [
+                              {
+                                "text": "a.1",
+                                "type": "text"
+                              }
+                            ],
+                            "type": "paragraph"
+                          }
+                        ],
+                        "type": "listItem"
+                      }
+                    ],
+                    "type": "bulletList"
+                  }
+                ],
+                "type": "listItem"
+              }
+            ],
+            "type": "orderedList"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "1. a\n   - a.1",
+      "name": "vinietas-dentro-de-numerada",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "attrs": {
+                  "checked": true
+                },
+                "content": [
+                  {
+                    "content": [
+                      {
+                        "text": "uno",
+                        "type": "text"
+                      }
+                    ],
+                    "type": "paragraph"
+                  },
+                  {
+                    "content": [
+                      {
+                        "attrs": {
+                          "checked": false
+                        },
+                        "content": [
+                          {
+                            "content": [
+                              {
+                                "text": "uno.a",
+                                "type": "text"
+                              }
+                            ],
+                            "type": "paragraph"
+                          },
+                          {
+                            "content": [
+                              {
+                                "attrs": {
+                                  "checked": true
+                                },
+                                "content": [
+                                  {
+                                    "content": [
+                                      {
+                                        "text": "uno.a.i",
+                                        "type": "text"
+                                      }
+                                    ],
+                                    "type": "paragraph"
+                                  }
+                                ],
+                                "type": "taskItem"
+                              }
+                            ],
+                            "type": "taskList"
+                          }
+                        ],
+                        "type": "taskItem"
+                      }
+                    ],
+                    "type": "taskList"
+                  }
+                ],
+                "type": "taskItem"
+              }
+            ],
+            "type": "taskList"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "- [x] uno\n  - [ ] uno.a\n    - [x] uno.a.i",
+      "name": "tareas-3-niveles-mezcladas",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "attrs": {
+              "level": 2
+            },
+            "content": [
+              {
+                "text": "hola ",
+                "type": "text"
+              },
+              {
+                "marks": [
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "mundo",
+                "type": "text"
+              }
+            ],
+            "type": "heading"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "## hola **mundo**",
+      "name": "titulo-con-marcas",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "attrs": {
+              "language": "js"
+            },
+            "content": [
+              {
+                "text": "a\n\nb",
+                "type": "text"
+              }
+            ],
+            "type": "codeBlock"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "```js\na\n\nb\n```",
+      "name": "bloque-codigo-con-lineas-en-blanco",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "attrs": {
+              "language": "js"
+            },
+            "content": [
+              {
+                "text": "a\n",
+                "type": "text"
+              }
+            ],
+            "type": "codeBlock"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "```js\na\n\n```",
+      "name": "bloque-codigo-con-salto-final",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a*b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a\\*b",
+      "name": "literal-asterisco",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a_b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a\\_b",
+      "name": "literal-guion-bajo",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a`b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a\\`b",
+      "name": "literal-backtick",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a[b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a\\[b",
+      "name": "literal-corchete-abre",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a]b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a\\]b",
+      "name": "literal-corchete-cierra",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a~b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a\\~b",
+      "name": "literal-tilde",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a\\b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a\\\\b",
+      "name": "literal-backslash",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a<b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a&lt;b",
+      "name": "literal-menor-que",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a>b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a&gt;b",
+      "name": "literal-mayor-que",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "a&b",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "a&amp;b",
+      "name": "literal-ampersand",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "# no titulo",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "# no titulo",
+      "name": "inicio-de-linea-almohadilla",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "- no lista",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "- no lista",
+      "name": "inicio-de-linea-guion",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "1. no numerada",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "1. no numerada",
+      "name": "inicio-de-linea-numero-punto",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "> no cita",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "&gt; no cita",
+      "name": "inicio-de-linea-mayor-que",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "[ ] no tarea",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "\\[ \\] no tarea",
+      "name": "inicio-de-linea-checkbox",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "--- no separador",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "--- no separador",
+      "name": "inicio-de-linea-guiones-triples",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "``` no codigo",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "\\`\\`\\` no codigo",
+      "name": "inicio-de-linea-tres-backticks",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "texto",
+                "type": "text"
+              },
+              {
+                "marks": [
+                  {
+                    "type": "underline"
+                  }
+                ],
+                "text": "marcado",
+                "type": "text"
+              },
+              {
+                "text": "final",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "texto++marcado++final",
+      "name": "marca-subrayado",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "texto",
+                "type": "text"
+              },
+              {
+                "marks": [
+                  {
+                    "type": "strike"
+                  }
+                ],
+                "text": "marcado",
+                "type": "text"
+              },
+              {
+                "text": "final",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "texto~~marcado~~final",
+      "name": "marca-tachado",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "texto",
+                "type": "text"
+              },
+              {
+                "marks": [
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "marcado",
+                "type": "text"
+              },
+              {
+                "text": "final",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "texto**marcado**final",
+      "name": "marca-negrita",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "texto",
+                "type": "text"
+              },
+              {
+                "marks": [
+                  {
+                    "type": "italic"
+                  }
+                ],
+                "text": "marcado",
+                "type": "text"
+              },
+              {
+                "text": "final",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "texto*marcado*final",
+      "name": "marca-cursiva",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "text": "texto",
+                "type": "text"
+              },
+              {
+                "marks": [
+                  {
+                    "type": "code"
+                  }
+                ],
+                "text": "marcado",
+                "type": "text"
+              },
+              {
+                "text": "final",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "texto`marcado`final",
+      "name": "marca-codigo-en-linea",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "underline"
+                  },
+                  {
+                    "type": "strike"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "~~++x++~~",
+      "name": "combinadas-subrayado-tachado",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "underline"
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "**++x++**",
+      "name": "combinadas-subrayado-negrita",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "underline"
+                  },
+                  {
+                    "type": "italic"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "*++x++*",
+      "name": "combinadas-subrayado-cursiva",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "strike"
+                  },
+                  {
+                    "type": "underline"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "~~++x++~~",
+      "name": "combinadas-tachado-subrayado",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "strike"
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "**~~x~~**",
+      "name": "combinadas-tachado-negrita",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "strike"
+                  },
+                  {
+                    "type": "italic"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "*~~x~~*",
+      "name": "combinadas-tachado-cursiva",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "bold"
+                  },
+                  {
+                    "type": "underline"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "**++x++**",
+      "name": "combinadas-negrita-subrayado",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "bold"
+                  },
+                  {
+                    "type": "strike"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "**~~x~~**",
+      "name": "combinadas-negrita-tachado",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "bold"
+                  },
+                  {
+                    "type": "italic"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "***x***",
+      "name": "combinadas-negrita-cursiva",
+      "reparses": true
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "italic"
+                  },
+                  {
+                    "type": "underline"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "*++x++*",
+      "name": "combinadas-cursiva-subrayado",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "italic"
+                  },
+                  {
+                    "type": "strike"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "*~~x~~*",
+      "name": "combinadas-cursiva-tachado",
+      "reparses": false
+    },
+    {
+      "doc": {
+        "content": [
+          {
+            "content": [
+              {
+                "marks": [
+                  {
+                    "type": "italic"
+                  },
+                  {
+                    "type": "bold"
+                  }
+                ],
+                "text": "x",
+                "type": "text"
+              }
+            ],
+            "type": "paragraph"
+          }
+        ],
+        "type": "doc"
+      },
+      "markdown": "***x***",
+      "name": "combinadas-cursiva-negrita",
+      "reparses": false
+    }
+  ],
   "version": 1
 }
