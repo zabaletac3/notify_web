@@ -1,11 +1,8 @@
 <script lang="ts">
 	import { onDestroy, onMount, type Snippet } from 'svelte';
 	import { Editor } from '@tiptap/core';
-	import { Markdown } from '@tiptap/markdown';
 	import Placeholder from '@tiptap/extension-placeholder';
-	import TaskItem from '@tiptap/extension-task-item';
-	import TaskList from '@tiptap/extension-task-list';
-	import StarterKit from '@tiptap/starter-kit';
+	import { createMarkdownExtensions } from '#lib/core/editor/extensions.js';
 	import AppIcon from './app-icon.svelte';
 	import ToolbarButton from './toolbar-button.svelte';
 	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
@@ -50,10 +47,7 @@
 		editor = new Editor({
 			element,
 			extensions: [
-				StarterKit,
-				Markdown,
-				TaskList,
-				TaskItem.configure({ nested: true }),
+				...createMarkdownExtensions(),
 				Placeholder.configure({ placeholder: 'Empieza a escribir…' })
 			],
 			content,
