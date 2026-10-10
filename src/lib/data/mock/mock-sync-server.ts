@@ -47,10 +47,14 @@ export class MockSyncServer implements SyncTransport {
 		const applied: SyncApplied[] = [];
 		const conflicts: EncryptedSyncConflictReport[] = [];
 		const touched = new Set<string>();
+		// Revisión de cada nota justo antes de que, en esta misma petición, el borrado de su carpeta se
+		// la subiera de rebote (ver applyFolder/applyNote): así el upsert de esa nota que llegue con esa
+		// revisión anterior no choca contra un cambio que, en los hechos, él mismo provocó.
+		const folderBump = new Map<Id, number>();
 		for (const change of req.changes) {
 			if (change.op === 'upsert') this.validate(change);
-			if (change.entity === 'folder') this.applyFolder(account, change, applied, touched);
-			else this.applyNote(account, change, req, applied, conflicts, touched);
+			if (change.entity === 'folder') this.applyFolder(account, change, applied, touched, folderBump);
+			else this.applyNote(account, change, req, applied, conflicts, touched, folderBump);
 		}
 
 		return {
@@ -121,7 +125,8 @@ export class MockSyncServer implements SyncTransport {
 		req: EncryptedSyncRequest,
 		applied: SyncApplied[],
 		conflicts: EncryptedSyncConflictReport[],
-		touched: Set<string>
+		touched: Set<string>,
+		folderBump: Map<Id, number>
 	) {
 		const existing = account.notes.find((n) => n.id === change.id);
 		const key = `note:${change.id}`;
@@ -154,7 +159,9 @@ export class MockSyncServer implements SyncTransport {
 			return;
 		}
 
-		if (existing.revision !== change.baseRevision) {
+		const bumpedFrom = folderBump.get(existing.id);
+		const exemptFromOwnFolderDelete = bumpedFrom !== undefined && bumpedFrom === change.baseRevision;
+		if (existing.revision !== change.baseRevision && !exemptFromOwnFolderDelete) {
 			// El servidor no pisa: devuelve su versión y el cliente decide.
 			conflicts.push({
 				noteId: existing.id,
@@ -178,7 +185,8 @@ export class MockSyncServer implements SyncTransport {
 		account: ServerAccount,
 		change: EncryptedSyncChange,
 		applied: SyncApplied[],
-		touched: Set<string>
+		touched: Set<string>,
+		folderBump: Map<Id, number>
 	) {
 		const existing = account.folders.find((f) => f.id === change.id);
 		const revision = (existing?.revision ?? 0) + 1;
@@ -191,6 +199,9 @@ export class MockSyncServer implements SyncTransport {
 				// Sus notas pasan a "sin carpeta" también en el servidor (es un metadato, no hace falta descifrar).
 				for (const note of account.notes) {
 					if (note.folderId === change.id) {
+						// Guarda la revisión que tenía antes de esta subida de rebote: un upsert de esta
+						// misma petición con esa baseRevision no es un conflicto real (ver applyNote).
+						folderBump.set(note.id, note.revision);
 						note.folderId = null;
 						note.revision += 1;
 						this.bump(account, 'note', note.id);
