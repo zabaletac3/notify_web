@@ -21,6 +21,7 @@ import type {
 	SharedNote
 } from '#lib/domain/index.js';
 import { masterKeyAad } from './account-keys.js';
+import { buildMarkdownVector } from './markdown-vectors.js';
 import {
 	decryptFolder,
 	decryptNote,
@@ -723,6 +724,9 @@ móvil) y la web comprueben que leen y escriben **exactamente los mismos bytes**
   \`origin + "/n/" + slug + keyFragment\`.
 - **sync.json.** Estructura de \`EncryptedSyncRequest\`/\`EncryptedSyncResponse\`; las notas y carpetas
   llevan \`wrappedKey\`/\`payload\` y se descifran con \`masterKey\`.
+- **markdown.json.** Casos de Markdown: \`canonical = serializar(analizar(input))\` con el mismo editor
+  (TipTap 3) sin interfaz. \`canonical\` es idempotente. Con \`supported: false\` el bloque queda fuera del
+  conjunto que edita el móvil y debe conservarse intacto (bloque opaco).
 `;
 
 /** Vectores en memoria. Deterministas: el mismo resultado en cada ejecución. */
@@ -736,7 +740,8 @@ export async function buildVectors(): Promise<Record<string, Record<string, unkn
 		'padding.json': buildPadding(),
 		'note-payload.json': await buildNotePayload(),
 		'share.json': await buildShare(),
-		'sync.json': await buildSync()
+		'sync.json': await buildSync(),
+		'markdown.json': buildMarkdownVector()
 	};
 }
 

@@ -47,3 +47,6 @@ móvil) y la web comprueben que leen y escriben **exactamente los mismos bytes**
   `origin + "/n/" + slug + keyFragment`.
 - **sync.json.** Estructura de `EncryptedSyncRequest`/`EncryptedSyncResponse`; las notas y carpetas
   llevan `wrappedKey`/`payload` y se descifran con `masterKey`.
+- **markdown.json.** Casos de Markdown: `canonical = serializar(analizar(input))` con el mismo editor
+  (TipTap 3) sin interfaz. `canonical` es idempotente. Con `supported: false` el bloque queda fuera del
+  conjunto que edita el móvil y debe conservarse intacto (bloque opaco).
