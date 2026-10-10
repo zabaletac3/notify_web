@@ -5737,22 +5737,8 @@
           "pendingCount": 2
         },
         {
-          "conflicts": [
-            {
-              "local": {
-                "content": "x",
-                "device": "A",
-                "title": "Dentro"
-              },
-              "noteId": "019cb84a-4100-756a-8fb4-d9fe23486d92",
-              "remote": {
-                "content": "x",
-                "device": "A",
-                "title": "Dentro"
-              }
-            }
-          ],
-          "cursor": "4",
+          "conflicts": [],
+          "cursor": "5",
           "folders": [],
           "lastSyncedAt": "2026-03-04T10:00:00.000Z",
           "notes": [
@@ -5762,21 +5748,13 @@
               "folderId": null,
               "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
               "pinned": false,
-              "revision": 1,
-              "syncStatus": "conflict",
+              "revision": 3,
+              "syncStatus": "synced",
               "title": "Dentro"
             }
           ],
-          "outbox": [
-            {
-              "baseRevision": 1,
-              "entity": "note",
-              "entityId": "019cb84a-4100-756a-8fb4-d9fe23486d92",
-              "op": "upsert",
-              "version": 1
-            }
-          ],
-          "pendingCount": 1
+          "outbox": [],
+          "pendingCount": 0
         }
       ],
       "initial": {
@@ -5898,36 +5876,17 @@
                     "entity": "folder",
                     "id": "019cb84a-4100-7da2-87ec-11365b80a5ca",
                     "revision": 2
-                  }
-                ],
-                "conflicts": [
+                  },
                   {
-                    "noteId": "019cb84a-4100-756a-8fb4-d9fe23486d92",
-                    "remote": {
-                      "content": "x",
-                      "title": "Dentro"
-                    },
-                    "remoteDeviceName": "A"
-                  }
-                ],
-                "cursor": "4",
-                "hasMore": false,
-                "remoteChanges": [
-                  {
-                    "deleted": false,
                     "entity": "note",
                     "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
-                    "note": {
-                      "content": "x",
-                      "deletedAt": null,
-                      "folderId": null,
-                      "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
-                      "revision": 2,
-                      "title": "Dentro"
-                    },
-                    "revision": 2
+                    "revision": 3
                   }
-                ]
+                ],
+                "conflicts": [],
+                "cursor": "5",
+                "hasMore": false,
+                "remoteChanges": []
               }
             }
           ],

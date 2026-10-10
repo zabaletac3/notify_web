@@ -93,13 +93,17 @@ Estas decisiones condicionan el servidor; cada una trae mi recomendación. Marca
       esto: esa comprobación solo mira los cambios remotos que **no** se acaban de enviar en la misma
       petición, y el cambio pendiente de la carpeta siempre viaja en la misma petición que hizo que el
       servidor la recreara.
-- [x] **`sync-behavior.json`: borrar una carpeta con notas puede producir un conflicto de la nota con
-      ella misma.** Escenario `borrar-una-carpeta-con-notas`: al borrar una carpeta localmente, la nota
-      que contenía queda «sin carpeta» y pendiente de subir (con la `baseRevision` que tenía antes del
-      borrado). Esa nota y el borrado de la carpeta se mandan en la misma petición; `MockSyncServer`
-      procesa primero el borrado de la carpeta y, como parte de él, sube la revisión de cada nota que
-      apuntaba a esa carpeta (le pone `folderId: null`); cuando el servidor procesa después el `upsert`
-      de esa misma nota, su `baseRevision` ya no coincide con la revisión que el servidor acaba de subir
-      y la rechaza como conflicto, con la versión remota y la local con el mismo contenido. El móvil
-      debe esperar este conflicto espurio (de contenido idéntico) al borrar una carpeta con notas dentro
-      mientras haya una sincronización pendiente de esas notas.
+- [x] **`sync-behavior.json`: borrar una carpeta con notas ya no produce un conflicto de la nota con
+      ella misma (corregido).** Escenario `borrar-una-carpeta-con-notas`: al borrar una carpeta
+      localmente, la nota que contenía queda «sin carpeta» y pendiente de subir (con la `baseRevision`
+      que tenía antes del borrado). Esa nota y el borrado de la carpeta se mandan en la misma petición;
+      `MockSyncServer` procesa primero el borrado de la carpeta y, como parte de él, sube la revisión de
+      cada nota que apuntaba a esa carpeta (le pone `folderId: null`). Antes, cuando el servidor procesaba
+      después el `upsert` de esa misma nota, su `baseRevision` ya no coincidía con la revisión que el
+      servidor acababa de subir y lo rechazaba como conflicto, con la versión remota y la local con el
+      mismo contenido. Regla aplicada (solo dentro de la misma petición): `applyFolder` anota, por nota
+      afectada, la revisión que tenía justo antes de esa subida de rebote; `applyNote` acepta el
+      `upsert` (o `delete`) de esa nota cuando su `baseRevision` coincide con esa revisión anotada, aunque
+      ya no coincida con la revisión actual. Ningún otro caso se relaja: un cambio hecho por otro
+      dispositivo u otra petición antes de este borrado de carpeta sigue siendo un conflicto real. El
+      mismo ajuste se hizo en `notify_backend` (`internal/modules/notesync/service.go`).

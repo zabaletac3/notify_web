@@ -826,7 +826,9 @@ paths:
         El cliente envía su cola de cambios y el último `cursor`; el servidor responde con lo aplicado,
         los cambios remotos desde ese cursor y los conflictos. Ver `docs/adr/0004-sincronizacion.md`.
         Un `baseRevision` distinto en una nota es conflicto (no se aplica, no es un error HTTP);
-        las carpetas son «gana el último». **Los conflictos se resuelven en el cliente**, que es el único
+        las carpetas son «gana el último». Excepción: si en la misma petición el borrado de su carpeta
+        le subió la revisión a una nota, un cambio de esa nota con la `baseRevision` anterior a esa
+        subida no es conflicto. **Los conflictos se resuelven en el cliente**, que es el único
         que puede leer ambas versiones: elige `local`, `remote` o `both` y vuelve a subir lo que decida.
         El servidor valida que `payload` y `wrappedKey` tengan la forma de un texto cifrado
         (`422` con `payload: invalid-payload`) y nada más; nunca descifra.
