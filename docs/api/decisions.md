@@ -58,3 +58,48 @@ Estas decisiones condicionan el servidor; cada una trae mi recomendación. Marca
       el escenario de paginación envuelve su transporte con un decorador que parte `remoteChanges` en páginas y
       encadena `hasMore`/`cursor`. La cuenta del servidor es vacía: se fija la sesión a la cuenta de prueba porque
       el servidor simulado decide la cuenta por la sesión, no por el cliente.
+
+## Vectores nuevos (fase 1b del plan 0007)
+
+- [x] **`markdown.json`: la sangría de más de 2 espacios (o un tabulador) en la continuación de un
+      elemento de lista no es idempotente.** `- uno\n    continua` (4 espacios) y `- uno\n\tcontinua`
+      (tabulador) se leen como un único párrafo con esa sangría dentro del texto; al releer el resultado
+      ya serializado (`- uno\n  continua`, 2 espacios) el analizador la recorta más todavía
+      (`- uno\ncontinua`, sin sangría). Son casos de lectura (`cases`) con `supported: false`; el móvil no
+      tiene que reproducir este recorte progresivo, solo lo documenta.
+- [x] **`markdown.json`: un `orderedList` con `start` en su valor por defecto (1) no reaparece con
+      `attrs` al releer.** El analizador de `@tiptap/markdown` solo añade `attrs: { start }` cuando
+      `start !== 1`; con `start: 1` el nodo reaparece sin `attrs` en absoluto. Por eso varios casos de
+      `serialize` con una lista numerada que empieza en 1 (listas contiguas, numerada dentro de
+      viñetas y viceversa) traen `reparses: false` aunque el Markdown emitido sea correcto: es un
+      artefacto de comparar el JSON byte a byte contra lo que de verdad editaría TipTap (que sí
+      incluiría `start: 1`), no una pérdida de datos real.
+- [x] **`sync-behavior.json`: el borrado remoto de una nota en conflicto no se aplica mientras el
+      conflicto esté abierto.** Escenario `borrado-remoto-de-una-nota-en-conflicto`: con la nota en
+      conflicto (tiene una entrada en la cola, aunque esa entrada no se envíe), `LocalSyncRepository`
+      comprueba primero si hay una entrada pendiente (`if (pending) continue`) **antes** de comprobar si
+      el cambio remoto es un borrado; como la entrada sigue ahí mientras no se resuelva el conflicto, el
+      borrado se ignora: la nota sigue en conflicto con la versión remota antigua, nunca con la que la
+      borró. El plan (§7) describe «borrado remoto borra nota y conflicto» como regla general; en
+      presencia de un conflicto abierto el código no la aplica. No se corrige aquí (regla 4 de la §0);
+      el móvil debe reproducir este mismo comportamiento para no divergir de la web.
+- [x] **`sync-behavior.json`: una carpeta borrada en remoto puede «resucitar» si otro dispositivo tiene
+      un cambio local pendiente para ella.** Escenario `carpeta-borrada-en-remoto-con-cambio-local-pendiente`:
+      las carpetas no tienen conflictos (gana el último cambio, §7); un cambio pendiente local siempre
+      se envía y, si el servidor ya no tiene esa carpeta (la borró otro dispositivo), `MockSyncServer` la
+      trata como una creación nueva en vez de rechazarla. El resultado es que la carpeta vuelve a
+      existir con el nombre que puso quien la tenía pendiente, revisión 1, sin que quede rastro del
+      borrado. La regla «cambio pendiente local gana salvo que el remoto sea un borrado» (§7) no evita
+      esto: esa comprobación solo mira los cambios remotos que **no** se acaban de enviar en la misma
+      petición, y el cambio pendiente de la carpeta siempre viaja en la misma petición que hizo que el
+      servidor la recreara.
+- [x] **`sync-behavior.json`: borrar una carpeta con notas puede producir un conflicto de la nota con
+      ella misma.** Escenario `borrar-una-carpeta-con-notas`: al borrar una carpeta localmente, la nota
+      que contenía queda «sin carpeta» y pendiente de subir (con la `baseRevision` que tenía antes del
+      borrado). Esa nota y el borrado de la carpeta se mandan en la misma petición; `MockSyncServer`
+      procesa primero el borrado de la carpeta y, como parte de él, sube la revisión de cada nota que
+      apuntaba a esa carpeta (le pone `folderId: null`); cuando el servidor procesa después el `upsert`
+      de esa misma nota, su `baseRevision` ya no coincide con la revisión que el servidor acaba de subir
+      y la rechaza como conflicto, con la versión remota y la local con el mismo contenido. El móvil
+      debe esperar este conflicto espurio (de contenido idéntico) al borrar una carpeta con notas dentro
+      mientras haya una sincronización pendiente de esas notas.
