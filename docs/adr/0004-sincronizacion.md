@@ -8,7 +8,7 @@
 - Los identificadores los genera el cliente (UUID v7, `newId()`), así se crea sin conexión.
 - Cada nota y carpeta tiene una `revision` que el servidor incrementa en cada escritura aceptada. El servidor numera sus cambios con un contador; el `cursor` del cliente es el último visto.
 - Los cambios del cliente van a una cola (outbox) con **una entrada por entidad**: conserva el `baseRevision` más antiguo y los datos más recientes. Crear y borrar sin haber sincronizado se anulan.
-- **Conflictos solo en notas:** si el `baseRevision` no coincide, el servidor no aplica el cambio y devuelve su versión; el cliente deja la entrada fuera de los envíos hasta que la persona elige `local`, `remote` o `both`. Las carpetas son «gana el último».
+- **Conflictos solo en notas:** si el `baseRevision` no coincide, el servidor no aplica el cambio y devuelve su versión; el cliente deja la entrada fuera de los envíos hasta que la persona elige `local`, `remote` o `both`. Las carpetas son «gana el último». Excepción: si, dentro de la misma petición, el borrado de la carpeta de una nota le subió la revisión de rebote, un cambio de esa nota con la `baseRevision` que tenía justo antes de esa subida no cuenta como conflicto (evita que la nota choque contra un cambio que ella misma provocó); un cambio de otro dispositivo u otra petición sigue siendo conflicto.
 - Los borrados definitivos viajan como lápidas. Mover a la papelera y restaurar son actualizaciones normales (`deletedAt`).
 - Sincronización automática unos segundos después de un cambio, al recuperar la conexión y cada minuto con la app abierta; respeta el ajuste de sincronización automática.
 - Al cerrar sesión se borra la copia local; el primer arranque de un dispositivo descarga todo.
