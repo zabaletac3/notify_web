@@ -17,7 +17,8 @@ function makeServer() {
 	const db = new MockDatabase({ startAuthenticated: false });
 	db.session = {
 		user: {
-			id: `u_${++seq}`,
+			// Nunca "u_1": coincide con DEMO_USER_ID y el servidor sembraría los datos de ejemplo.
+			id: `test-user-${++seq}`,
 			email: 'test@example.com',
 			fullName: 'Test',
 			emailVerified: true,
@@ -29,13 +30,25 @@ function makeServer() {
 	return { db, server: new MockSyncServer(db) };
 }
 
-function noteUpsert(id: string, baseRevision: number, folderId: string | null, payload: string): EncryptedSyncChange {
+function noteUpsert(
+	id: string,
+	baseRevision: number,
+	folderId: string | null,
+	payload: string
+): EncryptedSyncChange {
 	return {
 		entity: 'note',
 		id,
 		op: 'upsert',
 		baseRevision,
-		data: { folderId, createdAt: TS, updatedAt: TS, deletedAt: null, wrappedKey: sealedKey, payload }
+		data: {
+			folderId,
+			createdAt: TS,
+			updatedAt: TS,
+			deletedAt: null,
+			wrappedKey: sealedKey,
+			payload
+		}
 	};
 }
 
@@ -104,7 +117,7 @@ describe('MockSyncServer: borrar una carpeta con notas', () => {
 	});
 
 	it('sigue habiendo conflicto si otra petición cambió la nota antes', async () => {
-		const { db, server } = makeServer();
+		const { server } = makeServer();
 		const folder = newId();
 		const note = newId();
 
