@@ -47,14 +47,18 @@ export class MockSyncServer implements SyncTransport {
 		const applied: SyncApplied[] = [];
 		const conflicts: EncryptedSyncConflictReport[] = [];
 		const touched = new Set<string>();
-		// Revisión de cada nota justo antes de que, en esta misma petición, el borrado de su carpeta se
-		// la subiera de rebote (ver applyFolder/applyNote): así el upsert de esa nota que llegue con esa
-		// revisión anterior no choca contra un cambio que, en los hechos, él mismo provocó.
+		// Revisión de cada nota justo antes de que, en esta misma petición, el borrado de su
+		// carpeta se la subiera de rebote (ver applyFolder/applyNote): así el upsert de esa nota
+		// que llegue con esa revisión anterior no choca contra un cambio que, en los hechos, él
+		// mismo provocó.
 		const folderBump = new Map<Id, number>();
 		for (const change of req.changes) {
 			if (change.op === 'upsert') this.validate(change);
-			if (change.entity === 'folder') this.applyFolder(account, change, applied, touched, folderBump);
-			else this.applyNote(account, change, req, applied, conflicts, touched, folderBump);
+			if (change.entity === 'folder') {
+				this.applyFolder(account, change, applied, touched, folderBump);
+			} else {
+				this.applyNote(account, change, req, applied, conflicts, touched, folderBump);
+			}
 		}
 
 		return {
@@ -160,7 +164,8 @@ export class MockSyncServer implements SyncTransport {
 		}
 
 		const bumpedFrom = folderBump.get(existing.id);
-		const exemptFromOwnFolderDelete = bumpedFrom !== undefined && bumpedFrom === change.baseRevision;
+		const exemptFromOwnFolderDelete =
+			bumpedFrom !== undefined && bumpedFrom === change.baseRevision;
 		if (existing.revision !== change.baseRevision && !exemptFromOwnFolderDelete) {
 			// El servidor no pisa: devuelve su versión y el cliente decide.
 			conflicts.push({
