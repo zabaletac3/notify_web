@@ -1,0 +1,2532 @@
+{
+  "description": "Comportamiento del motor de sincronización (outbox + LocalSyncRepository + MockSyncServer) con reloj e ids fijos. Cada escenario lista sus `steps` (con `device` a/b) y el estado lógico de `a` tras cada paso en `expected`. Campos lógicos (id, título, texto, revisión, estado, cola, conflictos, cursor), nunca bytes cifrados.",
+  "scenarios": [
+    {
+      "expected": [
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "uno",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-790e-b358-7da2c7ec1136",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Idea"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-790e-b358-7da2c7ec1136",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "uno dos",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-790e-b358-7da2c7ec1136",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Idea"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-790e-b358-7da2c7ec1136",
+              "op": "upsert",
+              "version": 2
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "uno dos tres",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-790e-b358-7da2c7ec1136",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Idea"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-790e-b358-7da2c7ec1136",
+              "op": "upsert",
+              "version": 3
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "uno dos tres",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-790e-b358-7da2c7ec1136",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Idea"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        }
+      ],
+      "initial": {
+        "conflicts": [],
+        "cursor": null,
+        "folders": [],
+        "lastSyncedAt": null,
+        "notes": [],
+        "outbox": [],
+        "pendingCount": 0
+      },
+      "name": "cola-fusiona-ediciones",
+      "steps": [
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "content": "uno",
+          "device": "a",
+          "id": "019cb84a-4100-790e-b358-7da2c7ec1136",
+          "op": "createNote",
+          "title": "Idea"
+        },
+        {
+          "content": "uno dos",
+          "device": "a",
+          "id": "019cb84a-4100-790e-b358-7da2c7ec1136",
+          "op": "updateNote"
+        },
+        {
+          "content": "uno dos tres",
+          "device": "a",
+          "id": "019cb84a-4100-790e-b358-7da2c7ec1136",
+          "op": "updateNote"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        }
+      ]
+    },
+    {
+      "expected": [
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-794e-b398-bde2072c5176",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Efímera"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-794e-b398-bde2072c5176",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "",
+              "deleted": true,
+              "folderId": null,
+              "id": "019cb84a-4100-794e-b398-bde2072c5176",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Efímera"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-794e-b398-bde2072c5176",
+              "op": "upsert",
+              "version": 2
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        }
+      ],
+      "initial": {
+        "conflicts": [],
+        "cursor": null,
+        "folders": [],
+        "lastSyncedAt": null,
+        "notes": [],
+        "outbox": [],
+        "pendingCount": 0
+      },
+      "name": "crear-y-borrar-antes-de-sincronizar",
+      "steps": [
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "id": "019cb84a-4100-794e-b398-bde2072c5176",
+          "op": "createNote",
+          "title": "Efímera"
+        },
+        {
+          "device": "a",
+          "id": "019cb84a-4100-794e-b398-bde2072c5176",
+          "op": "moveToTrash"
+        },
+        {
+          "device": "a",
+          "id": "019cb84a-4100-794e-b398-bde2072c5176",
+          "op": "deleteForever"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        }
+      ]
+    },
+    {
+      "expected": [
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "v1",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7dd2-b71c-41668bb0d5fa",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "En vuelo"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7dd2-b71c-41668bb0d5fa",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "v2",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7dd2-b71c-41668bb0d5fa",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "En vuelo"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7dd2-b71c-41668bb0d5fa",
+              "op": "upsert",
+              "version": 2
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "v2",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7dd2-b71c-41668bb0d5fa",
+              "pinned": false,
+              "revision": 2,
+              "syncStatus": "synced",
+              "title": "En vuelo"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        }
+      ],
+      "initial": {
+        "conflicts": [],
+        "cursor": null,
+        "folders": [],
+        "lastSyncedAt": null,
+        "notes": [],
+        "outbox": [],
+        "pendingCount": 0
+      },
+      "name": "editar-durante-la-sincronizacion",
+      "steps": [
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "content": "v1",
+          "device": "a",
+          "id": "019cb84a-4100-7dd2-b71c-41668bb0d5fa",
+          "op": "createNote",
+          "title": "En vuelo"
+        },
+        {
+          "content": "v2",
+          "device": "a",
+          "id": "019cb84a-4100-7dd2-b71c-41668bb0d5fa",
+          "op": "editDuringSync"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        }
+      ]
+    },
+    {
+      "expected": [
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [
+            {
+              "local": {
+                "content": "versión de A",
+                "device": "A",
+                "title": "Compartida"
+              },
+              "noteId": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "remote": {
+                "content": "versión de B",
+                "device": "B",
+                "title": "Compartida"
+              }
+            }
+          ],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "conflict",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "pinned": false,
+              "revision": 2,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 2,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "3",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "pinned": false,
+              "revision": 3,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "3",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+              "pinned": false,
+              "revision": 3,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        }
+      ],
+      "initial": {
+        "conflicts": [],
+        "cursor": null,
+        "folders": [],
+        "lastSyncedAt": null,
+        "notes": [],
+        "outbox": [],
+        "pendingCount": 0
+      },
+      "name": "conflicto-resolucion-local",
+      "steps": [
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "content": "base",
+          "device": "a",
+          "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+          "op": "createNote",
+          "title": "Compartida"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "content": "versión de A",
+          "device": "a",
+          "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+          "op": "updateNote"
+        },
+        {
+          "content": "versión de B",
+          "device": "b",
+          "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+          "op": "updateNote"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "id": "019cb84a-4100-7156-bba0-c5ea0f34597e",
+          "op": "resolveConflict",
+          "resolution": "local"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        }
+      ]
+    },
+    {
+      "expected": [
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [
+            {
+              "local": {
+                "content": "versión de A",
+                "device": "A",
+                "title": "Compartida"
+              },
+              "noteId": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "remote": {
+                "content": "versión de B",
+                "device": "B",
+                "title": "Compartida"
+              }
+            }
+          ],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "conflict",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de B",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "pinned": false,
+              "revision": 2,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de B",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+              "pinned": false,
+              "revision": 2,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        }
+      ],
+      "initial": {
+        "conflicts": [],
+        "cursor": null,
+        "folders": [],
+        "lastSyncedAt": null,
+        "notes": [],
+        "outbox": [],
+        "pendingCount": 0
+      },
+      "name": "conflicto-resolucion-remote",
+      "steps": [
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "content": "base",
+          "device": "a",
+          "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+          "op": "createNote",
+          "title": "Compartida"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "content": "versión de A",
+          "device": "a",
+          "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+          "op": "updateNote"
+        },
+        {
+          "content": "versión de B",
+          "device": "b",
+          "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+          "op": "updateNote"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "id": "019cb84a-4100-7196-bbe0-052a4f7499be",
+          "op": "resolveConflict",
+          "resolution": "remote"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        }
+      ]
+    },
+    {
+      "expected": [
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [
+            {
+              "local": {
+                "content": "versión de A",
+                "device": "A",
+                "title": "Compartida"
+              },
+              "noteId": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "remote": {
+                "content": "versión de B",
+                "device": "B",
+                "title": "Compartida"
+              }
+            }
+          ],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "conflict",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7116-bb60-85aacff4193e",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Compartida (conflicto)"
+            },
+            {
+              "content": "versión de B",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "pinned": false,
+              "revision": 2,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-7116-bb60-85aacff4193e",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "3",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "versión de A",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7116-bb60-85aacff4193e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Compartida (conflicto)"
+            },
+            {
+              "content": "versión de B",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+              "pinned": false,
+              "revision": 2,
+              "syncStatus": "synced",
+              "title": "Compartida"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        }
+      ],
+      "initial": {
+        "conflicts": [],
+        "cursor": null,
+        "folders": [],
+        "lastSyncedAt": null,
+        "notes": [],
+        "outbox": [],
+        "pendingCount": 0
+      },
+      "name": "conflicto-resolucion-both",
+      "steps": [
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "content": "base",
+          "device": "a",
+          "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+          "op": "createNote",
+          "title": "Compartida"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "content": "versión de A",
+          "device": "a",
+          "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+          "op": "updateNote"
+        },
+        {
+          "content": "versión de B",
+          "device": "b",
+          "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+          "op": "updateNote"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "id": "019cb84a-4100-71d6-bb20-456a8fb4d9fe",
+          "op": "resolveConflict",
+          "resolution": "both"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        }
+      ]
+    },
+    {
+      "expected": [
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-79de-8328-4d7297bce106",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Local"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-79de-8328-4d7297bce106",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71a6-8bf0-153a5f84a9ce",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Remota"
+            },
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-79de-8328-4d7297bce106",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Local"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-79de-8328-4d7297bce106",
+              "op": "upsert",
+              "version": 1
+            },
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-71a6-8bf0-153a5f84a9ce",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 2
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71a6-8bf0-153a5f84a9ce",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Remota"
+            },
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-79de-8328-4d7297bce106",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Local"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71a6-8bf0-153a5f84a9ce",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Remota"
+            },
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-79de-8328-4d7297bce106",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Local"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71a6-8bf0-153a5f84a9ce",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Remota"
+            },
+            {
+              "content": "local pendiente",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-79de-8328-4d7297bce106",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Local"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-79de-8328-4d7297bce106",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71a6-8bf0-153a5f84a9ce",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Remota"
+            },
+            {
+              "content": "local pendiente",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-79de-8328-4d7297bce106",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Local"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-79de-8328-4d7297bce106",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "base",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71a6-8bf0-153a5f84a9ce",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Remota"
+            },
+            {
+              "content": "local pendiente",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-79de-8328-4d7297bce106",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "pending",
+              "title": "Local"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "note",
+              "entityId": "019cb84a-4100-79de-8328-4d7297bce106",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "4",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "remoto",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71a6-8bf0-153a5f84a9ce",
+              "pinned": false,
+              "revision": 2,
+              "syncStatus": "synced",
+              "title": "Remota"
+            },
+            {
+              "content": "local pendiente",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-79de-8328-4d7297bce106",
+              "pinned": false,
+              "revision": 2,
+              "syncStatus": "synced",
+              "title": "Local"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        }
+      ],
+      "initial": {
+        "conflicts": [],
+        "cursor": null,
+        "folders": [],
+        "lastSyncedAt": null,
+        "notes": [],
+        "outbox": [],
+        "pendingCount": 0
+      },
+      "name": "cambio-remoto-con-local-pendiente",
+      "steps": [
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "content": "base",
+          "device": "a",
+          "id": "019cb84a-4100-79de-8328-4d7297bce106",
+          "op": "createNote",
+          "title": "Local"
+        },
+        {
+          "content": "base",
+          "device": "a",
+          "id": "019cb84a-4100-71a6-8bf0-153a5f84a9ce",
+          "op": "createNote",
+          "title": "Remota"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "content": "local pendiente",
+          "device": "a",
+          "id": "019cb84a-4100-79de-8328-4d7297bce106",
+          "op": "updateNote"
+        },
+        {
+          "content": "remoto",
+          "device": "b",
+          "id": "019cb84a-4100-71a6-8bf0-153a5f84a9ce",
+          "op": "updateNote"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        }
+      ]
+    },
+    {
+      "expected": [
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "x",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71e6-8b30-557a9fc4e90e",
+              "pinned": false,
+              "revision": 0,
+              "syncStatus": "pending",
+              "title": "Para borrar"
+            }
+          ],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "note",
+              "entityId": "019cb84a-4100-71e6-8b30-557a9fc4e90e",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "x",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71e6-8b30-557a9fc4e90e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Para borrar"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "x",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71e6-8b30-557a9fc4e90e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Para borrar"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "x",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71e6-8b30-557a9fc4e90e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Para borrar"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "x",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71e6-8b30-557a9fc4e90e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Para borrar"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "x",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-71e6-8b30-557a9fc4e90e",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Para borrar"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        }
+      ],
+      "initial": {
+        "conflicts": [],
+        "cursor": null,
+        "folders": [],
+        "lastSyncedAt": null,
+        "notes": [],
+        "outbox": [],
+        "pendingCount": 0
+      },
+      "name": "borrado-remoto",
+      "steps": [
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "content": "x",
+          "device": "a",
+          "id": "019cb84a-4100-71e6-8b30-557a9fc4e90e",
+          "op": "createNote",
+          "title": "Para borrar"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "id": "019cb84a-4100-71e6-8b30-557a9fc4e90e",
+          "op": "moveToTrash"
+        },
+        {
+          "device": "b",
+          "id": "019cb84a-4100-71e6-8b30-557a9fc4e90e",
+          "op": "deleteForever"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        }
+      ]
+    },
+    {
+      "expected": [
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [
+            {
+              "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+              "name": "Proyectos",
+              "revision": 0
+            }
+          ],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [
+            {
+              "baseRevision": 0,
+              "entity": "folder",
+              "entityId": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [
+            {
+              "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+              "name": "Proyectos",
+              "revision": 1
+            }
+          ],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [
+            {
+              "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+              "name": "Proyectos",
+              "revision": 1
+            }
+          ],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [
+            {
+              "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+              "name": "Proyectos de A",
+              "revision": 1
+            }
+          ],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "folder",
+              "entityId": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [
+            {
+              "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+              "name": "Proyectos de A",
+              "revision": 1
+            }
+          ],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "folder",
+              "entityId": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "1",
+          "folders": [
+            {
+              "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+              "name": "Proyectos de A",
+              "revision": 1
+            }
+          ],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [
+            {
+              "baseRevision": 1,
+              "entity": "folder",
+              "entityId": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+              "op": "upsert",
+              "version": 1
+            }
+          ],
+          "pendingCount": 1
+        },
+        {
+          "conflicts": [],
+          "cursor": "3",
+          "folders": [
+            {
+              "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+              "name": "Proyectos de A",
+              "revision": 3
+            }
+          ],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        }
+      ],
+      "initial": {
+        "conflicts": [],
+        "cursor": null,
+        "folders": [],
+        "lastSyncedAt": null,
+        "notes": [],
+        "outbox": [],
+        "pendingCount": 0
+      },
+      "name": "carpeta-gana-el-ultimo",
+      "steps": [
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+          "name": "Proyectos",
+          "op": "createFolder"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+          "name": "Proyectos de A",
+          "op": "renameFolder"
+        },
+        {
+          "device": "b",
+          "id": "019cb84a-4100-756a-8fb4-d9fe23486d92",
+          "name": "Proyectos de B",
+          "op": "renameFolder"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        }
+      ]
+    },
+    {
+      "expected": [
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "5",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "nota 2",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-753a-9f84-a9cef3183d62",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "B2"
+            },
+            {
+              "content": "nota 0",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-75aa-8ff4-193e6388add2",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "B0"
+            },
+            {
+              "content": "nota 4",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-75ca-af14-395e83a8cdf2",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "B4"
+            },
+            {
+              "content": "nota 3",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7d02-a74c-7196bbe0052a",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "B3"
+            },
+            {
+              "content": "nota 1",
+              "deleted": false,
+              "folderId": null,
+              "id": "019cb84a-4100-7d72-97bc-e1062b50759a",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "B1"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        }
+      ],
+      "initial": {
+        "conflicts": [],
+        "cursor": null,
+        "folders": [],
+        "lastSyncedAt": null,
+        "notes": [],
+        "outbox": [],
+        "pendingCount": 0
+      },
+      "name": "paginacion-con-hasmore",
+      "steps": [
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "content": "nota 0",
+          "device": "b",
+          "id": "019cb84a-4100-75aa-8ff4-193e6388add2",
+          "op": "createNote",
+          "title": "B0"
+        },
+        {
+          "content": "nota 1",
+          "device": "b",
+          "id": "019cb84a-4100-7d72-97bc-e1062b50759a",
+          "op": "createNote",
+          "title": "B1"
+        },
+        {
+          "content": "nota 2",
+          "device": "b",
+          "id": "019cb84a-4100-753a-9f84-a9cef3183d62",
+          "op": "createNote",
+          "title": "B2"
+        },
+        {
+          "content": "nota 3",
+          "device": "b",
+          "id": "019cb84a-4100-7d02-a74c-7196bbe0052a",
+          "op": "createNote",
+          "title": "B3"
+        },
+        {
+          "content": "nota 4",
+          "device": "b",
+          "id": "019cb84a-4100-75ca-af14-395e83a8cdf2",
+          "op": "createNote",
+          "title": "B4"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        }
+      ]
+    },
+    {
+      "expected": [
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "0",
+          "folders": [],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [],
+          "outbox": [],
+          "pendingCount": 0
+        },
+        {
+          "conflicts": [],
+          "cursor": "2",
+          "folders": [
+            {
+              "id": "019cb84a-4100-7d92-b7dc-01264b7095ba",
+              "name": "Carpeta",
+              "revision": 1
+            }
+          ],
+          "lastSyncedAt": "2026-03-04T10:00:00.000Z",
+          "notes": [
+            {
+              "content": "x",
+              "deleted": false,
+              "folderId": "019cb84a-4100-7d92-b7dc-01264b7095ba",
+              "id": "019cb84a-4100-755a-bfa4-c9ee13385d82",
+              "pinned": false,
+              "revision": 1,
+              "syncStatus": "synced",
+              "title": "Nota"
+            }
+          ],
+          "outbox": [],
+          "pendingCount": 0
+        }
+      ],
+      "initial": {
+        "conflicts": [],
+        "cursor": null,
+        "folders": [],
+        "lastSyncedAt": null,
+        "notes": [],
+        "outbox": [],
+        "pendingCount": 0
+      },
+      "name": "carpeta-antes-que-nota",
+      "steps": [
+        {
+          "device": "a",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "b",
+          "id": "019cb84a-4100-7d92-b7dc-01264b7095ba",
+          "name": "Carpeta",
+          "op": "createFolder"
+        },
+        {
+          "content": "x",
+          "device": "b",
+          "folderId": "019cb84a-4100-7d92-b7dc-01264b7095ba",
+          "id": "019cb84a-4100-755a-bfa4-c9ee13385d82",
+          "op": "createNote",
+          "title": "Nota"
+        },
+        {
+          "device": "b",
+          "op": "sync"
+        },
+        {
+          "device": "a",
+          "op": "sync"
+        }
+      ]
+    }
+  ],
+  "version": 1
+}

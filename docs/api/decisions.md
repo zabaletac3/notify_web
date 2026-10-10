@@ -40,3 +40,21 @@ Estas decisiones condicionan el servidor; cada una trae mi recomendación. Marca
 
 - Exportar e importar notas en Markdown se hace en el navegador.
 - El bloqueo biométrico depende del cliente. El cifrado de las notas ya no es un ajuste: es siempre obligatorio (D13).
+
+## Vectores nuevos (fase 1 del plan 0007)
+
+- [x] **`markdown.json`: la valla anidada es bloque opaco.** `canonical = serializar(analizar(input))` con
+      TipTap 3 (sin interfaz) es idempotente para todos los casos soportados salvo un bloque de código con
+      una valla de 4 comillas que contiene otra de 3: el serializador de TipTap no elige una valla más larga y
+      el resultado no vuelve a leerse igual. Se trata como bloque opaco (`supported: false`) y el móvil lo
+      conservará intacto. Se documenta aquí porque es la alternativa de la §12 del plan (serializador que no
+      iguala `canonical`). El resto del corpus (incluido un bloque de código con comillas invertidas simples
+      dentro) sí es idempotente.
+- [x] **`sync-behavior.json`: esquema y generación.** Cada escenario es `{name, initial, steps[], expected[]}`;
+      cada `step` lleva `op` y `device` (`a` es el observado), y `expected[i]` es el estado lógico de `a` tras el
+      paso `i` (id, título, texto, revisión, estado, cola, conflictos, cursor; nunca bytes cifrados). Se genera
+      ejecutando `outbox.ts` + `LocalSyncRepository` + `MockSyncServer` con reloj fijo y `crypto.getRandomValues`
+      parcheado con una secuencia determinista (los ids del cliente salen de ahí). Como `MockSyncServer` no pagina,
+      el escenario de paginación envuelve su transporte con un decorador que parte `remoteChanges` en páginas y
+      encadena `hasMore`/`cursor`. La cuenta del servidor es vacía: se fija la sesión a la cuenta de prueba porque
+      el servidor simulado decide la cuenta por la sesión, no por el cliente.

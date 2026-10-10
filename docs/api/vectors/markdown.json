@@ -1,0 +1,360 @@
+{
+  "cases": [
+    {
+      "canonical": "Hola, mundo.",
+      "input": "Hola, mundo.",
+      "name": "parrafo",
+      "supported": true
+    },
+    {
+      "canonical": "# Título uno",
+      "input": "# Título uno",
+      "name": "titulo-1",
+      "supported": true
+    },
+    {
+      "canonical": "## Título dos",
+      "input": "## Título dos",
+      "name": "titulo-2",
+      "supported": true
+    },
+    {
+      "canonical": "### Título tres",
+      "input": "### Título tres",
+      "name": "titulo-3",
+      "supported": true
+    },
+    {
+      "canonical": "#### Título cuatro",
+      "input": "#### Título cuatro",
+      "name": "titulo-4",
+      "supported": true
+    },
+    {
+      "canonical": "##### Título cinco",
+      "input": "##### Título cinco",
+      "name": "titulo-5",
+      "supported": true
+    },
+    {
+      "canonical": "###### Título seis",
+      "input": "###### Título seis",
+      "name": "titulo-6",
+      "supported": true
+    },
+    {
+      "canonical": "Texto en **negrita** y normal.",
+      "input": "Texto en **negrita** y normal.",
+      "name": "negrita",
+      "supported": true
+    },
+    {
+      "canonical": "Texto en *cursiva* y normal.",
+      "input": "Texto en *cursiva* y normal.",
+      "name": "cursiva",
+      "supported": true
+    },
+    {
+      "canonical": "Texto ~~tachado~~ y normal.",
+      "input": "Texto ~~tachado~~ y normal.",
+      "name": "tachado",
+      "supported": true
+    },
+    {
+      "canonical": "Usa `const x = 1;` en línea.",
+      "input": "Usa `const x = 1;` en línea.",
+      "name": "codigo-en-linea",
+      "supported": true
+    },
+    {
+      "canonical": "[AxoNote](https://apunte.app)",
+      "input": "[AxoNote](https://apunte.app)",
+      "name": "enlace",
+      "supported": true
+    },
+    {
+      "canonical": "[AxoNote](https://apunte.app \"La web\")",
+      "input": "[AxoNote](https://apunte.app \"La web\")",
+      "name": "enlace-con-titulo",
+      "supported": true
+    },
+    {
+      "canonical": "**negrita *y cursiva***",
+      "input": "**negrita *y cursiva***",
+      "name": "marcas-combinadas-negrita-cursiva",
+      "supported": true
+    },
+    {
+      "canonical": "**~~todo a la vez~~**",
+      "input": "~~**todo a la vez**~~",
+      "name": "marcas-combinadas-tachado-negrita",
+      "supported": true
+    },
+    {
+      "canonical": "- uno\n- dos\n- tres",
+      "input": "- uno\n- dos\n- tres",
+      "name": "lista-vinetas",
+      "supported": true
+    },
+    {
+      "canonical": "1. uno\n2. dos\n3. tres",
+      "input": "1. uno\n2. dos\n3. tres",
+      "name": "lista-numerada",
+      "supported": true
+    },
+    {
+      "canonical": "3. tres\n4. cuatro",
+      "input": "3. tres\n4. cuatro",
+      "name": "lista-numerada-no-empieza-en-1",
+      "supported": true
+    },
+    {
+      "canonical": "- [ ] pendiente\n- [x] hecha",
+      "input": "- [ ] pendiente\n- [x] hecha",
+      "name": "lista-tareas",
+      "supported": true
+    },
+    {
+      "canonical": "- uno\n  - uno.a\n    - uno.a.i",
+      "input": "- uno\n  - uno.a\n    - uno.a.i",
+      "name": "anidacion-3-niveles",
+      "supported": true
+    },
+    {
+      "canonical": "- [ ] tarea\n  - [x] subtarea\n    - [ ] sub-subtarea",
+      "input": "- [ ] tarea\n  - [x] subtarea\n    - [ ] sub-subtarea",
+      "name": "tareas-anidadas",
+      "supported": true
+    },
+    {
+      "canonical": "> Una cita célebre.",
+      "input": "> Una cita célebre.",
+      "name": "cita",
+      "supported": true
+    },
+    {
+      "canonical": "```\nconst a = 1;\n```",
+      "input": "```\nconst a = 1;\n```",
+      "name": "bloque-de-codigo",
+      "supported": true
+    },
+    {
+      "canonical": "```js\nconst a = 1;\n```",
+      "input": "```js\nconst a = 1;\n```",
+      "name": "bloque-de-codigo-con-lenguaje",
+      "supported": true
+    },
+    {
+      "canonical": "```\nconst saludo = `hola ${nombre}`;\n```",
+      "input": "```\nconst saludo = `hola ${nombre}`;\n```",
+      "name": "bloque-de-codigo-con-comillas-dentro",
+      "supported": true
+    },
+    {
+      "canonical": "```\n```\nvalor entre comillas invertidas\n```\n```",
+      "input": "````\n```\nvalor entre comillas invertidas\n```\n````",
+      "name": "bloque-de-codigo-con-valla-anidada",
+      "supported": false
+    },
+    {
+      "canonical": "antes\n\n---\n\ndespués",
+      "input": "antes\n\n---\n\ndespués",
+      "name": "separador",
+      "supported": true
+    },
+    {
+      "canonical": "línea uno  \nínea dos",
+      "input": "línea uno  \nínea dos",
+      "name": "salto-duro",
+      "supported": true
+    },
+    {
+      "canonical": "\\*no es lista\\* \\_no es cursiva\\_ # no es título \\[no es enlace\\] \\\\ &lt; \\`",
+      "input": "\\*no es lista\\* \\_no es cursiva\\_ \\# no es título \\[no es enlace\\] \\\\ \\< \\`",
+      "name": "escapes",
+      "supported": true
+    },
+    {
+      "canonical": "",
+      "input": "",
+      "name": "nota-vacia",
+      "supported": true
+    },
+    {
+      "canonical": "",
+      "input": "   ",
+      "name": "solo-espacios",
+      "supported": true
+    },
+    {
+      "canonical": "Café, ñandú 🙂 y 日本語 también.",
+      "input": "Café, ñandú 🙂 y 日本語 también.",
+      "name": "emoji-y-no-latino",
+      "supported": true
+    },
+    {
+      "canonical": "texto &lt;em&gt;enfatizado&lt;/em&gt; y &lt;br&gt; salto",
+      "input": "texto <em>enfatizado</em> y <br> salto",
+      "name": "html-en-linea",
+      "supported": false
+    },
+    {
+      "canonical": "",
+      "input": "| a | b |\n| - | - |\n| 1 | 2 |",
+      "name": "tabla",
+      "supported": false
+    },
+    {
+      "canonical": "alt",
+      "input": "![alt](https://example.com/x.png)",
+      "name": "imagen",
+      "supported": false
+    },
+    {
+      "canonical": "Entregables: prototipo en Figma, app en Tauri, API en Go y documentación.\n\n## Fechas\n\n- [x] Prototipo en Figma\n- [ ] App web con SvelteKit\n- [ ] Backend con Go y MongoDB\n- [ ] Sustentación",
+      "input": "Entregables: prototipo en Figma, app en Tauri, API en Go y documentación.\n\n## Fechas\n\n- [x] Prototipo en Figma\n- [ ] App web con SvelteKit\n- [ ] Backend con Go y MongoDB\n- [ ] Sustentación",
+      "name": "fixture:Plan del proyecto final",
+      "supported": true
+    },
+    {
+      "canonical": "- [ ] Leche\n- [ ] Pan\n- [x] Café\n- [ ] Tomates\n- [ ] Arroz",
+      "input": "- [ ] Leche\n- [ ] Pan\n- [x] Café\n- [ ] Tomates\n- [ ] Arroz",
+      "name": "fixture:Lista de compras de la semana",
+      "supported": true
+    },
+    {
+      "canonical": "La normalización organiza las tablas para evitar redundancia y anomalías al insertar, actualizar o borrar. Para el parcial entran las tres primeras formas normales, con el ejemplo de matrícula que vimos en clase.\n\n## Formas normales\n\n- **1FN:** valores atómicos, sin grupos repetidos.\n- **2FN:** sin dependencias parciales de la clave.\n- **3FN:** sin dependencias transitivas.\n\n## Pendientes\n\n- [x] Repasar ejemplos de dependencias funcionales\n- [x] Hacer el taller 4 (diagramas ER)\n- [ ] Preguntar al profe por BCNF\n- [ ] Armar fichas para el viernes\n\n> Una tabla está en 3FN si todo atributo no clave depende de la clave, de toda la clave y nada más que de la clave.",
+      "input": "La normalización organiza las tablas para evitar redundancia y anomalías al insertar, actualizar o borrar. Para el parcial entran las tres primeras formas normales, con el ejemplo de matrícula que vimos en clase.\n\n## Formas normales\n\n- **1FN:** valores atómicos, sin grupos repetidos.\n- **2FN:** sin dependencias parciales de la clave.\n- **3FN:** sin dependencias transitivas.\n\n## Pendientes\n\n- [x] Repasar ejemplos de dependencias funcionales\n- [x] Hacer el taller 4 (diagramas ER)\n- [ ] Preguntar al profe por BCNF\n- [ ] Armar fichas para el viernes\n\n> Una tabla está en 3FN si todo atributo no clave depende de la clave, de toda la clave y nada más que de la clave.",
+      "name": "fixture:Resumen: Bases de datos II",
+      "supported": true
+    },
+    {
+      "canonical": "Capítulos 3 y 4. Ideas clave sobre modelos mentales y retroalimentación.\n\n- Los usuarios construyen **modelos mentales** a partir de experiencias previas.\n- Toda acción debe tener una respuesta visible.",
+      "input": "Capítulos 3 y 4. Ideas clave sobre modelos mentales y retroalimentación.\n\n- Los usuarios construyen **modelos mentales** a partir de experiencias previas.\n- Toda acción debe tener una respuesta visible.",
+      "name": "fixture:Lectura — Diseño centrado en el usuario",
+      "supported": true
+    },
+    {
+      "canonical": "Taller 5: gradiente, divergencia y rotacional con ejemplos resueltos.\n\n1. Calcular el gradiente de f(x, y) = x²y.\n2. Hallar la divergencia de F = (x, y, z).",
+      "input": "Taller 5: gradiente, divergencia y rotacional con ejemplos resueltos.\n\n1. Calcular el gradiente de f(x, y) = x²y.\n2. Hallar la divergencia de F = (x, y, z).",
+      "name": "fixture:Ejercicios de cálculo vectorial",
+      "supported": true
+    },
+    {
+      "canonical": "Modelo OSI vs TCP/IP, encapsulamiento y herramientas de diagnóstico.",
+      "input": "Modelo OSI vs TCP/IP, encapsulamiento y herramientas de diagnóstico.",
+      "name": "fixture:Notas de clase — Redes",
+      "supported": true
+    },
+    {
+      "canonical": "Abrir con una demo en vivo, luego explicar la arquitectura y cerrar con preguntas.",
+      "input": "Abrir con una demo en vivo, luego explicar la arquitectura y cerrar con preguntas.",
+      "name": "fixture:Ideas para la exposición",
+      "supported": true
+    },
+    {
+      "canonical": "Retroalimentación del prototipo: contraste del texto secundario y tamaños táctiles.",
+      "input": "Retroalimentación del prototipo: contraste del texto secundario y tamaños táctiles.",
+      "name": "fixture:Notas del taller de diseño",
+      "supported": true
+    },
+    {
+      "canonical": "Entregar antes del viernes. Revisar rúbrica y fuentes.",
+      "input": "Entregar antes del viernes. Revisar rúbrica y fuentes.",
+      "name": "fixture:Apuntes de álgebra lineal",
+      "supported": true
+    },
+    {
+      "canonical": "Ideas principales y dudas para preguntar en la próxima sesión.",
+      "input": "Ideas principales y dudas para preguntar en la próxima sesión.",
+      "name": "fixture:Taller de estructuras de datos",
+      "supported": true
+    },
+    {
+      "canonical": "Repasar definiciones y los ejemplos de la clase del martes.",
+      "input": "Repasar definiciones y los ejemplos de la clase del martes.",
+      "name": "fixture:Guía de estudio — probabilidad",
+      "supported": true
+    },
+    {
+      "canonical": "Anotar avances cada domingo.",
+      "input": "Anotar avances cada domingo.",
+      "name": "fixture:Metas del mes",
+      "supported": true
+    },
+    {
+      "canonical": "Pendiente definir fechas y presupuesto.",
+      "input": "Pendiente definir fechas y presupuesto.",
+      "name": "fixture:Regalos de cumpleaños",
+      "supported": true
+    },
+    {
+      "canonical": "Revisar opciones y comparar precios.",
+      "input": "Revisar opciones y comparar precios.",
+      "name": "fixture:Rutina de ejercicio",
+      "supported": true
+    },
+    {
+      "canonical": "Validar con tres compañeros antes de invertir tiempo.",
+      "input": "Validar con tres compañeros antes de invertir tiempo.",
+      "name": "fixture:App de recordatorios de riego",
+      "supported": true
+    },
+    {
+      "canonical": "Boceto rápido: lo más importante primero, detalles después.",
+      "input": "Boceto rápido: lo más importante primero, detalles después.",
+      "name": "fixture:Nombre para el proyecto",
+      "supported": true
+    },
+    {
+      "canonical": "Ajustar la sal al final y servir caliente.",
+      "input": "Ajustar la sal al final y servir caliente.",
+      "name": "fixture:Arepas de queso",
+      "supported": true
+    },
+    {
+      "canonical": "Ingredientes y pasos. Cocinar a fuego medio.",
+      "input": "Ingredientes y pasos. Cocinar a fuego medio.",
+      "name": "fixture:Sopa de lentejas",
+      "supported": true
+    },
+    {
+      "canonical": "Anotado para no olvidarlo.",
+      "input": "Anotado para no olvidarlo.",
+      "name": "fixture:Contraseñas de WiFi",
+      "supported": true
+    },
+    {
+      "canonical": "Cosas pendientes de la semana.",
+      "input": "Cosas pendientes de la semana.",
+      "name": "fixture:Teléfonos útiles",
+      "supported": true
+    },
+    {
+      "canonical": "Revisar esto cuando haya tiempo.",
+      "input": "Revisar esto cuando haya tiempo.",
+      "name": "fixture:Pendientes sueltos",
+      "supported": true
+    },
+    {
+      "canonical": "Introducción y objetivos del laboratorio…",
+      "input": "Introducción y objetivos del laboratorio…",
+      "name": "fixture:Borrador de informe",
+      "supported": true
+    },
+    {
+      "canonical": "Leche, pan, tomates, café, arroz…",
+      "input": "Leche, pan, tomates, café, arroz…",
+      "name": "fixture:Lista de compras",
+      "supported": true
+    },
+    {
+      "canonical": "Revisar el cronograma y repartir tareas…",
+      "input": "Revisar el cronograma y repartir tareas…",
+      "name": "fixture:Notas de la reunión",
+      "supported": true
+    }
+  ],
+  "description": "Casos de Markdown de AxoNote. `canonical = serializar(analizar(input))` con el mismo `MarkdownManager` (TipTap 3) que usa el editor, sin interfaz. `supported` indica si el móvil edita ese caso o lo trata como bloque opaco (se conserva intacto).",
+  "version": 1
+}
