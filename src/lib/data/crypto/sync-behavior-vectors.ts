@@ -4,10 +4,14 @@ import { createDemoVault } from '#lib/data/mock/demo-vault.js';
 import { MockDatabase } from '#lib/data/mock/mock-database.js';
 import type {
 	ConflictResolution,
+	EncryptedFolder,
+	EncryptedNote,
 	EncryptedSyncRequest,
 	EncryptedSyncResponse,
 	Id
 } from '#lib/domain/index.js';
+import { decryptFolder, decryptNote } from './note-codec.js';
+import type { Vault } from './vault.js';
 
 /**
  * Vectores de **comportamiento de sincronización** (`docs/api/vectors/sync-behavior.json`).
@@ -55,6 +59,52 @@ interface LogicalState {
 	cursor: string | null;
 	lastSyncedAt: string | null;
 	pendingCount: number;
+}
+
+/**
+ * Un intercambio `POST /sync` del dispositivo `a`, en campos lógicos (sin bytes cifrados): lo que
+ * necesita un transporte guionizado para reproducir el protocolo sin un servidor real.
+ */
+interface LogicalRequest {
+	cursor: string | null;
+	changes: { entity: string; id: Id; op: string; baseRevision: number }[];
+}
+interface LogicalRemoteNote {
+	id: Id;
+	title: string;
+	content: string;
+	folderId: Id | null;
+	revision: number;
+	deletedAt: string | null;
+}
+interface LogicalRemoteFolder {
+	id: Id;
+	name: string;
+	revision: number;
+}
+interface LogicalRemoteChange {
+	entity: string;
+	id: Id;
+	deleted: boolean;
+	revision: number;
+	note?: LogicalRemoteNote;
+	folder?: LogicalRemoteFolder;
+}
+interface LogicalConflictReport {
+	noteId: Id;
+	remote: { title: string; content: string };
+	remoteDeviceName: string;
+}
+interface LogicalResponse {
+	cursor: string;
+	hasMore: boolean;
+	applied: { entity: string; id: Id; revision: number }[];
+	conflicts: LogicalConflictReport[];
+	remoteChanges: LogicalRemoteChange[];
+}
+interface LogicalExchange {
+	request: LogicalRequest;
+	response: LogicalResponse;
 }
 
 const NOW = new Date('2026-03-04T10:00:00.000Z');
@@ -121,11 +171,25 @@ class Harness {
 	readonly steps: Record<string, unknown>[] = [];
 	readonly expected: LogicalState[] = [];
 	private readonly devices: Record<'a' | 'b', LocalBackend>;
+	private readonly vaultA: Vault;
+	/** El transporte real que ve `a` (sin grabar). `installPagination`/`editDuringSync` lo sustituyen. */
+	private innerSyncA: (req: EncryptedSyncRequest) => Promise<EncryptedSyncResponse>;
+	/** Intercambios grabados desde el último `exchanges = []`. */
+	private exchanges: LogicalExchange[] = [];
 
-	private constructor(a: LocalBackend, b: LocalBackend) {
+	private constructor(a: LocalBackend, b: LocalBackend, vaultA: Vault) {
 		this.a = a;
 		this.b = b;
+		this.vaultA = vaultA;
 		this.devices = { a, b };
+		this.innerSyncA = a.local.server.sync.bind(a.local.server);
+		// Grabador permanente: envuelve lo que haya en `innerSyncA` en cada momento (la paginación y
+		// la edición en vuelo lo sustituyen a él, no esta capa) y registra cada intercambio real.
+		a.local.server.sync = async (req: EncryptedSyncRequest) => {
+			const response = await this.innerSyncA(req);
+			this.exchanges.push(await this.toLogicalExchange(req, response));
+			return response;
+		};
 	}
 
 	static async create(name: string): Promise<Harness> {
@@ -159,7 +223,67 @@ class Harness {
 			now,
 			device: { id: 'd_b', name: 'B' }
 		});
-		return new Harness(a, b);
+		return new Harness(a, b, vaultA);
+	}
+
+	/** Versión lógica (sin bytes cifrados) de una nota remota: lo que decodificaría el móvil. */
+	private async logicalNote(note: EncryptedNote): Promise<LogicalRemoteNote> {
+		const plain = await decryptNote(this.vaultA, note, 'synced');
+		return {
+			id: note.id,
+			title: plain.title,
+			content: plain.content,
+			folderId: note.folderId,
+			revision: note.revision,
+			deletedAt: note.deletedAt
+		};
+	}
+
+	private async logicalFolder(folder: EncryptedFolder): Promise<LogicalRemoteFolder> {
+		const plain = await decryptFolder(this.vaultA, folder);
+		return { id: folder.id, name: plain.name, revision: folder.revision };
+	}
+
+	private async toLogicalExchange(
+		req: EncryptedSyncRequest,
+		response: EncryptedSyncResponse
+	): Promise<LogicalExchange> {
+		return {
+			request: {
+				cursor: req.cursor,
+				changes: req.changes.map((c) => ({
+					entity: c.entity,
+					id: c.id,
+					op: c.op,
+					baseRevision: c.baseRevision
+				}))
+			},
+			response: {
+				cursor: response.cursor,
+				hasMore: !!response.hasMore,
+				applied: response.applied,
+				conflicts: await Promise.all(
+					response.conflicts.map(async (c) => ({
+						noteId: c.noteId,
+						remote: await this.logicalNote(c.remote).then(({ title, content }) => ({
+							title,
+							content
+						})),
+						remoteDeviceName: c.remoteDeviceName
+					}))
+				),
+				remoteChanges: await Promise.all(
+					response.remoteChanges.map(async (ch) => ({
+						entity: ch.entity,
+						id: ch.id,
+						deleted: ch.deleted,
+						revision: ch.revision,
+						...(ch.note ? { note: await this.logicalNote(ch.note) } : {}),
+						...(ch.folder ? { folder: await this.logicalFolder(ch.folder) } : {})
+					}))
+				)
+			}
+		};
 	}
 
 	private dev(who: 'a' | 'b') {
@@ -219,8 +343,10 @@ class Harness {
 	}
 
 	async sync(who: 'a' | 'b' = 'a') {
+		this.exchanges = [];
 		await this.dev(who).repos.sync.syncNow();
-		await this.record({ op: 'sync', device: who });
+		const exchanges = who === 'a' ? this.exchanges : undefined;
+		await this.record({ op: 'sync', device: who, ...(exchanges ? { exchanges } : {}) });
 	}
 
 	async createNote(who: 'a' | 'b', draft: { title?: string; content?: string; folderId?: Id }) {
@@ -276,9 +402,10 @@ class Harness {
 
 	/** Edita la nota mientras su sincronización está en vuelo (el cambio nuevo queda pendiente). */
 	async editDuringSync(id: Id, patch: { content?: string }) {
+		this.exchanges = [];
 		const dev = this.a;
-		const original = dev.local.server.sync.bind(dev.local.server);
-		dev.local.server.sync = async (req) => {
+		const original = this.innerSyncA;
+		this.innerSyncA = async (req) => {
 			const response = await original(req);
 			await dev.repos.notes.update(id, patch);
 			return response;
@@ -286,16 +413,21 @@ class Harness {
 		try {
 			await dev.repos.sync.syncNow();
 		} finally {
-			dev.local.server.sync = original;
+			this.innerSyncA = original;
 		}
-		await this.record({ op: 'editDuringSync', device: 'a', id, ...patch });
+		await this.record({
+			op: 'editDuringSync',
+			device: 'a',
+			id,
+			...patch,
+			editDuringSync: this.exchanges.length - 1,
+			exchanges: this.exchanges
+		});
 	}
 
 	/** Envuelve el transporte de `a` para paginar `remoteChanges` con el tamaño dado. */
 	installPagination(pageSize: number) {
-		const dev = this.a;
-		const original = dev.local.server.sync.bind(dev.local.server);
-		dev.local.server.sync = paginating(original, pageSize);
+		this.innerSyncA = paginating(this.innerSyncA, pageSize);
 	}
 
 	toJson(name: string, initial: LogicalState) {
@@ -452,6 +584,129 @@ const SCENARIOS: { name: string; build: ScenarioBuilder }[] = [
 			await h.sync();
 			// `a` debe aplicar la carpeta antes de la nota para que la nota quede dentro.
 		}
+	},
+	{
+		name: 'editar-y-borrar-una-nota-ya-sincronizada',
+		build: async (h) => {
+			await h.sync();
+			const note = await h.createNote('a', { title: 'Editar y borrar', content: 'v1' });
+			await h.sync();
+			// Sincronizada (revision > 0): editar y luego borrar deja solo el borrado, con esa revisión.
+			await h.updateNote('a', note.id, { content: 'v2' });
+			await h.moveToTrash('a', note.id);
+			await h.deleteForever('a', note.id);
+			await h.sync();
+		}
+	},
+	{
+		name: 'conflicto-no-bloquea-el-envio-de-otras',
+		build: async (h) => {
+			await h.sync();
+			await h.sync('b');
+			const shared = await h.createNote('a', { title: 'Compartida', content: 'base' });
+			const other = await h.createNote('a', { title: 'Otra', content: 'independiente' });
+			await h.sync();
+			await h.sync('b');
+			await h.updateNote('b', shared.id, { content: 'versión de B' });
+			await h.sync('b');
+			// `a` sube a la vez el cambio de la compartida (entra en conflicto) y el de la otra nota.
+			await h.updateNote('a', shared.id, { content: 'versión de A' });
+			await h.updateNote('a', other.id, { content: 'independiente editada' });
+			await h.sync();
+		}
+	},
+	{
+		name: 'cambio-remoto-actualiza-un-conflicto-abierto',
+		build: async (h) => {
+			await h.sync();
+			await h.sync('b');
+			const note = await h.createNote('a', { title: 'Compartida', content: 'base' });
+			await h.sync();
+			await h.sync('b');
+			await h.updateNote('a', note.id, { content: 'versión de A' });
+			await h.updateNote('b', note.id, { content: 'versión de B' });
+			await h.sync('b');
+			await h.sync(); // conflicto abierto: remoto = «versión de B»
+			await h.updateNote('b', note.id, { content: 'versión de B otra vez' });
+			await h.sync('b');
+			await h.sync(); // sin resolver: la versión remota del conflicto se actualiza
+		}
+	},
+	{
+		name: 'borrado-remoto-de-una-nota-en-conflicto',
+		build: async (h) => {
+			await h.sync();
+			await h.sync('b');
+			const note = await h.createNote('a', { title: 'Compartida', content: 'base' });
+			await h.sync();
+			await h.sync('b');
+			await h.updateNote('a', note.id, { content: 'versión de A' });
+			await h.updateNote('b', note.id, { content: 'versión de B' });
+			await h.sync('b');
+			await h.sync(); // conflicto abierto
+			await h.moveToTrash('b', note.id);
+			await h.deleteForever('b', note.id);
+			await h.sync('b');
+			await h.sync();
+		}
+	},
+	{
+		name: 'carpeta-borrada-en-remoto-con-cambio-local-pendiente',
+		build: async (h) => {
+			await h.sync();
+			await h.sync('b');
+			const folder = await h.createFolder('a', 'Carpeta');
+			await h.sync();
+			await h.sync('b');
+			await h.renameFolder('a', folder.id, 'Carpeta renombrada por A');
+			await h.deleteFolder('b', folder.id);
+			await h.sync('b');
+			await h.sync();
+		}
+	},
+	{
+		name: 'borrar-una-carpeta-con-notas',
+		build: async (h) => {
+			await h.sync();
+			const folder = await h.createFolder('a', 'Con notas');
+			const note = await h.createNote('a', {
+				title: 'Dentro',
+				content: 'x',
+				folderId: folder.id
+			});
+			await h.sync();
+			await h.deleteFolder('a', note.folderId!);
+			await h.sync();
+		}
+	},
+	{
+		name: 'mover-a-la-papelera-y-restaurar',
+		build: async (h) => {
+			await h.sync();
+			const note = await h.createNote('a', { title: 'Para la papelera', content: 'x' });
+			await h.sync();
+			await h.moveToTrash('a', note.id);
+			await h.sync();
+			await h.restore('a', note.id);
+			await h.sync();
+		}
+	},
+	{
+		name: 'resolver-local-y-editar-antes-de-sincronizar',
+		build: async (h) => {
+			await h.sync();
+			await h.sync('b');
+			const note = await h.createNote('a', { title: 'Compartida', content: 'base' });
+			await h.sync();
+			await h.sync('b');
+			await h.updateNote('a', note.id, { content: 'versión de A' });
+			await h.updateNote('b', note.id, { content: 'versión de B' });
+			await h.sync('b');
+			await h.sync(); // conflicto abierto
+			await h.resolveConflict(note.id, 'local');
+			await h.updateNote('a', note.id, { content: 'versión de A otra vez' });
+			await h.sync();
+		}
 	}
 ];
 
@@ -474,7 +729,9 @@ export async function buildSyncBehaviorVector(): Promise<Record<string, unknown>
 				'Comportamiento del motor de sincronización (outbox + LocalSyncRepository + MockSyncServer) ' +
 				'con reloj e ids fijos. Cada escenario lista sus `steps` (con `device` a/b) y el estado lógico ' +
 				'de `a` tras cada paso en `expected`. Campos lógicos (id, título, texto, revisión, estado, cola, ' +
-				'conflictos, cursor), nunca bytes cifrados.',
+				'conflictos, cursor), nunca bytes cifrados. Cada paso `sync` de `a` lleva además `exchanges[]` ' +
+				'(uno por página `POST /sync`) con su `request` y `response` lógicos, para reproducirlo con un ' +
+				'transporte guionizado sin servidor; `editDuringSync` indica en qué intercambio ocurrió la edición.',
 			scenarios
 		};
 	});
